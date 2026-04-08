@@ -40,4 +40,14 @@ export class GameSession {
     this.currentRound = props.currentRound;
     this.agents = props.agents;
   }
+
+  withAgents(agents: GameAgent[]): GameSession {
+    return new GameSession({
+      id: this.id,
+      name: this.name,
+      status: this.status,
+      currentRound: this.currentRound,
+      agents,
+    });
+  }
 }

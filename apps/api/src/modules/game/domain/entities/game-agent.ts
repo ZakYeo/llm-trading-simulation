@@ -25,4 +25,17 @@ export class GameAgent {
     this.balance = props.balance;
     this.depositAccount = props.depositAccount;
   }
+
+  withAccounts(
+    balance: AccountBalance,
+    depositAccount: DepositAccount,
+  ): GameAgent {
+    return new GameAgent({
+      id: this.id,
+      name: this.name,
+      role: this.role,
+      balance,
+      depositAccount,
+    });
+  }
 }
