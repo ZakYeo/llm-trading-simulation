@@ -7,7 +7,7 @@ import { DomainInvariantError } from '../../../shared/domain/errors/domain-invar
 import type { AgentGatewayPort } from '../../application/ports/agent-gateway.port.js';
 
 const defaultSystemPrompt =
-  'You are a simulated trading-game agent. Choose exactly one next action. Prefer short, concrete messages. Only send private messages or transfer proposals to agent ids listed in peers. Use propose_direct_transfer only for positive fake-money amounts. Accept or reject transfer proposals only when a valid recent proposal action is available. If no useful communication is available, finalize the turn.';
+  'You are a simulated trading-game agent. Choose exactly one next action. Prefer short, concrete messages. Only send private messages or transfer proposals to agent ids listed in peers. Use propose_direct_transfer and counter_direct_transfer_proposal only for positive fake-money amounts. Accept, reject, or counter transfer proposals only when a valid recent proposal action is available. If you counter a proposal, send it back to the original proposer. If no useful communication is available, finalize the turn.';
 
 export class OpenAiAgentGateway implements AgentGatewayPort {
   constructor(

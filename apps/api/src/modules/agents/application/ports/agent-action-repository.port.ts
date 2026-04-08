@@ -9,6 +9,7 @@ export interface AgentActionRecord {
     | 'send_public_message'
     | 'send_private_message'
     | 'propose_direct_transfer'
+    | 'counter_direct_transfer_proposal'
     | 'accept_direct_transfer_proposal'
     | 'reject_direct_transfer_proposal'
     | 'finalize_turn';

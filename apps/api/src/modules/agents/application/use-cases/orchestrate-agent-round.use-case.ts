@@ -3,6 +3,13 @@ import type { TransferFundsUseCase } from '../../../game/application/use-cases/t
 import type { AgentActionRepositoryPort } from '../ports/agent-action-repository.port.js';
 import type { RunAgentCommunicationTurnUseCase } from './run-agent-communication-turn.use-case.js';
 
+function isTransferProposalActionType(actionType: string): boolean {
+  return (
+    actionType === 'propose_direct_transfer' ||
+    actionType === 'counter_direct_transfer_proposal'
+  );
+}
+
 export interface OrchestrateAgentRoundInput {
   gameSessionId: string;
   turnCount: number;
@@ -81,7 +88,7 @@ export class OrchestrateAgentRoundUseCase {
         (candidate) => candidate.id === acceptance.relatedProposalActionId,
       );
 
-      if (!proposal || proposal.actionType !== 'propose_direct_transfer') {
+      if (!proposal || !isTransferProposalActionType(proposal.actionType)) {
         throw new DomainInvariantError(
           'Accepted transfer proposal must reference a valid proposal action.',
         );

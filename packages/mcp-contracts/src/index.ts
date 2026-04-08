@@ -23,6 +23,7 @@ export const recentAgentActionSchema = z.object({
     'send_public_message',
     'send_private_message',
     'propose_direct_transfer',
+    'counter_direct_transfer_proposal',
     'accept_direct_transfer_proposal',
     'reject_direct_transfer_proposal',
     'finalize_turn',
@@ -69,6 +70,13 @@ export const agentActionSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('propose_direct_transfer'),
+    recipientAgentId: z.string().min(1),
+    amount: z.string().min(1),
+    rationale: z.string().min(1),
+  }),
+  z.object({
+    type: z.literal('counter_direct_transfer_proposal'),
+    proposalActionId: z.string().min(1),
     recipientAgentId: z.string().min(1),
     amount: z.string().min(1),
     rationale: z.string().min(1),

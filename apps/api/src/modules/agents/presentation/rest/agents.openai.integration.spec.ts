@@ -98,7 +98,7 @@ describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
     delete process.env.OPENAI_AGENT_SYSTEM_PROMPT;
   });
 
-  it('runs a real OpenAI-backed multi-turn agent round through the HTTP boundary', async () => {
+  it('runs a real OpenAI-backed multi-turn agent round with meaningful interaction through the HTTP boundary', async () => {
     const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
       method: 'POST',
       headers: {
@@ -116,6 +116,7 @@ describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
         ],
       }),
     });
+    expect(createResponse.status).toBe(201);
     const createdSession = (await createResponse.json()) as { id: string };
 
     const response = await fetch(
@@ -139,21 +140,21 @@ describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
         messages: Array<{ visibility: string; content: string }>;
       }>;
     };
+    expect(response.status, JSON.stringify(body)).toBe(201);
     const replayResponse = await fetch(
       `${baseUrl}/api/replay/sessions/${createdSession.id}`,
     );
+    expect(replayResponse.status).toBe(200);
     const replay = (await replayResponse.json()) as {
       events: Array<{ type: string; actionType?: string }>;
     };
 
-    expect(response.status, JSON.stringify(body)).toBe(201);
     expect(body.gameSessionId).toBe(createdSession.id);
     expect(body.turns).toHaveLength(2);
     expect(body.turns.every((turn) => turn.actions.length === 5)).toBe(true);
     expect(body.turns.every((turn) => turn.actionRecords.length === 5)).toBe(
       true,
     );
-    expect(replayResponse.status).toBe(200);
     expect(replay.events.some((event) => event.type === 'action')).toBe(true);
   }, 120_000);
 });

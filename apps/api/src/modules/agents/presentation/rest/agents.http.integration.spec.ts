@@ -53,6 +53,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
         ],
       }),
     });
+    expect(createResponse.status).toBe(201);
     const createdSession = (await createResponse.json()) as { id: string };
 
     const response = await fetch(
@@ -96,6 +97,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
         ],
       }),
     });
+    expect(createResponse.status).toBe(201);
     const createdSession = (await createResponse.json()) as { id: string };
 
     const response = await fetch(
@@ -120,6 +122,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
     const sessionResponse = await fetch(
       `${baseUrl}/api/game/sessions/${createdSession.id}`,
     );
+    expect(sessionResponse.status).toBe(200);
     const session = (await sessionResponse.json()) as {
       agents: Array<{
         role: string;
@@ -173,6 +176,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
         ],
       }),
     });
+    expect(createResponse.status).toBe(201);
     const createdSession = (await createResponse.json()) as { id: string };
 
     const response = await fetch(
@@ -195,6 +199,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
     const sessionResponse = await fetch(
       `${baseUrl}/api/game/sessions/${createdSession.id}`,
     );
+    expect(sessionResponse.status).toBe(200);
     const session = (await sessionResponse.json()) as {
       agents: Array<{
         role: string;
@@ -214,6 +219,83 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
     ).toBe(true);
     expect(banker?.availableBalance).toBe('100.0000');
     expect(trader?.availableBalance).toBe('100.0000');
+
+    delete process.env.AGENT_MOCK_SCENARIO;
+  });
+
+  it('persists counter-proposals and settles the accepted counter amount', async () => {
+    process.env.AGENT_MOCK_SCENARIO = 'counter_proposal';
+
+    const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'Counter Proposal Table',
+        initialBalance: '100.0000',
+        agents: [
+          { name: 'Banker Bot', role: 'banker' },
+          { name: 'Analyst Bot', role: 'analyst' },
+          { name: 'Lawyer Bot', role: 'lawyer' },
+          { name: 'Influencer Bot', role: 'influencer' },
+          { name: 'Trader Bot', role: 'trader' },
+        ],
+      }),
+    });
+    expect(createResponse.status).toBe(201);
+    const createdSession = (await createResponse.json()) as { id: string };
+
+    const response = await fetch(
+      `${baseUrl}/api/agents/sessions/${createdSession.id}/rounds/orchestrate`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          turnCount: 4,
+        }),
+      },
+    );
+    const body = (await response.json()) as {
+      turns: Array<{
+        actionRecords: Array<{
+          actionType: string;
+          amount?: string;
+          relatedProposalActionId?: string;
+        }>;
+      }>;
+    };
+    const sessionResponse = await fetch(
+      `${baseUrl}/api/game/sessions/${createdSession.id}`,
+    );
+    expect(sessionResponse.status).toBe(200);
+    const session = (await sessionResponse.json()) as {
+      agents: Array<{
+        role: string;
+        availableBalance: string;
+      }>;
+    };
+    const banker = session.agents.find((agent) => agent.role === 'banker');
+    const trader = session.agents.find((agent) => agent.role === 'trader');
+    const flattenedActions = body.turns.flatMap((turn) => turn.actionRecords);
+    const counterAction = flattenedActions.find(
+      (action) =>
+        action.actionType === 'counter_direct_transfer_proposal' &&
+        action.amount === '8.5',
+    );
+    const acceptance = flattenedActions.find(
+      (action) =>
+        action.actionType === 'accept_direct_transfer_proposal' &&
+        action.relatedProposalActionId,
+    );
+
+    expect(response.status).toBe(201);
+    expect(counterAction).toBeDefined();
+    expect(acceptance?.relatedProposalActionId).toBeDefined();
+    expect(banker?.availableBalance).toBe('108.5000');
+    expect(trader?.availableBalance).toBe('91.5000');
 
     delete process.env.AGENT_MOCK_SCENARIO;
   });

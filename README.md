@@ -28,7 +28,7 @@ Implemented so far:
 - replay-oriented read model and HTTP endpoint over stored round and ledger history
 - backend-only agent communication endpoint with persisted public/private agent messages
 - multi-turn backend round orchestration with persisted agent action records and replay exposure
-- transfer proposal acceptance and rejection actions, with accepted proposals resolved through the existing transfer flow
+- transfer proposal acceptance, rejection, and counter-proposal actions, with accepted proposals resolved through the existing transfer flow
 - OpenAI-backed agent gateway behind a backend port, with a mock runtime used for integration tests
 - shared Nest app bootstrap and HTTP exception mapping for validation and domain errors
 - Prisma mapper/repository adapter tests for session persistence boundaries
@@ -50,10 +50,10 @@ Current backend quality notes:
 - replay data now includes agent-message history, money-flow history, and persisted agent action records
 - backend agent communication now supports both a single turn and a multi-turn round orchestration path
 - multi-turn orchestration is covered through unit tests and Postgres-backed HTTP integration tests
-- accepted transfer proposals now result in real persisted balance mutations, not just replay-only intents
+- accepted transfer proposals, including accepted counter-proposals, now result in real persisted balance mutations, not just replay-only intents
 - rejected transfer proposals are now covered too and leave balances unchanged while remaining replay-visible
 - the OpenAI key is now usable through the backend agent gateway when `AGENT_RUNTIME_PROVIDER` is not set to `mock`
-- a gated live OpenAI integration test now exists for the agents HTTP orchestration path
+- a gated live OpenAI integration test now exists for the agents HTTP orchestration path; it encourages and detects meaningful interaction when it occurs, while remaining a smoke path because provider behavior is still non-deterministic
 - there is still no standalone MCP server runtime, generalized negotiation engine, or broad settlement workflow beyond direct transfer proposals yet
 
 ## Workspace
@@ -93,7 +93,7 @@ Test database:
 2. `TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/llm_trading_simulation_test?schema=public" corepack pnpm db:test:prepare`
 3. `TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/llm_trading_simulation_test?schema=public" corepack pnpm --filter @llm-sim/api test:integration`
 
-Integration tests currently run with file parallelism disabled because they share a single Postgres test database.
+Integration tests currently run as explicit sequential file invocations because they share a single Postgres test database.
 
 Live OpenAI integration test:
 
@@ -125,8 +125,8 @@ Run these before committing:
 
 ## Immediate next work
 
-1. Extend the action vocabulary beyond direct transfer proposals into richer negotiation primitives.
-2. Decide whether proposal settlement should stay in the current orchestrator or move into a dedicated settlement service.
-3. Add stronger live-provider assertions so the gated OpenAI integration path proves meaningful agent interaction, not just successful orchestration.
+1. Decide whether proposal settlement should stay in the current orchestrator or move into a dedicated settlement service.
+2. Add another negotiation primitive beyond direct transfer and counter-offer flows.
+3. Keep improving the gated live-provider path while retaining deterministic mock tests as the main regression suite.
 4. Keep frontend integration deferred until backend communication and replay are richer.
 5. Introduce standalone MCP-facing agent adapters after the backend communication loop is stable.

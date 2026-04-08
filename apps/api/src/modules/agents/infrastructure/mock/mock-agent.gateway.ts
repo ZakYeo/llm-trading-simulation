@@ -9,7 +9,8 @@ export class MockAgentGateway implements AgentGatewayPort {
     const trader = context.peers.find((peer) => peer.role === 'trader');
     const pendingProposal = context.recentActions.find((action) => {
       if (
-        action.type !== 'propose_direct_transfer' ||
+        (action.type !== 'propose_direct_transfer' &&
+          action.type !== 'counter_direct_transfer_proposal') ||
         action.recipientAgentId !== context.self.agentId
       ) {
         return false;
@@ -17,7 +18,8 @@ export class MockAgentGateway implements AgentGatewayPort {
 
       return !context.recentActions.some(
         (candidate) =>
-          (candidate.type === 'accept_direct_transfer_proposal' ||
+          (candidate.type === 'counter_direct_transfer_proposal' ||
+            candidate.type === 'accept_direct_transfer_proposal' ||
             candidate.type === 'reject_direct_transfer_proposal') &&
           candidate.relatedProposalActionId === action.actionId,
       );
@@ -65,6 +67,28 @@ export class MockAgentGateway implements AgentGatewayPort {
         };
       }
 
+      if (scenario === 'counter_proposal') {
+        return {
+          type: 'counter_direct_transfer_proposal',
+          proposalActionId: pendingProposal.actionId,
+          recipientAgentId: pendingProposal.agentId,
+          amount: '8.5000',
+          rationale: 'I can fund this round, but only at a lower amount.',
+        };
+      }
+
+      return {
+        type: 'accept_direct_transfer_proposal',
+        proposalActionId: pendingProposal.actionId,
+      };
+    }
+
+    if (
+      context.self.role === 'trader' &&
+      scenario === 'counter_proposal' &&
+      context.turnNumber >= 4 &&
+      pendingProposal?.type === 'counter_direct_transfer_proposal'
+    ) {
       return {
         type: 'accept_direct_transfer_proposal',
         proposalActionId: pendingProposal.actionId,

@@ -216,4 +216,51 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       }),
     ).rejects.toThrow(DomainInvariantError);
   });
+
+  it('persists a counter-proposal as the proposal recipient response', async () => {
+    const actionRepository = new InMemoryAgentActionRepository();
+    await actionRepository.save({
+      gameSessionId: 'game-1',
+      roundNumber: 1,
+      turnNumber: 2,
+      agentId: 'agent-2',
+      recipientAgentId: 'agent-1',
+      actionType: 'propose_direct_transfer',
+      amount: '15.0000',
+      content: 'I can turn this into a higher-return trade quickly.',
+    });
+
+    const useCase = new RunAgentCommunicationTurnUseCase(
+      new InMemoryGameSessionRepository(createSession()),
+      new InMemoryAgentMessageRepository(),
+      actionRepository,
+      new ScriptedAgentGateway([
+        {
+          type: 'counter_direct_transfer_proposal',
+          proposalActionId: 'action-1',
+          recipientAgentId: 'agent-2',
+          amount: '8.5000',
+          rationale: 'I can fund this trade, but only at a lower amount.',
+        },
+        {
+          type: 'finalize_turn',
+        },
+      ]),
+    );
+
+    const result = await useCase.execute({
+      gameSessionId: 'game-1',
+      turnNumber: 3,
+    });
+
+    expect(result.actionRecords[0]).toMatchObject({
+      agentId: 'agent-1',
+      recipientAgentId: 'agent-2',
+      actionType: 'counter_direct_transfer_proposal',
+      relatedProposalActionId: 'action-1',
+      amount: '8.5000',
+      content: 'I can fund this trade, but only at a lower amount.',
+      turnNumber: 3,
+    });
+  });
 });

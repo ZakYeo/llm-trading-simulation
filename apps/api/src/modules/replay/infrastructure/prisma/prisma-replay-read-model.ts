@@ -195,6 +195,9 @@ export class PrismaReplayReadModel implements ReplayReadModelPort {
           case 'PROPOSE_DIRECT_TRANSFER':
             actionType = 'propose_direct_transfer';
             break;
+          case 'COUNTER_DIRECT_TRANSFER_PROPOSAL':
+            actionType = 'counter_direct_transfer_proposal';
+            break;
           case 'ACCEPT_DIRECT_TRANSFER_PROPOSAL':
             actionType = 'accept_direct_transfer_proposal';
             break;

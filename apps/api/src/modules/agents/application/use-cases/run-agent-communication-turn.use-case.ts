@@ -18,6 +18,30 @@ import type {
   AgentMessageRepositoryPort,
 } from '../ports/agent-message-repository.port.js';
 
+function isTransferProposalActionType(
+  actionType: AgentActionRecord['actionType'],
+): actionType is
+  | 'propose_direct_transfer'
+  | 'counter_direct_transfer_proposal' {
+  return (
+    actionType === 'propose_direct_transfer' ||
+    actionType === 'counter_direct_transfer_proposal'
+  );
+}
+
+function isTransferProposalResolutionType(
+  actionType: AgentActionRecord['actionType'],
+): actionType is
+  | 'counter_direct_transfer_proposal'
+  | 'accept_direct_transfer_proposal'
+  | 'reject_direct_transfer_proposal' {
+  return (
+    actionType === 'counter_direct_transfer_proposal' ||
+    actionType === 'accept_direct_transfer_proposal' ||
+    actionType === 'reject_direct_transfer_proposal'
+  );
+}
+
 export interface RunAgentCommunicationTurnInput {
   gameSessionId: string;
   turnNumber?: number;
@@ -141,7 +165,8 @@ export class RunAgentCommunicationTurnUseCase {
       const action = await this.agentGateway.decideNextAction(context);
       const recipientAgentId =
         action.type === 'send_private_message' ||
-        action.type === 'propose_direct_transfer'
+        action.type === 'propose_direct_transfer' ||
+        action.type === 'counter_direct_transfer_proposal'
           ? action.recipientAgentId
           : action.type === 'accept_direct_transfer_proposal' ||
               action.type === 'reject_direct_transfer_proposal'
@@ -160,20 +185,24 @@ export class RunAgentCommunicationTurnUseCase {
         }
       }
 
-      if (action.type === 'propose_direct_transfer') {
+      if (
+        action.type === 'propose_direct_transfer' ||
+        action.type === 'counter_direct_transfer_proposal'
+      ) {
         Money.fromDecimal(action.amount);
       }
 
       let relatedProposalActionId: string | undefined;
 
       if (
+        action.type === 'counter_direct_transfer_proposal' ||
         action.type === 'accept_direct_transfer_proposal' ||
         action.type === 'reject_direct_transfer_proposal'
       ) {
         const proposal = recentActions.find(
           (candidate) =>
             candidate.id === action.proposalActionId &&
-            candidate.actionType === 'propose_direct_transfer',
+            isTransferProposalActionType(candidate.actionType),
         );
 
         if (!proposal) {
@@ -191,13 +220,21 @@ export class RunAgentCommunicationTurnUseCase {
         const existingResponse = recentActions.find(
           (candidate) =>
             candidate.relatedProposalActionId === proposal.id &&
-            (candidate.actionType === 'accept_direct_transfer_proposal' ||
-              candidate.actionType === 'reject_direct_transfer_proposal'),
+            isTransferProposalResolutionType(candidate.actionType),
         );
 
         if (existingResponse) {
           throw new DomainInvariantError(
             'Transfer proposal has already been resolved.',
+          );
+        }
+
+        if (
+          action.type === 'counter_direct_transfer_proposal' &&
+          action.recipientAgentId !== proposal.agentId
+        ) {
+          throw new DomainInvariantError(
+            'Counter-proposal recipient must match the original proposal sender.',
           );
         }
 
@@ -213,12 +250,16 @@ export class RunAgentCommunicationTurnUseCase {
         relatedProposalActionId,
         actionType: action.type,
         amount:
-          action.type === 'propose_direct_transfer' ? action.amount : undefined,
+          action.type === 'propose_direct_transfer' ||
+          action.type === 'counter_direct_transfer_proposal'
+            ? action.amount
+            : undefined,
         content:
           action.type === 'send_public_message' ||
           action.type === 'send_private_message'
             ? action.content
-            : action.type === 'propose_direct_transfer'
+            : action.type === 'propose_direct_transfer' ||
+                action.type === 'counter_direct_transfer_proposal'
               ? action.rationale
               : action.type === 'reject_direct_transfer_proposal'
                 ? action.rationale

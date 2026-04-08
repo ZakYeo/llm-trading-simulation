@@ -11,6 +11,7 @@ Quality status:
 - unit tests cover money, ledger, session creation, bank mutations, transfers, and Prisma mapping/repository adapters
 - Docker-isolated local runtime is working for API, web, and Postgres
 - Prisma migration and test database bootstrap flow now exist
+- the API integration runner now executes the integration files sequentially so a shared Postgres test database stays stable
 - real Postgres-backed integration coverage now exists for repository persistence and the main create-session -> transfer -> deposit -> withdraw -> read-state backend flow
 - real Postgres-backed HTTP integration coverage now exists for create, read, transfer, deposit, and withdraw through the live Nest app boundary
 - round advancement with interest accrual is now implemented and covered through unit, Postgres-backed integration, and HTTP integration tests
@@ -20,9 +21,10 @@ Quality status:
 - backend-only agent communication now exists with persisted public/private messages
 - backend-only round orchestration now exists across multiple turns with persisted agent action records
 - accepted transfer proposals now resolve into real transfer mutations through the existing game flow
+- counter-proposals now exist as a first negotiation-deepening primitive, with accepted counters resolving through the same validated transfer path
 - rejected transfer proposals are covered and remain replay-visible without mutating balances
 - OpenAI is now wired behind an `AgentGatewayPort`, with mock runtime selection available for deterministic tests
-- a gated live OpenAI integration test now exists for the agents orchestration HTTP path
+- a gated live OpenAI integration test now exists for the agents orchestration HTTP path, with stronger prompts and detection for meaningful interaction while still operating as a smoke path
 
 Readiness assessment:
 
@@ -71,13 +73,14 @@ Completed this session:
 - added replay and HTTP integration coverage proving proposal -> acceptance -> persisted transfer state changes
 - added rejected-proposal coverage plus duplicate-resolution safeguards in unit and HTTP integration tests
 - added a gated real-OpenAI integration test that exercises the live agents orchestration path against the HTTP app boundary
+- added counter-proposals as a richer negotiation primitive with unit, replay, and Postgres-backed HTTP integration coverage
+- strengthened the gated live OpenAI test prompting and assertions so it detects proposal/response cycles when they occur without turning the real-provider smoke path into a flaky hard gate
 
 Immediate next steps:
 
-- extend the negotiation vocabulary beyond direct transfer proposals into richer primitives
+- add another negotiation primitive beyond direct transfer and counter-offer flows
 - add explicit lifecycle semantics for resolved proposals beyond the current accept/reject pair where needed
 - decide whether proposal resolution should live inside the agent orchestrator or in a dedicated negotiation/settlement application service
-- strengthen the gated live OpenAI test so it proves meaningful agent behavior without becoming flaky
 - keep the gated live OpenAI test healthy as the real-provider smoke path while deterministic mock tests remain the main regression suite
 - keep frontend integration deferred until backend communication and replay become richer
 - only after that, split the current in-process contract into true MCP-facing agent boundaries
@@ -105,7 +108,7 @@ Needs improvement next:
 - no domain event bus or full round engine yet
 - durable history now exists and replay reads are exposed, but the agent layer is still an in-process backend slice rather than a standalone MCP boundary
 - no idempotency handling yet
-- multi-turn state-mutation integration exists for direct transfer proposals, but not yet for broader negotiation patterns
+- multi-turn state-mutation integration exists for direct transfer proposals and counter-offers, but not yet for broader negotiation patterns
 - Docker runtime exists, but it still uses dev-mode web serving and no container-level automated smoke test
 - no prompt factory, generalized negotiation engine, or settlement layer beyond direct transfer proposal resolution yet
 
@@ -116,12 +119,12 @@ What counts as “real working and testable” now
 - a backend-only orchestrated agent turn with persisted messages/actions and integration coverage
 - at least one multi-turn agent communication integration test that proves stateful interaction, not just a single exchange
 - a path that resolves at least one persisted agent proposal into an actual validated state transition
-- at least one reusable negotiation pattern beyond direct transfer requests
+- at least one reusable negotiation pattern beyond a single direct transfer request
 
 Recommended next slice
 
 - keep `propose_direct_transfer` as the reference negotiation primitive now that it resolves end to end
-- add a second negotiable primitive, or broaden proposal metadata so different deal structures can be expressed
+- add a third negotiable primitive, or broaden proposal metadata so different deal structures can be expressed
 - decide whether proposal settlement should stay inside the current orchestrator or move into a dedicated settlement service
 - strengthen live-provider assertions around proposal, response, and settlement while keeping deterministic mock coverage as the main regression suite
 - keep agent-to-agent integration coverage for both accepted and rejected proposals as the baseline for future negotiation primitives

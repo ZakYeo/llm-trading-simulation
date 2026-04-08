@@ -16,6 +16,8 @@ function toPrismaActionType(
       return 'SEND_PRIVATE_MESSAGE';
     case 'propose_direct_transfer':
       return 'PROPOSE_DIRECT_TRANSFER';
+    case 'counter_direct_transfer_proposal':
+      return 'COUNTER_DIRECT_TRANSFER_PROPOSAL';
     case 'accept_direct_transfer_proposal':
       return 'ACCEPT_DIRECT_TRANSFER_PROPOSAL';
     case 'reject_direct_transfer_proposal':
@@ -37,6 +39,8 @@ function fromPrismaActionType(
       return 'send_private_message';
     case 'PROPOSE_DIRECT_TRANSFER':
       return 'propose_direct_transfer';
+    case 'COUNTER_DIRECT_TRANSFER_PROPOSAL':
+      return 'counter_direct_transfer_proposal';
     case 'ACCEPT_DIRECT_TRANSFER_PROPOSAL':
       return 'accept_direct_transfer_proposal';
     case 'REJECT_DIRECT_TRANSFER_PROPOSAL':
