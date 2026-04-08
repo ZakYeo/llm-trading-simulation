@@ -49,6 +49,7 @@ describe('GameController', () => {
     const controller = new GameController(
       createGameSessionUseCase as never,
       getGameSessionUseCase as never,
+      { execute: vi.fn() } as never,
       depositToBankUseCase as never,
       withdrawFromBankUseCase as never,
       transferFundsUseCase as never,
@@ -115,6 +116,7 @@ describe('GameController', () => {
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
+      { execute: vi.fn() } as never,
     );
 
     await expect(
@@ -137,6 +139,7 @@ describe('GameController', () => {
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
+      { execute: vi.fn() } as never,
     );
 
     const result = await controller.getSession('game-1');
@@ -146,6 +149,29 @@ describe('GameController', () => {
     });
     expect(result.id).toBe('game-1');
     expect(result.agents).toHaveLength(2);
+  });
+
+  it('routes round advancement through a validated request payload', async () => {
+    const advanceGameRoundUseCase = {
+      execute: vi.fn().mockResolvedValue(createSessionFixture()),
+    };
+    const controller = new GameController(
+      { execute: vi.fn() } as never,
+      { execute: vi.fn() } as never,
+      advanceGameRoundUseCase as never,
+      { execute: vi.fn() } as never,
+      { execute: vi.fn() } as never,
+      { execute: vi.fn() } as never,
+    );
+
+    await controller.advanceRound('game-1', {
+      interestRateBps: 250,
+    });
+
+    expect(advanceGameRoundUseCase.execute).toHaveBeenCalledWith({
+      gameSessionId: 'game-1',
+      interestRateBps: 250,
+    });
   });
 
   it('routes deposits, withdrawals, and transfers through validated request payloads', async () => {
@@ -159,6 +185,7 @@ describe('GameController', () => {
       execute: vi.fn().mockResolvedValue(createSessionFixture()),
     };
     const controller = new GameController(
+      { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       depositToBankUseCase as never,
@@ -199,17 +226,24 @@ describe('GameController', () => {
   });
 
   it('rejects invalid deposit, withdraw, and transfer payloads before calling use cases', async () => {
+    const advanceGameRoundUseCase = { execute: vi.fn() };
     const depositToBankUseCase = { execute: vi.fn() };
     const withdrawFromBankUseCase = { execute: vi.fn() };
     const transferFundsUseCase = { execute: vi.fn() };
     const controller = new GameController(
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
+      advanceGameRoundUseCase as never,
       depositToBankUseCase as never,
       withdrawFromBankUseCase as never,
       transferFundsUseCase as never,
     );
 
+    await expect(
+      controller.advanceRound('game-1', {
+        interestRateBps: -1,
+      }),
+    ).rejects.toBeInstanceOf(ZodError);
     await expect(
       controller.depositToBank('game-1', {
         agentId: '',
@@ -230,6 +264,7 @@ describe('GameController', () => {
       }),
     ).rejects.toBeInstanceOf(ZodError);
 
+    expect(advanceGameRoundUseCase.execute).not.toHaveBeenCalled();
     expect(depositToBankUseCase.execute).not.toHaveBeenCalled();
     expect(withdrawFromBankUseCase.execute).not.toHaveBeenCalled();
     expect(transferFundsUseCase.execute).not.toHaveBeenCalled();

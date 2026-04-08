@@ -144,6 +144,84 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
     expect(finalTrader?.availableBalance).toBe('85.0000');
   });
 
+  it('advances a round and accrues interest through the HTTP boundary', async () => {
+    const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'HTTP Round Table',
+        initialBalance: '100.0000',
+        agents: [
+          { name: 'Banker Bot', role: 'banker' },
+          { name: 'Analyst Bot', role: 'analyst' },
+          { name: 'Lawyer Bot', role: 'lawyer' },
+          { name: 'Influencer Bot', role: 'influencer' },
+          { name: 'Trader Bot', role: 'trader' },
+        ],
+      }),
+    });
+    const createdSession = (await createResponse.json()) as {
+      id: string;
+      currentRound: number;
+      status: string;
+      agents: Array<{
+        id: string;
+        role: string;
+        depositPrincipal: string;
+        depositAccruedInterest: string;
+      }>;
+    };
+
+    const banker = createdSession.agents.find(
+      (agent) => agent.role === 'banker',
+    );
+
+    expect(createResponse.status).toBe(201);
+    expect(banker).toBeDefined();
+
+    const depositResponse = await fetch(
+      `${baseUrl}/api/game/sessions/${createdSession.id}/deposit`,
+      {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          agentId: banker!.id,
+          amount: '40.0000',
+        }),
+      },
+    );
+
+    expect(depositResponse.status).toBe(200);
+
+    const advanceResponse = await fetch(
+      `${baseUrl}/api/game/sessions/${createdSession.id}/rounds/advance`,
+      {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          interestRateBps: 250,
+        }),
+      },
+    );
+    const advancedSession =
+      (await advanceResponse.json()) as typeof createdSession;
+    const advancedBanker = advancedSession.agents.find(
+      (agent) => agent.id === banker!.id,
+    );
+
+    expect(advanceResponse.status).toBe(200);
+    expect(advancedSession.status).toBe('active');
+    expect(advancedSession.currentRound).toBe(1);
+    expect(advancedBanker?.depositPrincipal).toBe('40.0000');
+    expect(advancedBanker?.depositAccruedInterest).toBe('1.0000');
+  });
+
   it('returns 400 for invalid request payloads', async () => {
     const response = await fetch(`${baseUrl}/api/game/sessions`, {
       method: 'POST',
@@ -166,6 +244,48 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
     expect(body.statusCode).toBe(400);
     expect(body.message).toBe('Request validation failed.');
     expect(body.details.length).toBeGreaterThan(0);
+  });
+
+  it('returns 400 for an invalid round advancement payload', async () => {
+    const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'HTTP Invalid Round Table',
+        initialBalance: '100.0000',
+        agents: [
+          { name: 'Banker Bot', role: 'banker' },
+          { name: 'Analyst Bot', role: 'analyst' },
+          { name: 'Lawyer Bot', role: 'lawyer' },
+          { name: 'Influencer Bot', role: 'influencer' },
+          { name: 'Trader Bot', role: 'trader' },
+        ],
+      }),
+    });
+    const createdSession = (await createResponse.json()) as { id: string };
+
+    const response = await fetch(
+      `${baseUrl}/api/game/sessions/${createdSession.id}/rounds/advance`,
+      {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          interestRateBps: -1,
+        }),
+      },
+    );
+    const body = (await response.json()) as {
+      statusCode: number;
+      message: string;
+    };
+
+    expect(response.status).toBe(400);
+    expect(body.statusCode).toBe(400);
+    expect(body.message).toBe('Request validation failed.');
   });
 
   it('returns 404 when a session is not found', async () => {

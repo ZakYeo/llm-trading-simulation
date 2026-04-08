@@ -57,4 +57,20 @@ export class GameSession {
       agents,
     });
   }
+
+  advanceRound(): GameSession {
+    if (this.status !== 'setup' && this.status !== 'active') {
+      throw new DomainInvariantError(
+        'Only setup or active game sessions can advance rounds.',
+      );
+    }
+
+    return new GameSession({
+      id: this.id,
+      name: this.name,
+      status: 'active',
+      currentRound: this.currentRound + 1,
+      agents: this.agents,
+    });
+  }
 }

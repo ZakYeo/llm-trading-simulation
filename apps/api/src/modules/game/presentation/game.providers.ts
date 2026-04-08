@@ -3,6 +3,7 @@ import { LedgerService } from '../domain/services/ledger.service.js';
 import type { GameSessionRepositoryPort } from '../application/ports/game-session-repository.port.js';
 import { PrismaGameSessionRepository } from '../infrastructure/prisma/prisma-game-session.repository.js';
 import type { PrismaClientLike } from '../infrastructure/prisma/game-session-prisma.contracts.js';
+import { AdvanceGameRoundUseCase } from '../application/use-cases/advance-game-round.use-case.js';
 import { CreateGameSessionUseCase } from '../application/use-cases/create-game-session.use-case.js';
 import { DepositToBankUseCase } from '../application/use-cases/deposit-to-bank.use-case.js';
 import { GetGameSessionUseCase } from '../application/use-cases/get-game-session.use-case.js';
@@ -44,6 +45,14 @@ export function createGameProviders() {
       useFactory: (repository: GameSessionRepositoryPort) =>
         new GetGameSessionUseCase(repository),
       inject: [GAME_SESSION_REPOSITORY],
+    },
+    {
+      provide: AdvanceGameRoundUseCase,
+      useFactory: (
+        repository: GameSessionRepositoryPort,
+        ledgerService: LedgerService,
+      ) => new AdvanceGameRoundUseCase(repository, ledgerService),
+      inject: [GAME_SESSION_REPOSITORY, LedgerService],
     },
     {
       provide: DepositToBankUseCase,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { AdvanceGameRoundUseCase } from '../application/use-cases/advance-game-round.use-case.js';
 import { CreateGameSessionUseCase } from '../application/use-cases/create-game-session.use-case.js';
 import { DepositToBankUseCase } from '../application/use-cases/deposit-to-bank.use-case.js';
 import { GetGameSessionUseCase } from '../application/use-cases/get-game-session.use-case.js';
@@ -36,7 +37,7 @@ describe('createGameProviders', () => {
   it('registers the expected infrastructure and use-case providers', () => {
     const providers = createGameProviders();
 
-    expect(providers).toHaveLength(9);
+    expect(providers).toHaveLength(10);
     expect(providers[0]).toBe(PrismaService);
     expect(providers[1]).toBe(LedgerService);
     expect(providers[2]).toMatchObject({
@@ -56,14 +57,18 @@ describe('createGameProviders', () => {
       inject: [GAME_SESSION_REPOSITORY],
     });
     expect(providers[6]).toMatchObject({
-      provide: DepositToBankUseCase,
+      provide: AdvanceGameRoundUseCase,
       inject: [GAME_SESSION_REPOSITORY, LedgerService],
     });
     expect(providers[7]).toMatchObject({
-      provide: WithdrawFromBankUseCase,
+      provide: DepositToBankUseCase,
       inject: [GAME_SESSION_REPOSITORY, LedgerService],
     });
     expect(providers[8]).toMatchObject({
+      provide: WithdrawFromBankUseCase,
+      inject: [GAME_SESSION_REPOSITORY, LedgerService],
+    });
+    expect(providers[9]).toMatchObject({
       provide: TransferFundsUseCase,
       inject: [GAME_SESSION_REPOSITORY, LedgerService],
     });
@@ -74,9 +79,10 @@ describe('createGameProviders', () => {
     const repositoryProvider = expectFactoryProvider(providers[2]);
     const createSessionProvider = expectFactoryProvider(providers[4]);
     const getSessionProvider = expectFactoryProvider(providers[5]);
-    const depositProvider = expectFactoryProvider(providers[6]);
-    const withdrawProvider = expectFactoryProvider(providers[7]);
-    const transferProvider = expectFactoryProvider(providers[8]);
+    const advanceRoundProvider = expectFactoryProvider(providers[6]);
+    const depositProvider = expectFactoryProvider(providers[7]);
+    const withdrawProvider = expectFactoryProvider(providers[8]);
+    const transferProvider = expectFactoryProvider(providers[9]);
 
     const prismaService = {} as PrismaService;
     const repository = repositoryProvider.useFactory(prismaService);
@@ -90,6 +96,9 @@ describe('createGameProviders', () => {
     expect(getSessionProvider.useFactory(repository)).toBeInstanceOf(
       GetGameSessionUseCase,
     );
+    expect(
+      advanceRoundProvider.useFactory(repository, ledgerService),
+    ).toBeInstanceOf(AdvanceGameRoundUseCase);
     expect(
       depositProvider.useFactory(repository, ledgerService),
     ).toBeInstanceOf(DepositToBankUseCase);

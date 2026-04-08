@@ -13,6 +13,7 @@ Quality status:
 - Prisma migration and test database bootstrap flow now exist
 - real Postgres-backed integration coverage now exists for repository persistence and the main create-session -> transfer -> deposit -> withdraw -> read-state backend flow
 - real Postgres-backed HTTP integration coverage now exists for create, read, transfer, deposit, and withdraw through the live Nest app boundary
+- round advancement with interest accrual is now implemented and covered through unit, Postgres-backed integration, and HTTP integration tests
 
 Readiness assessment:
 
@@ -42,12 +43,13 @@ Completed this session:
 - fixed the Prisma session repository write path so repeated aggregate saves succeed against a real database
 - added shared Nest app bootstrap configuration plus HTTP exception mapping for Zod and domain errors
 - added Postgres-backed HTTP integration tests for the game endpoints
+- added round advancement and interest-accrual application behavior plus validated API coverage
 
 Immediate next steps:
 
-- add interest accrual and round-oriented application services
 - add durable ledger/event persistence instead of only aggregate snapshot rewrites
-- add one end-to-end backend happy path that includes round progression and interest accrual
+- add durable round history persistence instead of only incrementing `currentRound`
+- add one end-to-end backend happy path that includes round progression, interest accrual, and persisted replayable history
 - add migration/bootstrap documentation and make integration test setup friction-free for future contributors
 
 Execution guidance for code quality
@@ -72,6 +74,7 @@ Needs improvement next:
 
 - no domain events, replay records, or round engine yet
 - repository persistence currently rewrites session snapshots and does not yet store ledger history records
+- round progression exists, but there is still no durable round-history model wired through the application layer
 - no idempotency handling yet
 - no agent-to-agent integration tests yet
 - Docker runtime exists, but it still uses dev-mode web serving and no container-level automated smoke test
