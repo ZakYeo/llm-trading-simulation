@@ -5,6 +5,12 @@ Execution tracker
 Current phase: Phase 1 — Domain model and core ledger
 Status: in progress
 
+Quality status:
+
+- green workspace on `lint`, `test`, `typecheck`, and `build`
+- unit tests cover money, ledger, session creation, bank mutations, transfers, and Prisma mapping/repository adapters
+- main remaining quality gap is lack of real database-backed integration tests and NestJS wiring coverage
+
 Completed this session:
 
 - created pnpm workspace root, shared tsconfig, eslint, prettier, and husky scaffolding
@@ -14,12 +20,41 @@ Completed this session:
 - added initial Prisma schema and Docker Compose Postgres setup
 - installed workspace dependencies and fixed the local `pnpm` execution path via `corepack`
 - implemented initial money, balance, deposit-account, and ledger domain primitives with tests
+- added game session creation, deposit, withdrawal, and transfer application use cases
+- added Prisma mapper and repository adapter coverage for game sessions
+- tightened MVP invariants so sessions require the five core roles and transfers reject self-transfer
 
 Immediate next steps:
 
-- expand Phase 1 from domain primitives into repository ports and Prisma-backed persistence
-- model transfers, deposits, withdrawals, and round records in Prisma
-- add application services for creating games and mutating balances through the ledger
+- add real Prisma/NestJS infrastructure wiring instead of adapter-only tests
+- add integration tests against a real test database for repository and use-case flows
+- add interest accrual and round-oriented application services
+- add API boundary validation with Zod for request DTOs before exposing mutation endpoints
+
+Execution guidance for code quality
+
+Always prefer:
+
+- one small vertical slice at a time
+- tests added before or alongside each behavior change
+- commit only after `corepack pnpm lint`, `corepack pnpm test`, `corepack pnpm typecheck`, and `corepack pnpm build` all pass
+- new persistence work behind ports and mappers, never leaking Prisma types into domain/application code
+- explicit invariant checks for money movement, session composition, and action legality
+
+Current architecture assessment
+
+Working well:
+
+- domain logic is still framework-light
+- money movement rules are centralized in the ledger and account aggregates
+- Prisma is isolated behind a repository port and mapper
+
+Needs improvement next:
+
+- no real Prisma client integration in Nest modules yet
+- no migration files or repository integration tests yet
+- no domain events, replay records, or round engine yet
+- no API mutation layer, request validation, or idempotency handling yet
 
 Project concept
 

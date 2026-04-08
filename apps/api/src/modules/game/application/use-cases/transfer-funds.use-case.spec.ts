@@ -99,4 +99,35 @@ describe('TransferFundsUseCase', () => {
       }),
     ).rejects.toThrow(DomainInvariantError);
   });
+
+  it('fails when source and destination are the same agent', async () => {
+    const repository = new InMemoryGameSessionRepository(
+      new GameSession({
+        id: 'game-1',
+        name: 'Treasury Table',
+        status: 'setup',
+        currentRound: 0,
+        agents: [
+          new GameAgent({
+            id: 'agent-1',
+            name: 'Trader Bot',
+            role: 'trader',
+            balance: AccountBalance.open(Money.fromDecimal('100.0000')),
+            depositAccount: DepositAccount.open(),
+          }),
+        ],
+      }),
+    );
+
+    const useCase = new TransferFundsUseCase(repository, new LedgerService());
+
+    await expect(
+      useCase.execute({
+        gameSessionId: 'game-1',
+        sourceAgentId: 'agent-1',
+        destinationAgentId: 'agent-1',
+        amount: '10.0000',
+      }),
+    ).rejects.toThrow(DomainInvariantError);
+  });
 });

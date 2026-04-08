@@ -34,6 +34,13 @@ export class GameSession {
       );
     }
 
+    if (
+      new Set(props.agents.map((agent) => agent.id)).size !==
+      props.agents.length
+    ) {
+      throw new DomainInvariantError('Game session agent ids must be unique.');
+    }
+
     this.id = props.id;
     this.name = props.name;
     this.status = props.status;

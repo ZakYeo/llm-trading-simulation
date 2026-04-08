@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { AgentRole } from '@llm-sim/shared-types';
 
 import type { IdGeneratorPort } from '../../../shared/application/ports/id-generator.port.js';
+import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import type { GameSession } from '../../domain/entities/game-session.js';
 import type { GameSessionRepositoryPort } from '../ports/game-session-repository.port.js';
 import { CreateGameSessionUseCase } from './create-game-session.use-case.js';
@@ -37,6 +38,14 @@ class SequenceIdGenerator implements IdGeneratorPort {
 }
 
 describe('CreateGameSessionUseCase', () => {
+  const agentRoles: AgentRole[] = [
+    'banker',
+    'analyst',
+    'lawyer',
+    'influencer',
+    'trader',
+  ];
+
   it('creates a setup game session with funded agents and empty deposit accounts', async () => {
     const repository = new InMemoryGameSessionRepository();
     const idGenerator = new SequenceIdGenerator([
@@ -49,13 +58,6 @@ describe('CreateGameSessionUseCase', () => {
     ]);
 
     const useCase = new CreateGameSessionUseCase(repository, idGenerator);
-    const agentRoles: AgentRole[] = [
-      'banker',
-      'analyst',
-      'lawyer',
-      'influencer',
-      'trader',
-    ];
 
     const session = await useCase.execute({
       name: 'Founders Table',
@@ -123,5 +125,45 @@ describe('CreateGameSessionUseCase', () => {
     ]);
     expect(repository.saved).toHaveLength(1);
     expect(repository.saved[0]).toBe(session);
+  });
+
+  it('rejects sessions that do not contain the five MVP roles exactly once', async () => {
+    const repository = new InMemoryGameSessionRepository();
+    const idGenerator = new SequenceIdGenerator([
+      'agent-1',
+      'agent-2',
+      'agent-3',
+      'agent-4',
+      'game-1',
+    ]);
+    const useCase = new CreateGameSessionUseCase(repository, idGenerator);
+
+    await expect(
+      useCase.execute({
+        name: 'Broken Table',
+        initialBalance: '100.0000',
+        agents: agentRoles.slice(0, 4).map((role, index) => ({
+          name: `Agent ${index + 1}`,
+          role,
+        })),
+      }),
+    ).rejects.toThrow(DomainInvariantError);
+  });
+
+  it('rejects non-positive initial balances', async () => {
+    const repository = new InMemoryGameSessionRepository();
+    const idGenerator = new SequenceIdGenerator(['unused-id']);
+    const useCase = new CreateGameSessionUseCase(repository, idGenerator);
+
+    await expect(
+      useCase.execute({
+        name: 'Zero Table',
+        initialBalance: '0.0000',
+        agents: agentRoles.map((role, index) => ({
+          name: `Agent ${index + 1}`,
+          role,
+        })),
+      }),
+    ).rejects.toThrow(DomainInvariantError);
   });
 });

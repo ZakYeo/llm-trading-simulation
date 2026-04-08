@@ -36,6 +36,12 @@ export class TransferFundsUseCase {
       );
     }
 
+    if (sourceAgent.id === destinationAgent.id) {
+      throw new DomainInvariantError(
+        'Source and destination agents must be different.',
+      );
+    }
+
     const updatedBalances = this.ledgerService.transfer(
       sourceAgent.balance,
       destinationAgent.balance,

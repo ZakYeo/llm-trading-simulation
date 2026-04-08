@@ -1,3 +1,4 @@
+import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import type { AgentRole } from '@llm-sim/shared-types';
 
 import type { DepositAccount } from '../../../bank/domain/entities/deposit-account.js';
@@ -19,6 +20,10 @@ export class GameAgent {
   readonly depositAccount: DepositAccount;
 
   constructor(props: GameAgentProps) {
+    if (props.name.trim().length === 0) {
+      throw new DomainInvariantError('Agent name is required.');
+    }
+
     this.id = props.id;
     this.name = props.name;
     this.role = props.role;
