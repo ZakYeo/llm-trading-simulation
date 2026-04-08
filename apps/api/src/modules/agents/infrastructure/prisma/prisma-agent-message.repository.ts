@@ -1,8 +1,8 @@
-import type { PrismaClient } from '@prisma/client';
 import type {
   AgentMessageRecord,
   AgentMessageRepositoryPort,
 } from '../../application/ports/agent-message-repository.port.js';
+import type { PrismaClient } from '../../../shared/infrastructure/prisma/prisma-client.js';
 
 interface PrismaAgentMessageRecord {
   id: string;

@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { PrismaClient } from '@prisma/client';
 
 import { AdvanceGameRoundUseCase } from './advance-game-round.use-case.js';
 import { DepositToBankUseCase } from './deposit-to-bank.use-case.js';
@@ -7,6 +6,10 @@ import { GetGameSessionUseCase } from './get-game-session.use-case.js';
 import { TransferFundsUseCase } from './transfer-funds.use-case.js';
 import { WithdrawFromBankUseCase } from './withdraw-from-bank.use-case.js';
 import { RandomIdGenerator } from '../../../shared/infrastructure/id/random-id-generator.js';
+import {
+  type PrismaClient,
+  createPrismaClient,
+} from '../../../shared/infrastructure/prisma/prisma-client.js';
 import { LedgerService } from '../../domain/services/ledger.service.js';
 import type { PrismaClientLike } from '../../infrastructure/prisma/game-session-prisma.contracts.js';
 import { PrismaGameSessionRepository } from '../../infrastructure/prisma/prisma-game-session.repository.js';
@@ -24,13 +27,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Game money flows integration', () => {
   let transferFundsUseCase: TransferFundsUseCase;
 
   beforeAll(async () => {
-    prisma = new PrismaClient({
-      datasources: {
-        db: {
-          url: testDatabaseUrl,
-        },
-      },
-    });
+    prisma = createPrismaClient(testDatabaseUrl);
 
     const repository = new PrismaGameSessionRepository(
       prisma as unknown as PrismaClientLike,

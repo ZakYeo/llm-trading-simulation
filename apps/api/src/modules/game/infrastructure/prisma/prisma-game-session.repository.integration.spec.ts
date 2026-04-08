@@ -1,8 +1,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { PrismaClient } from '@prisma/client';
 
 import { DepositAccount } from '../../../bank/domain/entities/deposit-account.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
+import {
+  type PrismaClient,
+  createPrismaClient,
+} from '../../../shared/infrastructure/prisma/prisma-client.js';
 import { AccountBalance } from '../../domain/entities/account-balance.js';
 import { GameAgent } from '../../domain/entities/game-agent.js';
 import { GameSession } from '../../domain/entities/game-session.js';
@@ -18,13 +21,7 @@ describe.runIf(Boolean(testDatabaseUrl))(
     let repository: PrismaGameSessionRepository;
 
     beforeAll(async () => {
-      prisma = new PrismaClient({
-        datasources: {
-          db: {
-            url: testDatabaseUrl,
-          },
-        },
-      });
+      prisma = createPrismaClient(testDatabaseUrl);
       repository = new PrismaGameSessionRepository(
         prisma as unknown as PrismaClientLike,
       );

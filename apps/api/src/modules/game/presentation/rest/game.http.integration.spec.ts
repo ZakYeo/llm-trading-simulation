@@ -144,6 +144,25 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
     expect(finalTrader?.availableBalance).toBe('85.0000');
   });
 
+  it('responds to CORS preflight requests for session creation', async () => {
+    const response = await fetch(`${baseUrl}/api/game/sessions`, {
+      method: 'OPTIONS',
+      headers: {
+        origin: 'http://localhost:5173',
+        'access-control-request-method': 'POST',
+        'access-control-request-headers': 'content-type',
+      },
+    });
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get('access-control-allow-origin')).toBe(
+      'http://localhost:5173',
+    );
+    expect(response.headers.get('access-control-allow-methods')).toContain(
+      'POST',
+    );
+  });
+
   it('advances a round and accrues interest through the HTTP boundary', async () => {
     const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
       method: 'POST',

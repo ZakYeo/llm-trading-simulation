@@ -1,9 +1,8 @@
-import type { PrismaClient } from '@prisma/client';
-
 import type {
   AgentActionRecord,
   AgentActionRepositoryPort,
 } from '../../application/ports/agent-action-repository.port.js';
+import type { PrismaClient } from '../../../shared/infrastructure/prisma/prisma-client.js';
 
 function toPrismaActionType(
   actionType: AgentActionRecord['actionType'],

@@ -3,7 +3,7 @@ import type {
   ReplayEventRecord,
   ReplayReadModelPort,
 } from '../../application/ports/replay-read-model.port.js';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '../../../shared/infrastructure/prisma/prisma-client.js';
 
 interface ReplaySessionRecord {
   id: string;

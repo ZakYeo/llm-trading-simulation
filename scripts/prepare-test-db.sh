@@ -12,8 +12,7 @@ WHERE NOT EXISTS (
 )\gexec
 SQL
 
-DATABASE_URL="$TEST_DATABASE_URL" corepack pnpm --filter @llm-sim/api exec prisma migrate reset --force --skip-generate --skip-seed --schema prisma/schema.prisma >/dev/null
-DATABASE_URL="$TEST_DATABASE_URL" corepack pnpm --filter @llm-sim/api exec prisma generate --schema prisma/schema.prisma >/dev/null
+DATABASE_URL="$TEST_DATABASE_URL" corepack pnpm --filter @llm-sim/api exec prisma migrate reset --force >/dev/null
+DATABASE_URL="$TEST_DATABASE_URL" corepack pnpm --filter @llm-sim/api exec prisma generate >/dev/null
 
 printf 'Prepared test database: %s\n' "$TEST_DATABASE_URL"
-

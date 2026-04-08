@@ -6,6 +6,10 @@ import { HttpErrorFilter } from './modules/shared/presentation/filters/http-erro
 
 export function configureApp(app: INestApplication): INestApplication {
   app.setGlobalPrefix('api');
+  app.enableCors({
+    origin: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  });
   app.useGlobalFilters(new HttpErrorFilter());
 
   return app;
