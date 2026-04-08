@@ -25,9 +25,10 @@ Quality status:
 - counter-proposals now exist as a first negotiation-deepening primitive, with accepted counters resolving through the same validated transfer path
 - rejected transfer proposals are covered and remain replay-visible without mutating balances
 - OpenAI is now wired behind an `AgentGatewayPort`, with mock runtime selection available for deterministic tests
-- a gated live OpenAI integration test now exists for the agents orchestration HTTP path, now running against `gpt-4.1-mini` with incentive-based prompting and per-agent reasoning logs
+- a gated live OpenAI integration test now exists for the agents orchestration HTTP path, now running against `gpt-4.1-mini` with incentive-based prompting, per-agent reasoning logs, and repeated short-run confidence checks
 - live-provider runs now demonstrate real non-passive interaction with clearer role separation: banker/trader handle most bilateral negotiation while analyst/lawyer/influencer mostly stay public
-- live-provider runs now sometimes produce valid proposal and acceptance actions, but structured execution is still not reliable enough to expect every run
+- negotiation-state cues now help banker/trader convert bilateral discussion into executable proposal/acceptance actions earlier in the round
+- live-provider runs now produce valid proposal and acceptance actions often enough to pass repeated confidence checks, but the behavior remains non-deterministic
 
 Readiness assessment:
 
@@ -82,12 +83,14 @@ Completed this session:
 - added logging of each live-provider agent decision and short reasoning for debugging and evaluation
 - enriched the live-provider context with economic semantics, actionable proposals for the current agent, and clearer descriptions of what each action does
 - refined role-level prompting so banker/trader are the main capital negotiators while analyst/lawyer/influencer bias toward public information leverage
+- added negotiation-state cues so banker/trader know when conversation is still exploratory versus ready for an executable transfer proposal
+- upgraded the live-provider integration from a single-run smoke test to a repeated short-run confidence test
 
 Immediate next steps:
 
-- improve action semantics so structured economic actions are easier for the live provider to distinguish from generic messages
-- improve context richness so agents see clearer incentives, leverage, and when banker/trader should convert agreed terms into executable actions
-- strengthen the gated live OpenAI test so it detects economically substantive interaction more robustly across runs without forcing a particular action type
+- decide whether the MVP should refresh capital state between agents within a turn, not just between turns
+- continue refining prompt/context behavior before adding hard execution constraints
+- keep the repeated live confidence test healthy and use stronger-model comparisons selectively instead of changing runtime defaults prematurely
 - keep deterministic mock tests as the main regression suite while the live-provider path remains a targeted confidence check
 - keep frontend integration deferred until backend communication and replay become richer
 - only after that, split the current in-process contract into true MCP-facing agent boundaries
@@ -118,7 +121,7 @@ Needs improvement next:
 - multi-turn state-mutation integration exists for direct transfer proposals and counter-offers, but not yet for broader negotiation patterns
 - Docker runtime exists, but it still uses dev-mode web serving and no container-level automated smoke test
 - no prompt factory, generalized negotiation engine, or settlement layer beyond direct transfer proposal resolution yet
-- live-provider context is stronger now, but still not decisive enough to make structured execution reliable across runs
+- live-provider context is stronger now and good enough for repeated confidence checks, but multi-agent capital state is still only refreshed between turns, not within the turn after each agent acts
 
 What counts as “real working and testable” now
 
@@ -131,9 +134,9 @@ What counts as “real working and testable” now
 
 Recommended next slice
 
-- clarify action semantics in the live-provider prompt/context so `send_private_message` is treated as conversation and proposal actions are treated as executable economic moves
-- enrich the agent turn context further with compact negotiation-state cues so banker/trader know when conversation has matured into an executable deal
-- raise the live-provider test bar from "not all finalize" toward "economically substantive interaction happened" across repeated runs without requiring one exact action type
+- evaluate whether turn-by-turn capital refresh is sufficient for the MVP or whether later agents within a turn also need refreshed balance state
+- keep prompt/context changes ahead of hard constraints, since recent live comparisons show model choice changes behavior significantly
+- retain the repeated live confidence test as the main real-provider check and expand it only when runtime cost remains acceptable
 - keep agent-to-agent integration coverage for both accepted and rejected proposals as the deterministic baseline for future negotiation primitives
 - retain replay fidelity so proposal, response, settlement, and model reasoning remain auditable
 
