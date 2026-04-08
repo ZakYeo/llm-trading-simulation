@@ -55,7 +55,9 @@ Current backend quality notes:
 - the OpenAI key is now usable through the backend agent gateway when `AGENT_RUNTIME_PROVIDER` is not set to `mock`
 - a gated live OpenAI integration test now exists for the agents HTTP orchestration path; it encourages and detects meaningful interaction when it occurs, while remaining a smoke path because provider behavior is still non-deterministic
 - the live OpenAI path now produces real non-passive interaction under incentive-based prompting and logs each agent decision plus short reasoning
-- the live provider still tends to express negotiation through messages more readily than through structured proposal/settlement actions
+- richer economic context and clearer action semantics now help the live provider occasionally convert banker/trader discussion into valid proposal and acceptance actions
+- role-level prompting now keeps banker/trader as the primary bilateral capital negotiators, while analyst/lawyer/influencer lean more heavily toward public signaling
+- the live provider is still non-deterministic, so structured proposal/settlement actions appear sometimes rather than reliably every run
 - there is still no standalone MCP server runtime, generalized negotiation engine, or broad settlement workflow beyond direct transfer proposals yet
 
 ## Workspace
@@ -104,7 +106,7 @@ Live OpenAI integration test:
 2. Ensure Docker Postgres is running
 3. `ENABLE_OPENAI_LIVE_TESTS=1 OPENAI_MODEL="gpt-4.1-mini" TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/llm_trading_simulation_test?schema=public" corepack pnpm --filter @llm-sim/api exec vitest run --config vitest.integration.config.ts src/modules/agents/presentation/rest/agents.openai.integration.spec.ts`
 
-The live test calls the real OpenAI API and is intentionally gated behind `ENABLE_OPENAI_LIVE_TESTS=1` so normal integration runs stay deterministic and do not incur model usage. It currently verifies that a 4-turn live run does not collapse into all `finalize_turn` actions, and the gateway logs each agent decision and short reasoning for inspection.
+The live test calls the real OpenAI API and is intentionally gated behind `ENABLE_OPENAI_LIVE_TESTS=1` so normal integration runs stay deterministic and do not incur model usage. It currently verifies that a 4-turn live run does not collapse into all `finalize_turn` actions, that banker/trader participate in substantive interaction, and that the gateway logs each agent decision and short reasoning for inspection.
 
 ## Docker
 
@@ -130,7 +132,7 @@ Run these before committing:
 ## Immediate next work
 
 1. Improve action semantics so the live provider more naturally chooses structured economic actions when they are the highest-value move.
-2. Improve context richness so agents see clearer economic incentives, current leverage, and why a structured action changes state more than another message.
-3. Strengthen the gated live-provider test without forcing a specific move, so it detects economically substantive interaction rather than just non-finalization.
+2. Improve context richness so agents see clearer economic incentives, current leverage, and when banker/trader should move from discussion into executable transfer actions.
+3. Strengthen the gated live-provider test further without forcing a specific move, so it detects economically substantive interaction more robustly across runs.
 4. Keep deterministic mock tests as the main regression suite and treat the live provider path as a targeted confidence check.
 5. Keep frontend integration deferred until backend communication and replay become richer.
