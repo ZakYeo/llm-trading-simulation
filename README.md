@@ -53,6 +53,7 @@ Current backend quality notes:
 - accepted transfer proposals now result in real persisted balance mutations, not just replay-only intents
 - rejected transfer proposals are now covered too and leave balances unchanged while remaining replay-visible
 - the OpenAI key is now usable through the backend agent gateway when `AGENT_RUNTIME_PROVIDER` is not set to `mock`
+- a gated live OpenAI integration test now exists for the agents HTTP orchestration path
 - there is still no standalone MCP server runtime, generalized negotiation engine, or broad settlement workflow beyond direct transfer proposals yet
 
 ## Workspace
@@ -93,6 +94,14 @@ Test database:
 3. `TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/llm_trading_simulation_test?schema=public" corepack pnpm --filter @llm-sim/api test:integration`
 
 Integration tests currently run with file parallelism disabled because they share a single Postgres test database.
+
+Live OpenAI integration test:
+
+1. Ensure `.env` contains `OPENAI_API_KEY`
+2. Ensure Docker Postgres is running
+3. `ENABLE_OPENAI_LIVE_TESTS=1 TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/llm_trading_simulation_test?schema=public" corepack pnpm --filter @llm-sim/api test:integration`
+
+The live test calls the real OpenAI API and is intentionally gated behind `ENABLE_OPENAI_LIVE_TESTS=1` so normal integration runs stay deterministic and do not incur model usage.
 
 ## Docker
 

@@ -32,6 +32,8 @@ export function createAgentsProviders() {
             apiKey: process.env.OPENAI_API_KEY,
           }),
           process.env.OPENAI_MODEL ?? 'gpt-5.2',
+          process.env.OPENAI_AGENT_SYSTEM_PROMPT,
+          process.env.OPENAI_AGENT_STRICT_MODE === '1',
         );
       },
     },

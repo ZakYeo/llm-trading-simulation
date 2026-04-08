@@ -22,6 +22,7 @@ Quality status:
 - accepted transfer proposals now resolve into real transfer mutations through the existing game flow
 - rejected transfer proposals are covered and remain replay-visible without mutating balances
 - OpenAI is now wired behind an `AgentGatewayPort`, with mock runtime selection available for deterministic tests
+- a gated live OpenAI integration test now exists for the agents orchestration HTTP path
 
 Readiness assessment:
 
@@ -68,12 +69,14 @@ Completed this session:
 - resolved accepted direct-transfer proposals through the existing validated transfer use case
 - added replay and HTTP integration coverage proving proposal -> acceptance -> persisted transfer state changes
 - added rejected-proposal coverage plus duplicate-resolution safeguards in unit and HTTP integration tests
+- added a gated real-OpenAI integration test that exercises the live agents orchestration path against the HTTP app boundary
 
 Immediate next steps:
 
 - extend the negotiation vocabulary beyond direct transfer proposals into richer primitives
 - add explicit lifecycle semantics for resolved proposals beyond the current accept/reject pair where needed
 - decide whether proposal resolution should live inside the agent orchestrator or in a dedicated negotiation/settlement application service
+- keep the gated live OpenAI test healthy as the real-provider smoke path while deterministic mock tests remain the main regression suite
 - keep frontend integration deferred until backend communication and replay become richer
 - only after that, split the current in-process contract into true MCP-facing agent boundaries
 
