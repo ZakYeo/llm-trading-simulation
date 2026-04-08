@@ -75,17 +75,73 @@ Current backend quality notes:
 The project roadmap lives in [plan.md](./plan.md) and [steps.md](./steps.md).
 `plan.md` is the source of truth for current priorities and quality gates.
 
-## Local development
+## Setup
 
-1. Copy `.env.example` to `.env` and keep the database/runtime values.
-2. Add `OPENAI_API_KEY` to `.env` if you want to exercise the real OpenAI-backed agent gateway.
-3. Start Postgres with `docker compose up -d`.
-4. Install dependencies with `corepack pnpm install`.
-5. Apply database changes with `corepack pnpm db:migrate:deploy`.
-6. Run the API and frontend with `corepack pnpm dev`.
+### Prerequisites
+
+1. Install Node.js 20+ or 22+.
+2. Enable Corepack and activate pnpm 9.12.3:
+   - `corepack enable`
+   - `corepack prepare pnpm@9.12.3 --activate`
+3. Install Docker and Docker Compose if you want the Postgres or full-stack container flow.
+
+### Environment configuration
+
+1. Copy `.env.example` to `.env`.
+2. Keep the default local database values unless you have a different Postgres instance.
+3. Set `OPENAI_API_KEY` in `.env` if you want to run the real OpenAI-backed agent runtime.
+4. Leave `AGENT_RUNTIME_PROVIDER=openai` for live-provider runs, or switch it to `mock` for deterministic local backend testing.
+5. For local frontend development, the web app reads `VITE_API_BASE_URL`. The default local API URL is `http://localhost:3000/api`.
+
+Example local env shape:
+
+```dotenv
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/llm_trading_simulation?schema=public"
+TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/llm_trading_simulation_test?schema=public"
+PORT=3000
+VITE_API_BASE_URL="http://localhost:3000/api"
+AGENT_RUNTIME_PROVIDER="openai"
+OPENAI_API_KEY=""
+OPENAI_MODEL="gpt-5.2"
+OPENAI_AGENT_SYSTEM_PROMPT=""
+OPENAI_AGENT_STRICT_MODE="0"
+```
+
+### Local backend and frontend
+
+1. Install dependencies with `corepack pnpm install`.
+2. Start Postgres with `docker compose up -d postgres`.
+3. Generate the Prisma client:
+   - `corepack pnpm db:generate`
+4. Apply migrations:
+   - `corepack pnpm db:migrate:deploy`
+5. Start the API and frontend together:
+   - `corepack pnpm dev`
+
+Local app URLs:
+
+- frontend: `http://localhost:5173`
+- API: `http://localhost:3000/api`
+
+### Frontend only
+
+If the API is already running and you only want the React app:
+
+1. Ensure `VITE_API_BASE_URL` points at the API base URL, for example `http://localhost:3000/api`.
+2. Run:
+   - `corepack pnpm --filter @llm-sim/web dev`
+3. Open `http://localhost:5173`
+
+### API only
+
+If you only want the Nest backend:
+
+1. Ensure Postgres is running and `.env` is configured.
+2. Run:
+   - `corepack pnpm --filter @llm-sim/api dev`
 
 For deterministic backend integration tests, use `AGENT_RUNTIME_PROVIDER=mock`.
-For Dockerized manual runs, the API container now uses the real OpenAI provider by default when `OPENAI_API_KEY` is present in `.env`.
+For local OpenAI-backed runs, keep `AGENT_RUNTIME_PROVIDER=openai` and set `OPENAI_API_KEY`.
 
 ## Database bootstrap
 
@@ -112,14 +168,28 @@ The live test calls the real OpenAI API and is intentionally gated behind `ENABL
 
 ## Docker
 
+### Full stack
+
 Run the full stack in isolation with:
 
-1. `corepack pnpm docker:up`
-2. Open the frontend at `http://localhost:5173`
-3. The API is exposed at `http://localhost:3000/api`
+1. Ensure `.env` exists and contains any OpenAI configuration you want the API container to use.
+2. Start the stack:
+   - `corepack pnpm docker:up`
+3. Open:
+   - frontend: `http://localhost:5173`
+   - API: `http://localhost:3000/api`
+4. Stop the stack:
+   - `corepack pnpm docker:down`
 
-This path builds the API and web containers and runs Postgres inside Compose.
-The API container receives `OPENAI_API_KEY`, `OPENAI_MODEL`, and `AGENT_RUNTIME_PROVIDER` from `.env`.
+This builds the API and web containers and runs Postgres inside Compose.
+The API container receives `OPENAI_API_KEY`, `OPENAI_MODEL`, `AGENT_RUNTIME_PROVIDER`, `OPENAI_AGENT_SYSTEM_PROMPT`, and `OPENAI_AGENT_STRICT_MODE` from `.env`.
+
+### Postgres only
+
+If you want Docker only for the database during local development:
+
+1. `docker compose up -d postgres`
+2. Run the API/frontend locally with `corepack pnpm dev`
 
 ## Verification
 
