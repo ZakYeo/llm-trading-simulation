@@ -34,7 +34,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
     delete process.env.AGENT_RUNTIME_PROVIDER;
   });
 
-  it('returns replay-oriented round, ledger, and agent-message history for a game session', async () => {
+  it('returns replay-oriented round, ledger, and agent history for a game session', async () => {
     const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
       method: 'POST',
       headers: {
@@ -107,9 +107,15 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
       },
     );
     await fetch(
-      `${baseUrl}/api/agents/sessions/${createdSession.id}/turns/communicate`,
+      `${baseUrl}/api/agents/sessions/${createdSession.id}/rounds/orchestrate`,
       {
         method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          turnCount: 2,
+        }),
       },
     );
 
@@ -123,6 +129,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
         type: string;
         amount?: string;
         visibility?: string;
+        actionType?: string;
         content?: string;
       }>;
     };
@@ -132,20 +139,29 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
     expect(replay.gameSession.currentRound).toBe(1);
     expect(replay.gameSession.status).toBe('active');
     expect(replay.rounds.map((round) => round.roundNumber)).toEqual([1]);
-    expect(
-      replay.events.filter((event) => event.type !== 'message'),
-    ).toHaveLength(3);
-    expect(
-      replay.events
-        .filter((event) => event.type !== 'message')
-        .map((event) => event.type),
-    ).toEqual(['transfer', 'deposit', 'withdrawal']);
-    expect(
-      replay.events
-        .filter((event) => event.type !== 'message')
-        .map((event) => event.amount),
-    ).toEqual(['15', '20', '5']);
+    const ledgerEvents = replay.events.filter((event) =>
+      ['transfer', 'deposit', 'withdrawal'].includes(event.type),
+    );
+    expect(ledgerEvents).toHaveLength(3);
+    expect(ledgerEvents.map((event) => event.type)).toEqual([
+      'transfer',
+      'deposit',
+      'withdrawal',
+    ]);
+    expect(ledgerEvents.map((event) => event.amount)).toEqual([
+      '15',
+      '20',
+      '5',
+    ]);
     expect(replay.events.some((event) => event.type === 'message')).toBe(true);
+    expect(
+      replay.events.some(
+        (event) =>
+          event.type === 'action' &&
+          event.actionType === 'propose_direct_transfer' &&
+          event.amount === '12.5',
+      ),
+    ).toBe(true);
     expect(
       replay.events.some(
         (event) =>

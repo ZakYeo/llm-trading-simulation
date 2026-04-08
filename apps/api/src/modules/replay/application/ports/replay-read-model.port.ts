@@ -6,10 +6,11 @@ export interface ReplayRoundRecord {
 
 export interface ReplayEventRecord {
   id: string;
-  type: 'transfer' | 'deposit' | 'withdrawal' | 'message';
+  type: 'transfer' | 'deposit' | 'withdrawal' | 'message' | 'action';
   createdAt: string;
   amount?: string;
   roundNumber?: number;
+  turnNumber?: number;
   agentId?: string;
   agentName?: string;
   sourceAgentId?: string;
@@ -22,6 +23,11 @@ export interface ReplayEventRecord {
   recipientAgentName?: string;
   visibility?: 'public' | 'private';
   content?: string;
+  actionType?:
+    | 'send_public_message'
+    | 'send_private_message'
+    | 'propose_direct_transfer'
+    | 'finalize_turn';
 }
 
 export interface GameReplayRecord {

@@ -3,14 +3,14 @@ import type {
   ReplayEventRecord,
   ReplayReadModelPort,
 } from '../../application/ports/replay-read-model.port.js';
-import type { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service.js';
+import type { PrismaClient } from '@prisma/client';
 
 function toAmountString(value: { toString(): string }): string {
   return value.toString();
 }
 
 export class PrismaReplayReadModel implements ReplayReadModelPort {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaClient) {}
 
   async findByGameSessionId(
     gameSessionId: string,
@@ -52,6 +52,14 @@ export class PrismaReplayReadModel implements ReplayReadModelPort {
           include: {
             senderAgent: true,
             recipientAgent: true,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+        agentTurnActions: {
+          include: {
+            agent: true,
           },
           orderBy: {
             createdAt: 'asc',
@@ -100,12 +108,45 @@ export class PrismaReplayReadModel implements ReplayReadModelPort {
           type: 'message' as const,
           createdAt: message.createdAt.toISOString(),
           roundNumber: message.roundNumber,
+          turnNumber: message.turnNumber,
           senderAgentId: message.senderAgentId,
           senderAgentName: message.senderAgent.name,
           recipientAgentId: message.recipientAgentId,
           recipientAgentName: message.recipientAgent?.name,
           visibility,
           content: message.content,
+        };
+      }),
+      ...session.agentTurnActions.map((action) => {
+        let actionType: ReplayEventRecord['actionType'];
+
+        switch (action.actionType) {
+          case 'SEND_PUBLIC_MESSAGE':
+            actionType = 'send_public_message';
+            break;
+          case 'SEND_PRIVATE_MESSAGE':
+            actionType = 'send_private_message';
+            break;
+          case 'PROPOSE_DIRECT_TRANSFER':
+            actionType = 'propose_direct_transfer';
+            break;
+          case 'FINALIZE_TURN':
+            actionType = 'finalize_turn';
+            break;
+        }
+
+        return {
+          id: action.id,
+          type: 'action' as const,
+          createdAt: action.createdAt.toISOString(),
+          roundNumber: action.roundNumber,
+          turnNumber: action.turnNumber,
+          agentId: action.agentId,
+          agentName: action.agent.name,
+          recipientAgentId: action.recipientAgentId,
+          amount: action.amount ? toAmountString(action.amount) : undefined,
+          content: action.content ?? undefined,
+          actionType,
         };
       }),
     ].sort((left, right) => {

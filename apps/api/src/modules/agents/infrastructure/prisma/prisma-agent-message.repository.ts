@@ -1,17 +1,18 @@
-import type { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service.js';
+import type { PrismaClient } from '@prisma/client';
 import type {
   AgentMessageRecord,
   AgentMessageRepositoryPort,
 } from '../../application/ports/agent-message-repository.port.js';
 
 export class PrismaAgentMessageRepository implements AgentMessageRepositoryPort {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaClient) {}
 
   async save(message: AgentMessageRecord): Promise<AgentMessageRecord> {
     const record = await this.prisma.agentMessage.create({
       data: {
         gameSessionId: message.gameSessionId,
         roundNumber: message.roundNumber,
+        turnNumber: message.turnNumber,
         senderAgentId: message.senderAgentId,
         recipientAgentId: message.recipientAgentId,
         visibility: message.visibility === 'public' ? 'PUBLIC' : 'PRIVATE',
@@ -23,6 +24,7 @@ export class PrismaAgentMessageRepository implements AgentMessageRepositoryPort 
       id: record.id,
       gameSessionId: record.gameSessionId,
       roundNumber: record.roundNumber,
+      turnNumber: record.turnNumber,
       senderAgentId: record.senderAgentId,
       recipientAgentId: record.recipientAgentId,
       visibility: record.visibility === 'PUBLIC' ? 'public' : 'private',
@@ -47,6 +49,7 @@ export class PrismaAgentMessageRepository implements AgentMessageRepositoryPort 
       id: record.id,
       gameSessionId: record.gameSessionId,
       roundNumber: record.roundNumber,
+      turnNumber: record.turnNumber,
       senderAgentId: record.senderAgentId,
       recipientAgentId: record.recipientAgentId,
       visibility: record.visibility === 'PUBLIC' ? 'public' : 'private',

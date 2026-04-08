@@ -18,14 +18,15 @@ Quality status:
 - transfer, deposit, and withdrawal actions now persist durable ledger history rows in Postgres
 - replay-oriented read models and API endpoints now exist over stored round and ledger history
 - backend-only agent communication now exists with persisted public/private messages
+- backend-only round orchestration now exists across multiple turns with persisted agent action records
 - OpenAI is now wired behind an `AgentGatewayPort`, with mock runtime selection available for deterministic tests
 
 Readiness assessment:
 
 - close to a real fake-money backend MVP
 - now entering the first backend agent-communication milestone
-- still not yet close to the full MCP multi-agent system with standalone agent servers and multi-turn negotiation
-- OpenAI credentials are now usable through the backend agent gateway, but the current implementation is still a minimal single-turn slice rather than a full agent runtime
+- still not yet close to the full MCP multi-agent system with standalone agent servers and negotiated multi-turn resolution
+- OpenAI credentials are now usable through the backend agent gateway, but the current implementation is still an early orchestration slice rather than a full agent runtime
 
 Completed this session:
 
@@ -58,11 +59,15 @@ Completed this session:
 - added a backend communication-turn use case plus `POST /api/agents/sessions/:id/turns/communicate`
 - added durable agent-message persistence and replay exposure for stored public/private messages
 - added unit and Postgres-backed HTTP integration coverage for the agent communication slice
+- added `POST /api/agents/sessions/:id/rounds/orchestrate` for multi-turn backend orchestration
+- added durable agent action persistence for message sends, transfer proposals, and finalize-turn decisions
+- extended replay reads so stored agent actions are visible alongside ledger and message history
+- added unit and Postgres-backed HTTP integration coverage for multi-turn orchestration
 
 Immediate next steps:
 
-- extend the current single communication turn into a backend round orchestrator that can execute multiple agent turns in sequence
-- decide and persist richer communication outcomes than messages alone, such as proposals, acceptances, or validated transfer intents
+- resolve persisted transfer proposals into validated state mutations or explicit rejection records
+- add richer action vocabulary beyond transfer proposals, such as accept or decline semantics
 - add agent-to-agent integration tests that prove multi-turn communication and resulting persisted state transitions
 - keep frontend integration deferred until backend communication and replay become richer
 - only after that, split the current in-process contract into true MCP-facing agent boundaries
@@ -88,11 +93,11 @@ Working well:
 Needs improvement next:
 
 - no domain event bus or full round engine yet
-- durable history now exists and replay reads are exposed, but the agent layer is still only a minimal backend slice rather than a standalone MCP boundary
+- durable history now exists and replay reads are exposed, but the agent layer is still an in-process backend slice rather than a standalone MCP boundary
 - no idempotency handling yet
-- no multi-turn agent-to-agent integration tests yet
+- no multi-turn agent-to-agent state-mutation integration tests yet
 - Docker runtime exists, but it still uses dev-mode web serving and no container-level automated smoke test
-- no prompt factory, multi-turn policy layer, or negotiation engine yet
+- no prompt factory, proposal-resolution layer, or negotiation engine yet
 
 What counts as “real working and testable” next
 
@@ -100,12 +105,14 @@ What counts as “real working and testable” next
 - real Postgres-backed integration tests that prove those flows end to end through the Nest HTTP boundary
 - a backend-only orchestrated agent turn with persisted messages/actions and integration coverage
 - at least one multi-turn agent communication integration test that proves stateful interaction, not just a single exchange
+- a path that resolves at least one persisted agent proposal into an actual validated state transition
 
 What is still later-stage work
 
 - MCP agent servers
 - standalone MCP transport boundaries
 - richer orchestrated multi-agent turns
+- proposal acceptance and settlement logic
 - agent-to-agent negotiation through MCP boundaries
 
 Quality additions to include in later phases

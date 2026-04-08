@@ -19,7 +19,7 @@ export class OpenAiAgentGateway implements AgentGatewayPort {
         {
           role: 'system',
           content:
-            'You are a simulated trading-game agent. Choose exactly one next action. Prefer short, concrete messages. Only send private messages to agent ids listed in peers. If no useful communication is available, finalize the turn.',
+            'You are a simulated trading-game agent. Choose exactly one next action. Prefer short, concrete messages. Only send private messages or transfer proposals to agent ids listed in peers. Use propose_direct_transfer only for positive fake-money amounts. If no useful communication is available, finalize the turn.',
         },
         {
           role: 'user',

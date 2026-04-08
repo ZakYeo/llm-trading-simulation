@@ -10,6 +10,10 @@ import { GameSession } from '../../../game/domain/entities/game-session.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import type { AgentGatewayPort } from '../ports/agent-gateway.port.js';
 import type {
+  AgentActionRecord,
+  AgentActionRepositoryPort,
+} from '../ports/agent-action-repository.port.js';
+import type {
   AgentMessageRecord,
   AgentMessageRepositoryPort,
 } from '../ports/agent-message-repository.port.js';
@@ -49,6 +53,22 @@ class InMemoryAgentMessageRepository implements AgentMessageRepositoryPort {
 
   async findRecentByGameSessionId(): Promise<AgentMessageRecord[]> {
     return [...this.saved];
+  }
+}
+
+class InMemoryAgentActionRepository implements AgentActionRepositoryPort {
+  saved: AgentActionRecord[] = [];
+
+  async save(action: AgentActionRecord): Promise<AgentActionRecord> {
+    const saved = {
+      ...action,
+      id: `action-${this.saved.length + 1}`,
+      createdAt: new Date(
+        Date.UTC(2026, 3, 8, 10, 0, this.saved.length),
+      ).toISOString(),
+    };
+    this.saved.push(saved);
+    return saved;
   }
 }
 
@@ -95,10 +115,11 @@ function createSession() {
 }
 
 describe('RunAgentCommunicationTurnUseCase', () => {
-  it('persists agent messages produced during an orchestrated communication turn', async () => {
+  it('persists agent actions and messages produced during an orchestrated communication turn', async () => {
     const useCase = new RunAgentCommunicationTurnUseCase(
       new InMemoryGameSessionRepository(createSession()),
       new InMemoryAgentMessageRepository(),
+      new InMemoryAgentActionRepository(),
       new ScriptedAgentGateway([
         {
           type: 'send_private_message',
@@ -106,27 +127,42 @@ describe('RunAgentCommunicationTurnUseCase', () => {
           content: 'I can offer funding if you show momentum.',
         },
         {
-          type: 'send_public_message',
-          content: 'I am looking for growth capital this round.',
+          type: 'propose_direct_transfer',
+          recipientAgentId: 'agent-1',
+          amount: '15.0000',
+          rationale: 'I can turn this into a higher-return trade quickly.',
         },
       ]),
     );
 
     const result = await useCase.execute({
       gameSessionId: 'game-1',
+      turnNumber: 2,
     });
 
+    expect(result.turnNumber).toBe(2);
     expect(result.actions).toHaveLength(2);
-    expect(result.messages).toHaveLength(2);
+    expect(result.actionRecords).toHaveLength(2);
+    expect(result.messages).toHaveLength(1);
+    expect(result.actionRecords[0]).toMatchObject({
+      agentId: 'agent-1',
+      recipientAgentId: 'agent-2',
+      actionType: 'send_private_message',
+      turnNumber: 2,
+    });
+    expect(result.actionRecords[1]).toMatchObject({
+      agentId: 'agent-2',
+      recipientAgentId: 'agent-1',
+      actionType: 'propose_direct_transfer',
+      amount: '15.0000',
+      content: 'I can turn this into a higher-return trade quickly.',
+      turnNumber: 2,
+    });
     expect(result.messages[0]).toMatchObject({
       senderAgentId: 'agent-1',
       recipientAgentId: 'agent-2',
       visibility: 'private',
-    });
-    expect(result.messages[1]).toMatchObject({
-      senderAgentId: 'agent-2',
-      recipientAgentId: null,
-      visibility: 'public',
+      turnNumber: 2,
     });
   });
 });

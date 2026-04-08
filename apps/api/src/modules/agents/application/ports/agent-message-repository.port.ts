@@ -2,6 +2,7 @@ export interface AgentMessageRecord {
   id?: string;
   gameSessionId: string;
   roundNumber: number;
+  turnNumber: number;
   senderAgentId: string;
   recipientAgentId: string | null;
   visibility: 'public' | 'private';

@@ -27,6 +27,7 @@ Implemented today:
 - durable transfer, deposit, and withdrawal history persistence
 - replay-oriented read model and HTTP endpoint over stored round and ledger history
 - backend-only agent communication endpoint with persisted public/private agent messages
+- multi-turn backend round orchestration with persisted agent action records and replay exposure
 - OpenAI-backed agent gateway behind a backend port, with a mock runtime used for integration tests
 - shared Nest app bootstrap and HTTP exception mapping for validation and domain errors
 - Prisma mapper/repository adapter tests for session persistence boundaries
@@ -45,10 +46,11 @@ Current backend quality notes:
 - round advancement now leaves durable `GameRound` history in Postgres
 - transfer, deposit, and withdrawal flows now leave durable ledger history rows in Postgres
 - replay data can now be read through `GET /api/replay/sessions/:id`
-- replay data now includes agent-message history as well as money-flow history
-- one backend agent communication turn is now implemented and covered through unit and Postgres-backed HTTP integration tests
+- replay data now includes agent-message history, money-flow history, and persisted agent action records
+- backend agent communication now supports both a single turn and a multi-turn round orchestration path
+- multi-turn orchestration is covered through unit tests and Postgres-backed HTTP integration tests
 - the OpenAI key is now usable through the backend agent gateway when `AGENT_RUNTIME_PROVIDER` is not set to `mock`
-- there is still no standalone MCP server runtime, negotiation engine, or multi-turn agent loop yet
+- there is still no standalone MCP server runtime, negotiated contract engine, or committed action-resolution loop yet
 
 ## Workspace
 
@@ -112,7 +114,7 @@ Run these before committing:
 ## Immediate next work
 
 1. Extend the single communication turn into a multi-turn orchestration flow with explicit round outcomes.
-2. Persist agent actions and communication as richer replay-ready event records.
-3. Add agent-to-agent integration tests that prove negotiation behavior over multiple backend turns.
+2. Resolve persisted agent proposals into validated game-state mutations instead of leaving them as replay-only intents.
+3. Add stronger agent-to-agent integration tests that prove negotiation behavior over multiple backend turns.
 4. Keep frontend integration deferred until backend agent communication and replay are richer.
 5. Introduce standalone MCP-facing agent adapters after the backend communication loop is stable.

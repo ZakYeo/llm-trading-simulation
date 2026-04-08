@@ -28,6 +28,13 @@ enum AgentMessageVisibility {
   PRIVATE
 }
 
+enum AgentTurnActionType {
+  SEND_PUBLIC_MESSAGE
+  SEND_PRIVATE_MESSAGE
+  PROPOSE_DIRECT_TRANSFER
+  FINALIZE_TURN
+}
+
 model GameSession {
   id           String       @id @default(uuid())
   name         String
@@ -38,6 +45,7 @@ model GameSession {
   agents       Agent[]
   rounds       GameRound[]
   agentMessages AgentMessage[]
+  agentTurnActions AgentTurnAction[]
   transfers    Transfer[]
   deposits     Deposit[]
   withdrawals  Withdrawal[]
@@ -55,6 +63,7 @@ model Agent {
   depositAccount AgentDepositAccount?
   sentMessages AgentMessage[] @relation("AgentMessageSender")
   receivedMessages AgentMessage[] @relation("AgentMessageRecipient")
+  turnActions  AgentTurnAction[]
   outgoingTransfers Transfer[]     @relation("TransferSourceAgent")
   incomingTransfers Transfer[]     @relation("TransferDestinationAgent")
   deposits      Deposit[]
@@ -91,6 +100,7 @@ model AgentMessage {
   id               String                 @id @default(uuid())
   gameSessionId    String
   roundNumber      Int
+  turnNumber       Int                    @default(1)
   senderAgentId    String
   recipientAgentId String?
   visibility       AgentMessageVisibility
@@ -99,6 +109,21 @@ model AgentMessage {
   gameSession      GameSession            @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
   senderAgent      Agent                  @relation("AgentMessageSender", fields: [senderAgentId], references: [id], onDelete: Cascade)
   recipientAgent   Agent?                 @relation("AgentMessageRecipient", fields: [recipientAgentId], references: [id], onDelete: SetNull)
+}
+
+model AgentTurnAction {
+  id               String             @id @default(uuid())
+  gameSessionId    String
+  roundNumber      Int
+  turnNumber       Int
+  agentId          String
+  recipientAgentId String?
+  actionType       AgentTurnActionType
+  amount           Decimal?           @db.Decimal(18, 4)
+  content          String?
+  createdAt        DateTime           @default(now())
+  gameSession      GameSession        @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  agent            Agent              @relation(fields: [agentId], references: [id], onDelete: Cascade)
 }
 
 model Transfer {

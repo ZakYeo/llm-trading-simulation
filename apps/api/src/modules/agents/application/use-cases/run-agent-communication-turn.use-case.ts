@@ -6,7 +6,12 @@ import type {
 
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import type { GameSessionRepositoryPort } from '../../../game/application/ports/game-session-repository.port.js';
+import { Money } from '../../../shared/domain/value-objects/money.js';
 import type { AgentGatewayPort } from '../ports/agent-gateway.port.js';
+import type {
+  AgentActionRecord,
+  AgentActionRepositoryPort,
+} from '../ports/agent-action-repository.port.js';
 import type {
   AgentMessageRecord,
   AgentMessageRepositoryPort,
@@ -14,16 +19,19 @@ import type {
 
 export interface RunAgentCommunicationTurnInput {
   gameSessionId: string;
+  turnNumber?: number;
 }
 
 export interface RunAgentCommunicationTurnResult {
   gameSessionId: string;
   roundNumber: number;
+  turnNumber: number;
   actions: Array<{
     agentId: string;
     agentName: string;
     action: AgentAction;
   }>;
+  actionRecords: AgentActionRecord[];
   messages: AgentMessageRecord[];
 }
 
@@ -44,6 +52,7 @@ export class RunAgentCommunicationTurnUseCase {
   constructor(
     private readonly gameSessionRepository: GameSessionRepositoryPort,
     private readonly agentMessageRepository: AgentMessageRepositoryPort,
+    private readonly agentActionRepository: AgentActionRepositoryPort,
     private readonly agentGateway: AgentGatewayPort,
   ) {}
 
@@ -58,12 +67,14 @@ export class RunAgentCommunicationTurnUseCase {
       throw new DomainInvariantError('Game session not found.');
     }
 
+    const turnNumber = input.turnNumber ?? 1;
     const recentMessages =
       await this.agentMessageRepository.findRecentByGameSessionId(
         session.id,
         20,
       );
     const actions: RunAgentCommunicationTurnResult['actions'] = [];
+    const savedActions: AgentActionRecord[] = [];
     const savedMessages: AgentMessageRecord[] = [];
 
     for (const agent of session.agents) {
@@ -71,6 +82,7 @@ export class RunAgentCommunicationTurnUseCase {
         gameId: session.id,
         sessionName: session.name,
         round: session.currentRound,
+        turnNumber,
         self: {
           agentId: agent.id,
           name: agent.name,
@@ -96,10 +108,15 @@ export class RunAgentCommunicationTurnUseCase {
       };
 
       const action = await this.agentGateway.decideNextAction(context);
+      const recipientAgentId =
+        action.type === 'send_private_message' ||
+        action.type === 'propose_direct_transfer'
+          ? action.recipientAgentId
+          : null;
 
-      if (action.type === 'send_private_message') {
+      if (recipientAgentId) {
         const recipientAgent = session.agents.find(
-          (candidate) => candidate.id === action.recipientAgentId,
+          (candidate) => candidate.id === recipientAgentId,
         );
 
         if (!recipientAgent || recipientAgent.id === agent.id) {
@@ -107,12 +124,41 @@ export class RunAgentCommunicationTurnUseCase {
             'Agent communication target must be another agent in the same game session.',
           );
         }
+      }
 
+      if (action.type === 'propose_direct_transfer') {
+        Money.fromDecimal(action.amount);
+      }
+
+      savedActions.push(
+        await this.agentActionRepository.save({
+          gameSessionId: session.id,
+          roundNumber: session.currentRound,
+          turnNumber,
+          agentId: agent.id,
+          recipientAgentId,
+          actionType: action.type,
+          amount:
+            action.type === 'propose_direct_transfer'
+              ? action.amount
+              : undefined,
+          content:
+            action.type === 'send_public_message' ||
+            action.type === 'send_private_message'
+              ? action.content
+              : action.type === 'propose_direct_transfer'
+                ? action.rationale
+                : undefined,
+        }),
+      );
+
+      if (action.type === 'send_private_message') {
         const savedMessage = await this.agentMessageRepository.save({
           gameSessionId: session.id,
           roundNumber: session.currentRound,
+          turnNumber,
           senderAgentId: agent.id,
-          recipientAgentId: recipientAgent.id,
+          recipientAgentId,
           visibility: 'private',
           content: action.content,
         });
@@ -125,6 +171,7 @@ export class RunAgentCommunicationTurnUseCase {
         const savedMessage = await this.agentMessageRepository.save({
           gameSessionId: session.id,
           roundNumber: session.currentRound,
+          turnNumber,
           senderAgentId: agent.id,
           recipientAgentId: null,
           visibility: 'public',
@@ -145,7 +192,9 @@ export class RunAgentCommunicationTurnUseCase {
     return {
       gameSessionId: session.id,
       roundNumber: session.currentRound,
+      turnNumber,
       actions,
+      actionRecords: savedActions,
       messages: savedMessages,
     };
   }
