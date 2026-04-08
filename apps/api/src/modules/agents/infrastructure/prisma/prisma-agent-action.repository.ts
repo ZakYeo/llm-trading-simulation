@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client';
 import type { PrismaClient } from '@prisma/client';
 
 import type {
@@ -61,7 +60,7 @@ interface PrismaAgentTurnActionRecord {
   recipientAgentId: string | null;
   relatedProposalActionId: string | null;
   actionType: string;
-  amount: Prisma.Decimal | null;
+  amount: { toString(): string } | null;
   content: string | null;
   createdAt: Date;
 }
@@ -91,10 +90,7 @@ export class PrismaAgentActionRepository implements AgentActionRepositoryPort {
         recipientAgentId: action.recipientAgentId,
         relatedProposalActionId: action.relatedProposalActionId,
         actionType: toPrismaActionType(action.actionType),
-        amount:
-          action.amount === undefined
-            ? undefined
-            : new Prisma.Decimal(action.amount),
+        amount: action.amount,
         content: action.content,
       },
     });

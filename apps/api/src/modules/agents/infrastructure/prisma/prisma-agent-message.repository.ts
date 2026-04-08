@@ -4,6 +4,18 @@ import type {
   AgentMessageRepositoryPort,
 } from '../../application/ports/agent-message-repository.port.js';
 
+interface PrismaAgentMessageRecord {
+  id: string;
+  gameSessionId: string;
+  roundNumber: number;
+  turnNumber: number;
+  senderAgentId: string;
+  recipientAgentId: string | null;
+  visibility: string;
+  content: string;
+  createdAt: Date;
+}
+
 export class PrismaAgentMessageRepository implements AgentMessageRepositoryPort {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -37,13 +49,13 @@ export class PrismaAgentMessageRepository implements AgentMessageRepositoryPort 
     gameSessionId: string,
     limit: number,
   ): Promise<AgentMessageRecord[]> {
-    const records = await this.prisma.agentMessage.findMany({
+    const records = (await this.prisma.agentMessage.findMany({
       where: { gameSessionId },
       orderBy: {
         createdAt: 'asc',
       },
       take: limit,
-    });
+    })) as PrismaAgentMessageRecord[];
 
     return records.map((record) => ({
       id: record.id,
