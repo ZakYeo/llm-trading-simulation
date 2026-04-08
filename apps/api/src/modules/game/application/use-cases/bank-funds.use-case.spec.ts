@@ -15,10 +15,37 @@ class InMemoryGameSessionRepository implements GameSessionRepositoryPort {
   constructor(private session: GameSession | null) {}
 
   saved: GameSession[] = [];
+  deposits: Array<{ gameSessionId: string; agentId: string; amount: string }> =
+    [];
+  withdrawals: Array<{
+    gameSessionId: string;
+    agentId: string;
+    amount: string;
+  }> = [];
 
   async save(session: GameSession): Promise<void> {
     this.saved.push(session);
     this.session = session;
+  }
+
+  async saveWithDeposit(
+    session: GameSession,
+    deposit: { gameSessionId: string; agentId: string; amount: string },
+  ): Promise<void> {
+    await this.save(session);
+    this.deposits.push(deposit);
+  }
+
+  async saveWithWithdrawal(
+    session: GameSession,
+    withdrawal: { gameSessionId: string; agentId: string; amount: string },
+  ): Promise<void> {
+    await this.save(session);
+    this.withdrawals.push(withdrawal);
+  }
+
+  async saveWithTransfer(): Promise<void> {
+    throw new Error('Not implemented in this test repository.');
   }
 
   async findById(id: string): Promise<GameSession | null> {
@@ -62,6 +89,13 @@ describe('Bank funds use cases', () => {
       '30.0000',
     );
     expect(repository.saved).toHaveLength(1);
+    expect(repository.deposits).toEqual([
+      {
+        gameSessionId: 'game-1',
+        agentId: 'agent-1',
+        amount: '30.0000',
+      },
+    ]);
   });
 
   it('withdraws funds from the bank account back into liquid balance', async () => {
@@ -104,6 +138,13 @@ describe('Bank funds use cases', () => {
       '0.0000',
     );
     expect(repository.saved).toHaveLength(1);
+    expect(repository.withdrawals).toEqual([
+      {
+        gameSessionId: 'game-1',
+        agentId: 'agent-1',
+        amount: '15.0000',
+      },
+    ]);
   });
 
   it('fails when the target game session does not exist', async () => {

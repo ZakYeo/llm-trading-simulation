@@ -106,6 +106,58 @@ export class GameSessionPrismaMapper {
     }));
   }
 
+  static toAgentUpsertInput(session: GameSession, agent: GameAgent) {
+    return {
+      where: { id: agent.id },
+      create: {
+        id: agent.id,
+        gameSessionId: session.id,
+        name: agent.name,
+        role: roleToPersistence[agent.role],
+        balance: {
+          create: {
+            available: agent.balance.available.toDecimal(),
+            reserved: agent.balance.reserved.toDecimal(),
+          },
+        },
+        depositAccount: {
+          create: {
+            principal: agent.depositAccount.principal.toDecimal(),
+            accrued: agent.depositAccount.accruedInterest.toDecimal(),
+          },
+        },
+      },
+      update: {
+        name: agent.name,
+        role: roleToPersistence[agent.role],
+        balance: {
+          upsert: {
+            create: {
+              available: agent.balance.available.toDecimal(),
+              reserved: agent.balance.reserved.toDecimal(),
+            },
+            update: {
+              available: agent.balance.available.toDecimal(),
+              reserved: agent.balance.reserved.toDecimal(),
+            },
+          },
+        },
+        depositAccount: {
+          upsert: {
+            create: {
+              principal: agent.depositAccount.principal.toDecimal(),
+              accrued: agent.depositAccount.accruedInterest.toDecimal(),
+            },
+            update: {
+              principal: agent.depositAccount.principal.toDecimal(),
+              accrued: agent.depositAccount.accruedInterest.toDecimal(),
+            },
+          },
+        },
+      },
+    };
+  }
+
   static toRoundCreateManyInput(gameSessionId: string, currentRound: number) {
     return Array.from({ length: currentRound }, (_, index) => ({
       gameSessionId,

@@ -14,10 +14,37 @@ class InMemoryGameSessionRepository implements GameSessionRepositoryPort {
   constructor(private session: GameSession | null) {}
 
   saved: GameSession[] = [];
+  transfers: Array<{
+    gameSessionId: string;
+    sourceAgentId: string;
+    destinationAgentId: string;
+    amount: string;
+  }> = [];
 
   async save(session: GameSession): Promise<void> {
     this.saved.push(session);
     this.session = session;
+  }
+
+  async saveWithTransfer(
+    session: GameSession,
+    transfer: {
+      gameSessionId: string;
+      sourceAgentId: string;
+      destinationAgentId: string;
+      amount: string;
+    },
+  ): Promise<void> {
+    await this.save(session);
+    this.transfers.push(transfer);
+  }
+
+  async saveWithDeposit(): Promise<void> {
+    throw new Error('Not implemented in this test repository.');
+  }
+
+  async saveWithWithdrawal(): Promise<void> {
+    throw new Error('Not implemented in this test repository.');
   }
 
   async findById(id: string): Promise<GameSession | null> {
@@ -67,6 +94,14 @@ describe('TransferFundsUseCase', () => {
     expect(session.agents[0]?.balance.available.toDecimal()).toBe('60.0000');
     expect(session.agents[1]?.balance.available.toDecimal()).toBe('65.0000');
     expect(repository.saved).toHaveLength(1);
+    expect(repository.transfers).toEqual([
+      {
+        gameSessionId: 'game-1',
+        sourceAgentId: 'agent-1',
+        destinationAgentId: 'agent-2',
+        amount: '40.0000',
+      },
+    ]);
   });
 
   it('fails when either agent is missing from the game session', async () => {

@@ -125,6 +125,23 @@ describe.runIf(Boolean(testDatabaseUrl))('Game money flows integration', () => {
       '0.0000',
     );
     expect(persistedTrader?.balance.available.toDecimal()).toBe('85.0000');
+
+    const transfers = await prisma.transfer.findMany({
+      where: { gameSessionId: createdSession.id },
+    });
+    const deposits = await prisma.deposit.findMany({
+      where: { gameSessionId: createdSession.id },
+    });
+    const withdrawals = await prisma.withdrawal.findMany({
+      where: { gameSessionId: createdSession.id },
+    });
+
+    expect(transfers).toHaveLength(1);
+    expect(transfers[0]?.amount.toString()).toBe('15');
+    expect(deposits).toHaveLength(1);
+    expect(deposits[0]?.amount.toString()).toBe('20');
+    expect(withdrawals).toHaveLength(1);
+    expect(withdrawals[0]?.amount.toString()).toBe('5');
   });
 
   it('persists round advancement and accrued interest against postgres', async () => {

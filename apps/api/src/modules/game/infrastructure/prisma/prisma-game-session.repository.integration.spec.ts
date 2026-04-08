@@ -120,5 +120,68 @@ describe.runIf(Boolean(testDatabaseUrl))(
       expect(persisted?.currentRound).toBe(2);
       expect(rounds.map((round) => round.roundNumber)).toEqual([1, 2]);
     });
+
+    it('persists durable transfer, deposit, and withdrawal records', async () => {
+      const session = new GameSession({
+        id: 'game-int-ledger',
+        name: 'Ledger Table',
+        status: 'setup',
+        currentRound: 0,
+        agents: [
+          new GameAgent({
+            id: 'agent-int-1',
+            name: 'Trader Bot',
+            role: 'trader',
+            balance: AccountBalance.open(Money.fromDecimal('60.0000')),
+            depositAccount: DepositAccount.open(),
+          }),
+          new GameAgent({
+            id: 'agent-int-2',
+            name: 'Banker Bot',
+            role: 'banker',
+            balance: AccountBalance.open(Money.fromDecimal('65.0000')),
+            depositAccount: DepositAccount.restore(
+              Money.fromDecimal('15.0000'),
+              Money.zero(),
+            ),
+          }),
+        ],
+      });
+
+      await repository.save(session);
+      await repository.saveWithTransfer(session, {
+        gameSessionId: session.id,
+        sourceAgentId: 'agent-int-1',
+        destinationAgentId: 'agent-int-2',
+        amount: '40.0000',
+      });
+      await repository.saveWithDeposit(session, {
+        gameSessionId: session.id,
+        agentId: 'agent-int-2',
+        amount: '20.0000',
+      });
+      await repository.saveWithWithdrawal(session, {
+        gameSessionId: session.id,
+        agentId: 'agent-int-2',
+        amount: '5.0000',
+      });
+
+      const transfers = await prisma.transfer.findMany({
+        where: { gameSessionId: session.id },
+      });
+      const deposits = await prisma.deposit.findMany({
+        where: { gameSessionId: session.id },
+      });
+      const withdrawals = await prisma.withdrawal.findMany({
+        where: { gameSessionId: session.id },
+      });
+
+      expect(transfers).toHaveLength(1);
+      expect(transfers[0]?.amount.toString()).toBe('40');
+      expect(deposits).toHaveLength(1);
+      expect(deposits[0]?.amount.toString()).toBe('20');
+      expect(withdrawals).toHaveLength(1);
+      expect(withdrawals[0]?.amount.toString()).toBe('5');
+    });
   },
 );

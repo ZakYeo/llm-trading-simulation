@@ -2,6 +2,11 @@ import type {
   GameSessionPrismaMapper,
   PersistedGameSessionRecord,
 } from './game-session-prisma.mapper.js';
+import type {
+  DepositHistoryRecord,
+  TransferHistoryRecord,
+  WithdrawalHistoryRecord,
+} from '../../application/ports/game-session-repository.port.js';
 
 export interface PrismaGameSessionDelegate {
   create(args: {
@@ -29,12 +34,22 @@ export interface PrismaGameSessionDelegate {
 }
 
 export interface PrismaAgentDelegate {
-  deleteMany(args: { where: { gameSessionId: string } }): Promise<unknown>;
+  deleteMany(args: {
+    where: {
+      gameSessionId: string;
+      id?: {
+        notIn: string[];
+      };
+    };
+  }): Promise<unknown>;
   create(args: {
     data: ReturnType<
       typeof GameSessionPrismaMapper.toAgentCreateInputs
     >[number];
   }): Promise<unknown>;
+  upsert(
+    args: ReturnType<typeof GameSessionPrismaMapper.toAgentUpsertInput>,
+  ): Promise<unknown>;
 }
 
 export interface PrismaGameRoundDelegate {
@@ -44,9 +59,24 @@ export interface PrismaGameRoundDelegate {
   }): Promise<unknown>;
 }
 
+export interface PrismaTransferDelegate {
+  create(args: { data: TransferHistoryRecord }): Promise<unknown>;
+}
+
+export interface PrismaDepositDelegate {
+  create(args: { data: DepositHistoryRecord }): Promise<unknown>;
+}
+
+export interface PrismaWithdrawalDelegate {
+  create(args: { data: WithdrawalHistoryRecord }): Promise<unknown>;
+}
+
 export interface PrismaClientLike {
   gameSession: PrismaGameSessionDelegate;
   agent: PrismaAgentDelegate;
   gameRound: PrismaGameRoundDelegate;
+  transfer: PrismaTransferDelegate;
+  deposit: PrismaDepositDelegate;
+  withdrawal: PrismaWithdrawalDelegate;
   $transaction<T>(callback: (tx: PrismaClientLike) => Promise<T>): Promise<T>;
 }

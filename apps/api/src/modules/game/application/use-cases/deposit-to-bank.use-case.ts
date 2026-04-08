@@ -47,7 +47,11 @@ export class DepositToBankUseCase {
       ),
     );
 
-    await this.repository.save(updatedSession);
+    await this.repository.saveWithDeposit(updatedSession, {
+      gameSessionId: updatedSession.id,
+      agentId: targetAgent.id,
+      amount: input.amount,
+    });
 
     return updatedSession;
   }
