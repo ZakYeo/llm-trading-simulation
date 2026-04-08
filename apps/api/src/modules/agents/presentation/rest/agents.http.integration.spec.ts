@@ -5,6 +5,67 @@ import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.serv
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 
+async function createAgentSession(baseUrl: string) {
+  const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: 'Agent Table',
+      initialBalance: '100.0000',
+      agents: [
+        { name: 'Banker Bot', role: 'banker' },
+        { name: 'Analyst Bot', role: 'analyst' },
+        { name: 'Lawyer Bot', role: 'lawyer' },
+        { name: 'Influencer Bot', role: 'influencer' },
+        { name: 'Trader Bot', role: 'trader' },
+      ],
+    }),
+  });
+
+  expect(createResponse.status).toBe(201);
+
+  return (await createResponse.json()) as { id: string };
+}
+
+async function readNextSseEvent(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+): Promise<{ event: string; data: string }> {
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (done) {
+      throw new Error('SSE stream closed before an event was received');
+    }
+
+    buffer += decoder.decode(value, { stream: true });
+    const separatorIndex = buffer.indexOf('\n\n');
+
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    const rawEvent = buffer.slice(0, separatorIndex);
+    const event = rawEvent.match(/^event:\s*(.+)$/m)?.[1];
+    const data = rawEvent
+      .split('\n')
+      .filter((line) => line.startsWith('data: '))
+      .map((line) => line.slice(6))
+      .join('\n');
+
+    if (!event || !data) {
+      buffer = buffer.slice(separatorIndex + 2);
+      continue;
+    }
+
+    return { event, data };
+  }
+}
+
 describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
   let prismaService: PrismaService;
   let baseUrl: string;
@@ -77,6 +138,67 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
     expect(
       body.messages.some((message) => message.visibility === 'private'),
     ).toBe(true);
+  });
+
+  it('streams agent progress over SSE for a session', async () => {
+    const createdSession = await createAgentSession(baseUrl);
+    const abortController = new AbortController();
+
+    const sseResponse = await fetch(
+      `${baseUrl}/api/agents/sessions/${createdSession.id}/events`,
+      {
+        headers: {
+          accept: 'text/event-stream',
+        },
+        signal: abortController.signal,
+      },
+    );
+
+    expect(sseResponse.status).toBe(200);
+    expect(sseResponse.headers.get('content-type')).toContain(
+      'text/event-stream',
+    );
+    expect(sseResponse.body).toBeTruthy();
+
+    const reader = sseResponse.body!.getReader();
+    const firstEventPromise = readNextSseEvent(reader);
+
+    const turnResponse = await fetch(
+      `${baseUrl}/api/agents/sessions/${createdSession.id}/turns/communicate`,
+      {
+        method: 'POST',
+      },
+    );
+
+    expect(turnResponse.status).toBe(201);
+
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+
+    const firstEvent = await Promise.race([
+      firstEventPromise,
+      new Promise<never>((_, reject) => {
+        timeoutHandle = setTimeout(() => {
+          reject(new Error('Timed out waiting for SSE event'));
+        }, 5_000);
+      }),
+    ]).finally(() => {
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
+    });
+
+    abortController.abort();
+    await reader.cancel().catch(() => undefined);
+
+    expect(firstEvent.event).toBe('action_progressed');
+    expect(JSON.parse(firstEvent.data)).toEqual(
+      expect.objectContaining({
+        type: 'action_progressed',
+        gameSessionId: createdSession.id,
+        roundNumber: 1,
+        turnNumber: 1,
+      }),
+    );
   });
 
   it('orchestrates multiple backend agent turns and persists richer agent outcomes', async () => {

@@ -231,8 +231,16 @@ corepack pnpm db:migrate:deploy
 Prepare the test database:
 
 ```bash
-TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/llm_trading_simulation_test?schema=public" corepack pnpm db:test:prepare
+corepack pnpm db:test:prepare
 ```
+
+By default this prepares:
+
+```text
+postgresql://postgres:postgres@localhost:5432/llm_trading_simulation_test?schema=public
+```
+
+If `TEST_DATABASE_URL` is present in `.env` or your shell, that value is used instead.
 
 ## Testing
 
@@ -242,11 +250,19 @@ Run all unit tests:
 corepack pnpm test
 ```
 
+Run all unit and integration tests:
+
+```bash
+corepack pnpm test:all
+```
+
 Run integration tests:
 
 ```bash
 corepack pnpm test:integration
 ```
+
+`test:integration` automatically prepares the test database first. It loads `.env` when present and defaults `TEST_DATABASE_URL` to the conventional local test database shown above.
 
 Run linting:
 
@@ -270,18 +286,23 @@ corepack pnpm build
 
 The live OpenAI integration test is gated and not part of the default deterministic suite.
 
-Example:
+Convenience command:
+
+```bash
+corepack pnpm test:integration:openai
+```
+
+Equivalent explicit example:
 
 ```bash
 ENABLE_OPENAI_LIVE_TESTS=1 \
 OPENAI_LIVE_TEST_RUN_COUNT=2 \
 OPENAI_LIVE_TEST_TURN_COUNT=2 \
 OPENAI_MODEL="gpt-4.1-mini" \
-TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/llm_trading_simulation_test?schema=public" \
-corepack pnpm --filter @llm-sim/api exec vitest run --config vitest.integration.config.ts src/modules/agents/presentation/rest/agents.openai.integration.spec.ts
+corepack pnpm test:integration
 ```
 
-This test uses the real OpenAI API and requires `OPENAI_API_KEY` to be present in `.env`.
+This test uses the real OpenAI API and requires `OPENAI_API_KEY` to be present in `.env` or your shell environment. The integration runner also loads `.env` automatically and prepares the test database before running.
 
 ## Useful Scripts
 
@@ -292,6 +313,9 @@ This test uses the real OpenAI API and requires `OPENAI_API_KEY` to be present i
 - `corepack pnpm db:migrate`: create/apply development migrations
 - `corepack pnpm db:migrate:deploy`: apply migrations without prompts
 - `corepack pnpm db:test:prepare`: reset and prepare the test database
+- `corepack pnpm test:all`: run unit tests, then integration tests
+- `corepack pnpm test:integration`: prepare the test database and run integration tests
+- `corepack pnpm test:integration:openai`: run integration tests with the live OpenAI suite enabled
 
 ## Current Scope
 

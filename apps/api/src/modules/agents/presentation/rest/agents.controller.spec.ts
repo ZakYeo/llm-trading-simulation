@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
+import { SELF_DECLARED_DEPS_METADATA } from '@nestjs/common/constants.js';
 import { firstValueFrom, of } from 'rxjs';
 
+import { AgentSessionEventStreamService } from '../../application/services/agent-session-event-stream.service.js';
+import { OrchestrateAgentRoundUseCase } from '../../application/use-cases/orchestrate-agent-round.use-case.js';
+import { RunAgentCommunicationTurnUseCase } from '../../application/use-cases/run-agent-communication-turn.use-case.js';
 import { AgentsController } from './agents.controller.js';
 
 describe('AgentsController', () => {
@@ -95,5 +99,20 @@ describe('AgentsController', () => {
         occurredAt: '2026-04-08T10:00:00.000Z',
       },
     });
+  });
+
+  it('declares explicit injection tokens for all constructor dependencies', () => {
+    const dependencies = Reflect.getMetadata(
+      SELF_DECLARED_DEPS_METADATA,
+      AgentsController,
+    ) as Array<{ index: number; param: unknown }>;
+
+    expect(dependencies).toEqual(
+      expect.arrayContaining([
+        { index: 0, param: OrchestrateAgentRoundUseCase },
+        { index: 1, param: RunAgentCommunicationTurnUseCase },
+        { index: 2, param: AgentSessionEventStreamService },
+      ]),
+    );
   });
 });

@@ -1,18 +1,24 @@
 #!/usr/bin/env sh
 set -eu
 
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+REPO_ROOT=$(CDPATH= cd -- "${SCRIPT_DIR}/.." && pwd)
+
+if [ -f "${REPO_ROOT}/.env" ]; then
+  set -a
+  . "${REPO_ROOT}/.env"
+  set +a
+fi
+
 TEST_DB_NAME="${TEST_DB_NAME:-llm_trading_simulation_test}"
 TEST_DATABASE_URL="${TEST_DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/${TEST_DB_NAME}?schema=public}"
 
 docker compose up -d postgres >/dev/null
 docker compose exec -T postgres psql -U postgres -d postgres -v ON_ERROR_STOP=1 <<SQL
-SELECT 'CREATE DATABASE ${TEST_DB_NAME}'
-WHERE NOT EXISTS (
-  SELECT FROM pg_database WHERE datname = '${TEST_DB_NAME}'
-)\gexec
+DROP DATABASE IF EXISTS ${TEST_DB_NAME} WITH (FORCE);
+CREATE DATABASE ${TEST_DB_NAME};
 SQL
 
-DATABASE_URL="$TEST_DATABASE_URL" corepack pnpm --filter @llm-sim/api exec prisma migrate reset --force >/dev/null
-DATABASE_URL="$TEST_DATABASE_URL" corepack pnpm --filter @llm-sim/api exec prisma generate >/dev/null
+DATABASE_URL="$TEST_DATABASE_URL" corepack pnpm --filter @llm-sim/api exec prisma migrate deploy >/dev/null
 
 printf 'Prepared test database: %s\n' "$TEST_DATABASE_URL"

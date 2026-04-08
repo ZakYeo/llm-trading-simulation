@@ -21,6 +21,7 @@ export class AgentsController {
     private readonly orchestrateAgentRoundUseCase: OrchestrateAgentRoundUseCase,
     @Inject(RunAgentCommunicationTurnUseCase)
     private readonly runAgentCommunicationTurnUseCase: RunAgentCommunicationTurnUseCase,
+    @Inject(AgentSessionEventStreamService)
     private readonly agentSessionEventStreamService: AgentSessionEventStreamService,
   ) {}
 
