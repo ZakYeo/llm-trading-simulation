@@ -31,11 +31,15 @@ describe('OrchestrateAgentRoundUseCase', () => {
     const transferFundsUseCase = {
       execute: vi.fn(),
     };
+    const agentSessionEventStreamService = {
+      publish: vi.fn(),
+    };
 
     const useCase = new OrchestrateAgentRoundUseCase(
       agentActionRepository as never,
       runAgentCommunicationTurnUseCase as never,
       transferFundsUseCase as never,
+      agentSessionEventStreamService as never,
     );
 
     await expect(
@@ -80,6 +84,32 @@ describe('OrchestrateAgentRoundUseCase', () => {
         turnNumber: 2,
       },
     );
+    expect(agentSessionEventStreamService.publish).toHaveBeenCalledTimes(3);
+    expect(agentSessionEventStreamService.publish).toHaveBeenNthCalledWith(1, {
+      type: 'turn_completed',
+      gameSessionId: 'game-1',
+      roundNumber: 1,
+      turnNumber: 1,
+      actionCount: 0,
+      messageCount: 0,
+      occurredAt: expect.any(String),
+    });
+    expect(agentSessionEventStreamService.publish).toHaveBeenNthCalledWith(2, {
+      type: 'turn_completed',
+      gameSessionId: 'game-1',
+      roundNumber: 1,
+      turnNumber: 2,
+      actionCount: 0,
+      messageCount: 0,
+      occurredAt: expect.any(String),
+    });
+    expect(agentSessionEventStreamService.publish).toHaveBeenNthCalledWith(3, {
+      type: 'round_completed',
+      gameSessionId: 'game-1',
+      roundNumber: 1,
+      turnCount: 2,
+      occurredAt: expect.any(String),
+    });
   });
 
   it('rejects non-positive turn counts', async () => {
@@ -92,6 +122,9 @@ describe('OrchestrateAgentRoundUseCase', () => {
       } as never,
       {
         execute: vi.fn(),
+      } as never,
+      {
+        publish: vi.fn(),
       } as never,
     );
 
@@ -171,11 +204,15 @@ describe('OrchestrateAgentRoundUseCase', () => {
     const transferFundsUseCase = {
       execute: vi.fn(),
     };
+    const agentSessionEventStreamService = {
+      publish: vi.fn(),
+    };
 
     const useCase = new OrchestrateAgentRoundUseCase(
       agentActionRepository as never,
       runAgentCommunicationTurnUseCase as never,
       transferFundsUseCase as never,
+      agentSessionEventStreamService as never,
     );
 
     await useCase.execute({
@@ -261,11 +298,15 @@ describe('OrchestrateAgentRoundUseCase', () => {
     const transferFundsUseCase = {
       execute: vi.fn(),
     };
+    const agentSessionEventStreamService = {
+      publish: vi.fn(),
+    };
 
     const useCase = new OrchestrateAgentRoundUseCase(
       agentActionRepository as never,
       runAgentCommunicationTurnUseCase as never,
       transferFundsUseCase as never,
+      agentSessionEventStreamService as never,
     );
 
     await useCase.execute({
@@ -364,11 +405,15 @@ describe('OrchestrateAgentRoundUseCase', () => {
     const transferFundsUseCase = {
       execute: vi.fn(),
     };
+    const agentSessionEventStreamService = {
+      publish: vi.fn(),
+    };
 
     const useCase = new OrchestrateAgentRoundUseCase(
       agentActionRepository as never,
       runAgentCommunicationTurnUseCase as never,
       transferFundsUseCase as never,
+      agentSessionEventStreamService as never,
     );
 
     await useCase.execute({

@@ -85,6 +85,17 @@ export interface OrchestratedRoundRecord {
   }>;
 }
 
+export interface AgentSessionEventRecord {
+  type: 'turn_completed' | 'round_completed';
+  gameSessionId: string;
+  roundNumber: number;
+  occurredAt: string;
+  turnNumber?: number;
+  turnCount?: number;
+  actionCount?: number;
+  messageCount?: number;
+}
+
 const defaultApiBaseUrl = 'http://localhost:3000/api';
 const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL?.replace(/\/$/u, '') ?? defaultApiBaseUrl;
@@ -142,5 +153,11 @@ export function orchestrateAgentRound(
       method: 'POST',
       body: JSON.stringify({ turnCount }),
     },
+  );
+}
+
+export function createAgentSessionEventSource(gameSessionId: string) {
+  return new EventSource(
+    `${apiBaseUrl}/agents/sessions/${gameSessionId}/events`,
   );
 }

@@ -1,5 +1,15 @@
-import { Body, Controller, Inject, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Inject,
+  MessageEvent,
+  Param,
+  Post,
+  Sse,
+} from '@nestjs/common';
+import { map, type Observable } from 'rxjs';
 
+import { AgentSessionEventStreamService } from '../../application/services/agent-session-event-stream.service.js';
 import { OrchestrateAgentRoundUseCase } from '../../application/use-cases/orchestrate-agent-round.use-case.js';
 import { RunAgentCommunicationTurnUseCase } from '../../application/use-cases/run-agent-communication-turn.use-case.js';
 import { orchestrateAgentRoundRequestSchema } from './schemas/orchestrate-agent-round.request.js';
@@ -11,6 +21,7 @@ export class AgentsController {
     private readonly orchestrateAgentRoundUseCase: OrchestrateAgentRoundUseCase,
     @Inject(RunAgentCommunicationTurnUseCase)
     private readonly runAgentCommunicationTurnUseCase: RunAgentCommunicationTurnUseCase,
+    private readonly agentSessionEventStreamService: AgentSessionEventStreamService,
   ) {}
 
   @Post('sessions/:gameSessionId/turns/communicate')
@@ -29,5 +40,19 @@ export class AgentsController {
       gameSessionId,
       turnCount: request.turnCount,
     });
+  }
+
+  @Sse('sessions/:gameSessionId/events')
+  streamSessionEvents(
+    @Param('gameSessionId') gameSessionId: string,
+  ): Observable<MessageEvent> {
+    return this.agentSessionEventStreamService
+      .streamForGameSession(gameSessionId)
+      .pipe(
+        map((event) => ({
+          type: event.type,
+          data: event,
+        })),
+      );
   }
 }

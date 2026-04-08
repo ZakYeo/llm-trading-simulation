@@ -1,6 +1,7 @@
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import type { TransferFundsUseCase } from '../../../game/application/use-cases/transfer-funds.use-case.js';
 import type { AgentActionRepositoryPort } from '../ports/agent-action-repository.port.js';
+import type { AgentSessionEventStreamService } from '../services/agent-session-event-stream.service.js';
 import type { RunAgentCommunicationTurnUseCase } from './run-agent-communication-turn.use-case.js';
 
 function isTransferProposalActionType(actionType: string): boolean {
@@ -28,6 +29,7 @@ export class OrchestrateAgentRoundUseCase {
     private readonly agentActionRepository: AgentActionRepositoryPort,
     private readonly runAgentCommunicationTurnUseCase: RunAgentCommunicationTurnUseCase,
     private readonly transferFundsUseCase: TransferFundsUseCase,
+    private readonly agentSessionEventStreamService: AgentSessionEventStreamService,
   ) {}
 
   async execute(
@@ -49,6 +51,15 @@ export class OrchestrateAgentRoundUseCase {
         turn.gameSessionId,
         turn.turnNumber,
       );
+      this.agentSessionEventStreamService.publish({
+        type: 'turn_completed',
+        gameSessionId: turn.gameSessionId,
+        roundNumber: turn.roundNumber,
+        turnNumber: turn.turnNumber,
+        actionCount: turn.actionRecords.length,
+        messageCount: turn.messages.length,
+        occurredAt: new Date().toISOString(),
+      });
 
       turns.push(turn);
     }
@@ -61,11 +72,31 @@ export class OrchestrateAgentRoundUseCase {
       );
     }
 
+    this.publishRoundCompleted(
+      latestTurn.gameSessionId,
+      latestTurn.roundNumber,
+      turns.length,
+    );
+
     return {
       gameSessionId: latestTurn.gameSessionId,
       roundNumber: latestTurn.roundNumber,
       turns,
     };
+  }
+
+  private publishRoundCompleted(
+    gameSessionId: string,
+    roundNumber: number,
+    turnCount: number,
+  ) {
+    this.agentSessionEventStreamService.publish({
+      type: 'round_completed',
+      gameSessionId,
+      roundNumber,
+      turnCount,
+      occurredAt: new Date().toISOString(),
+    });
   }
 
   private async resolveAcceptedTransferProposals(

@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { startTransition, useState } from 'react';
+import { startTransition, useEffect, useState } from 'react';
 
 import {
+  createAgentSessionEventSource,
   createGameSession,
   getGameReplay,
   getGameSession,
   orchestrateAgentRound,
+  type AgentSessionEventRecord,
   type GameReplayRecord,
 } from './lib/api';
 
@@ -168,6 +170,67 @@ export function App() {
         : current.filter((draft) => draft.id !== draftId),
     );
   }
+
+  useEffect(() => {
+    if (!selectedSessionId) {
+      return undefined;
+    }
+
+    const eventSource = createAgentSessionEventSource(selectedSessionId);
+
+    function handleTurnCompleted(event: MessageEvent<string>) {
+      const payload = JSON.parse(event.data) as AgentSessionEventRecord;
+
+      setLatestRunSummary(
+        `Turn ${payload.turnNumber ?? '?'} completed with ${payload.actionCount ?? 0} actions and ${payload.messageCount ?? 0} messages.`,
+      );
+      void Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['game-session', selectedSessionId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['game-replay', selectedSessionId],
+        }),
+      ]);
+    }
+
+    function handleRoundCompleted(event: MessageEvent<string>) {
+      const payload = JSON.parse(event.data) as AgentSessionEventRecord;
+
+      setLatestRunSummary(
+        `Round ${payload.roundNumber} finished after ${payload.turnCount ?? 0} turn${payload.turnCount === 1 ? '' : 's'}.`,
+      );
+      void Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['game-session', selectedSessionId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['game-replay', selectedSessionId],
+        }),
+      ]);
+    }
+
+    eventSource.addEventListener(
+      'turn_completed',
+      handleTurnCompleted as EventListener,
+    );
+    eventSource.addEventListener(
+      'round_completed',
+      handleRoundCompleted as EventListener,
+    );
+
+    return () => {
+      eventSource.removeEventListener(
+        'turn_completed',
+        handleTurnCompleted as EventListener,
+      );
+      eventSource.removeEventListener(
+        'round_completed',
+        handleRoundCompleted as EventListener,
+      );
+      eventSource.close();
+    };
+  }, [queryClient, selectedSessionId]);
 
   return (
     <main className="app-shell">
