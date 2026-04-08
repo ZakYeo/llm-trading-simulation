@@ -12,6 +12,7 @@ Quality status:
 - Docker-isolated local runtime is working for API, web, and Postgres
 - Prisma migration and test database bootstrap flow now exist
 - real Postgres-backed integration coverage now exists for repository persistence and the main create-session -> transfer -> deposit -> withdraw -> read-state backend flow
+- real Postgres-backed HTTP integration coverage now exists for create, read, transfer, deposit, and withdraw through the live Nest app boundary
 
 Readiness assessment:
 
@@ -39,13 +40,14 @@ Completed this session:
 - added a Postgres-backed repository integration test and generic integration test runner
 - added a Postgres-backed money-flow integration test proving persisted balance transitions end to end
 - fixed the Prisma session repository write path so repeated aggregate saves succeed against a real database
+- added shared Nest app bootstrap configuration plus HTTP exception mapping for Zod and domain errors
+- added Postgres-backed HTTP integration tests for the game endpoints
 
 Immediate next steps:
 
-- extend integration tests to the HTTP layer for session creation, read, deposit, withdrawal, and transfer endpoints
 - add interest accrual and round-oriented application services
 - add durable ledger/event persistence instead of only aggregate snapshot rewrites
-- add one end-to-end backend happy path through the Nest app boundary, not just application use cases
+- add one end-to-end backend happy path that includes round progression and interest accrual
 - add migration/bootstrap documentation and make integration test setup friction-free for future contributors
 
 Execution guidance for code quality
@@ -68,7 +70,6 @@ Working well:
 
 Needs improvement next:
 
-- no HTTP-level integration tests against the real database yet
 - no domain events, replay records, or round engine yet
 - repository persistence currently rewrites session snapshots and does not yet store ledger history records
 - no idempotency handling yet

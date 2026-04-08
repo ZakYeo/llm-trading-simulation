@@ -22,9 +22,11 @@ Implemented today:
 - core money, balance, deposit-account, and ledger domain primitives
 - game session creation, bank deposit/withdrawal, and direct transfer use cases
 - game session read, deposit, withdrawal, and transfer REST endpoints with request validation
+- shared Nest app bootstrap and HTTP exception mapping for validation and domain errors
 - Prisma mapper/repository adapter tests for session persistence boundaries
 - real repository integration coverage against Postgres for game-session persistence
 - real Postgres-backed integration coverage for create-session -> transfer -> deposit -> withdraw -> read-state
+- real Postgres-backed HTTP integration coverage for create, read, transfer, deposit, and withdraw endpoints
 - Docker-backed app runtime verified for API, web, and Postgres
 
 Current backend quality notes:
@@ -32,7 +34,7 @@ Current backend quality notes:
 - domain and application logic are covered by unit tests
 - game-session repository persistence is validated both with fake delegates and real Postgres-backed integration tests
 - NestJS dependency wiring plus validated session-create, session-read, deposit, withdrawal, and transfer endpoints are implemented
-- broader HTTP integration coverage is still missing
+- the main game HTTP flows are now covered against the live Nest app and Postgres
 - there is no round engine, replay/event stream, MCP runtime, or OpenAI-backed agent behavior yet
 
 ## Workspace
@@ -91,8 +93,8 @@ Run these before committing:
 
 ## Immediate next work
 
-1. Add HTTP integration tests that exercise the new game endpoints against the real Postgres-backed app path.
-2. Add round and interest-accrual application flows.
-3. Record ledger events instead of only rewriting session snapshots so history and replay become durable.
-4. Add a minimal frontend path that reads live session state from the backend.
+1. Add round and interest-accrual application flows.
+2. Record ledger events instead of only rewriting session snapshots so history and replay become durable.
+3. Add a minimal frontend path that reads live session state from the backend.
+4. Add agent-to-agent integration tests once orchestration boundaries exist.
 5. Only after the backend MVP is proven, start wiring LLM and agent runtime layers.
