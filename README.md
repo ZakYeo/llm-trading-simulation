@@ -7,6 +7,12 @@ a NestJS orchestration backend, and a React monitoring frontend.
 
 Phase 0 is complete. Phase 1 is in progress.
 
+Reality check:
+
+- the project is close to a real fake-money backend MVP
+- it is not yet close to the full MCP multi-agent + LLM system
+- the OpenAI key can be used later, but there is no LLM provider integration or agent runtime wired yet
+
 Implemented today:
 
 - pnpm workspace with shared packages, linting, formatting, and tests
@@ -15,15 +21,19 @@ Implemented today:
 - initial Prisma migration and Postgres-backed test database bootstrap flow
 - core money, balance, deposit-account, and ledger domain primitives
 - game session creation, bank deposit/withdrawal, and direct transfer use cases
+- game session read, deposit, withdrawal, and transfer REST endpoints with request validation
 - Prisma mapper/repository adapter tests for session persistence boundaries
 - real repository integration coverage against Postgres for game-session persistence
+- real Postgres-backed integration coverage for create-session -> transfer -> deposit -> withdraw -> read-state
+- Docker-backed app runtime verified for API, web, and Postgres
 
 Current backend quality notes:
 
 - domain and application logic are covered by unit tests
-- game-session repository persistence is validated both with fake delegates and a real Postgres-backed integration test
-- NestJS dependency wiring and one validated HTTP mutation endpoint are implemented
-- broader integration coverage for additional use cases and API flows is still missing
+- game-session repository persistence is validated both with fake delegates and real Postgres-backed integration tests
+- NestJS dependency wiring plus validated session-create, session-read, deposit, withdrawal, and transfer endpoints are implemented
+- broader HTTP integration coverage is still missing
+- there is no round engine, replay/event stream, MCP runtime, or OpenAI-backed agent behavior yet
 
 ## Workspace
 
@@ -81,7 +91,8 @@ Run these before committing:
 
 ## Immediate next work
 
-1. Extend real Postgres-backed integration coverage to deposit, withdrawal, and transfer flows.
+1. Add HTTP integration tests that exercise the new game endpoints against the real Postgres-backed app path.
 2. Add round and interest-accrual application flows.
-3. Add more validated REST endpoints on top of the current use cases.
-4. Start introducing replay and event recording boundaries.
+3. Record ledger events instead of only rewriting session snapshots so history and replay become durable.
+4. Add a minimal frontend path that reads live session state from the backend.
+5. Only after the backend MVP is proven, start wiring LLM and agent runtime layers.

@@ -5,6 +5,7 @@ import { PrismaGameSessionRepository } from '../infrastructure/prisma/prisma-gam
 import type { PrismaClientLike } from '../infrastructure/prisma/game-session-prisma.contracts.js';
 import { CreateGameSessionUseCase } from '../application/use-cases/create-game-session.use-case.js';
 import { DepositToBankUseCase } from '../application/use-cases/deposit-to-bank.use-case.js';
+import { GetGameSessionUseCase } from '../application/use-cases/get-game-session.use-case.js';
 import { WithdrawFromBankUseCase } from '../application/use-cases/withdraw-from-bank.use-case.js';
 import { TransferFundsUseCase } from '../application/use-cases/transfer-funds.use-case.js';
 import {
@@ -37,6 +38,12 @@ export function createGameProviders() {
         idGenerator: IdGeneratorPort,
       ) => new CreateGameSessionUseCase(repository, idGenerator),
       inject: [GAME_SESSION_REPOSITORY, ID_GENERATOR],
+    },
+    {
+      provide: GetGameSessionUseCase,
+      useFactory: (repository: GameSessionRepositoryPort) =>
+        new GetGameSessionUseCase(repository),
+      inject: [GAME_SESSION_REPOSITORY],
     },
     {
       provide: DepositToBankUseCase,

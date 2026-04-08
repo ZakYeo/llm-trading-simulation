@@ -6,6 +6,7 @@ import { Money } from '../../../shared/domain/value-objects/money.js';
 import { AccountBalance } from '../../domain/entities/account-balance.js';
 import { GameAgent } from '../../domain/entities/game-agent.js';
 import { GameSession } from '../../domain/entities/game-session.js';
+import type { PrismaClientLike } from './game-session-prisma.contracts.js';
 import { PrismaGameSessionRepository } from './prisma-game-session.repository.js';
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
@@ -24,7 +25,9 @@ describe.runIf(Boolean(testDatabaseUrl))(
           },
         },
       });
-      repository = new PrismaGameSessionRepository(prisma);
+      repository = new PrismaGameSessionRepository(
+        prisma as unknown as PrismaClientLike,
+      );
       await prisma.$connect();
     });
 

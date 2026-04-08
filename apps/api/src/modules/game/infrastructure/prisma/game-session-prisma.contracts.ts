@@ -4,30 +4,22 @@ import type {
 } from './game-session-prisma.mapper.js';
 
 export interface PrismaGameSessionDelegate {
-  upsert(args: {
-    where: { id: string };
-    create: ReturnType<typeof GameSessionPrismaMapper.toCreateInput>;
-    update: {
-      name: string;
-      status: 'SETUP' | 'ACTIVE' | 'SETTLEMENT' | 'COMPLETED' | 'FAILED';
-      currentRound: number;
-      agents: {
-        deleteMany: Record<string, never>;
-        create: ReturnType<
-          typeof GameSessionPrismaMapper.toCreateInput
-        >['agents']['create'];
-      };
-    };
+  create(args: {
+    data: ReturnType<typeof GameSessionPrismaMapper.toCreateInput>;
   }): Promise<unknown>;
+  delete(args: { where: { id: string } }): Promise<unknown>;
   findUnique(args: {
     where: { id: string };
-    include: {
+    include?: {
       agents: {
         include: {
           balance: true;
           depositAccount: true;
         };
       };
+    };
+    select?: {
+      id: true;
     };
   }): Promise<PersistedGameSessionRecord | null>;
 }

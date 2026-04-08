@@ -7,21 +7,21 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
   constructor(private readonly prisma: PrismaClientLike) {}
 
   async save(session: GameSession): Promise<void> {
-    const create = GameSessionPrismaMapper.toCreateInput(session);
-
-    await this.prisma.gameSession.upsert({
+    const data = GameSessionPrismaMapper.toCreateInput(session);
+    const existing = await this.prisma.gameSession.findUnique({
       where: { id: session.id },
-      create,
-      update: {
-        name: create.name,
-        status: create.status,
-        currentRound: create.currentRound,
-        agents: {
-          deleteMany: {},
-          create: create.agents.create,
-        },
-      },
+      select: { id: true },
     });
+
+    if (!existing) {
+      await this.prisma.gameSession.create({ data });
+      return;
+    }
+
+    await this.prisma.gameSession.delete({
+      where: { id: session.id },
+    });
+    await this.prisma.gameSession.create({ data });
   }
 
   async findById(id: string): Promise<GameSession | null> {

@@ -11,7 +11,13 @@ Quality status:
 - unit tests cover money, ledger, session creation, bank mutations, transfers, and Prisma mapping/repository adapters
 - Docker-isolated local runtime is working for API, web, and Postgres
 - Prisma migration and test database bootstrap flow now exist
-- real Postgres-backed integration coverage exists for game-session repository persistence
+- real Postgres-backed integration coverage now exists for repository persistence and the main create-session -> transfer -> deposit -> withdraw -> read-state backend flow
+
+Readiness assessment:
+
+- close to a real fake-money backend MVP
+- not yet close to the full MCP multi-agent + LLM system
+- OpenAI credentials can be added now, but they are not yet used by the application because no `LlmPort`, provider adapter, or agent runtime has been implemented
 
 Completed this session:
 
@@ -27,15 +33,19 @@ Completed this session:
 - tightened MVP invariants so sessions require the five core roles and transfers reject self-transfer
 - wired NestJS providers for Prisma, repository, and core game use cases
 - added a validated session-creation API endpoint
+- added validated session-read, deposit, withdrawal, and transfer API endpoints
 - added a Docker-first isolated runtime and verified it against the running stack
 - added Prisma migration files plus a test database bootstrap script
 - added a Postgres-backed repository integration test and generic integration test runner
+- added a Postgres-backed money-flow integration test proving persisted balance transitions end to end
+- fixed the Prisma session repository write path so repeated aggregate saves succeed against a real database
 
 Immediate next steps:
 
-- extend integration tests against the real test database for deposit, withdrawal, transfer, and session-creation API flows
+- extend integration tests to the HTTP layer for session creation, read, deposit, withdrawal, and transfer endpoints
 - add interest accrual and round-oriented application services
-- add API boundary validation with Zod for request DTOs before exposing mutation endpoints
+- add durable ledger/event persistence instead of only aggregate snapshot rewrites
+- add one end-to-end backend happy path through the Nest app boundary, not just application use cases
 - add migration/bootstrap documentation and make integration test setup friction-free for future contributors
 
 Execution guidance for code quality
@@ -58,11 +68,26 @@ Working well:
 
 Needs improvement next:
 
-- no round-engine or bank-flow integration tests against the real database yet
+- no HTTP-level integration tests against the real database yet
 - no domain events, replay records, or round engine yet
-- API mutation layer has only one validated endpoint so far and no idempotency handling yet
+- repository persistence currently rewrites session snapshots and does not yet store ledger history records
+- no idempotency handling yet
 - no agent-to-agent integration tests yet
 - Docker runtime exists, but it still uses dev-mode web serving and no container-level automated smoke test
+- no `LlmPort`, prompt factory, model provider adapter, or OpenAI-backed decision loop yet
+
+What counts as “real working and testable” next
+
+- a backend flow that can create a session, mutate balances through transfer/deposit/withdraw, and read the resulting persisted state back through HTTP
+- real Postgres-backed integration tests that prove those flows end to end through the Nest HTTP boundary
+- a minimal frontend that can display live persisted backend state
+
+What is still later-stage work
+
+- MCP agent servers
+- orchestrated multi-agent turns
+- OpenAI-driven decisions
+- agent-to-agent negotiation through MCP boundaries
 
 Quality additions to include in later phases
 
