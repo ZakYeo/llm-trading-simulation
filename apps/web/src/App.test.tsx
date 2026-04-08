@@ -15,5 +15,7 @@ describe('App', () => {
     expect(html).toContain('LLM Trading Operator Console');
     expect(html).toContain('Session Controls');
     expect(html).toContain('Event Timeline');
+    expect(html).toContain('Run planner');
+    expect(html).toContain('Run next 2 turns');
   });
 });

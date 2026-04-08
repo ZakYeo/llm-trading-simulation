@@ -109,6 +109,9 @@ export function App() {
 
   const selectedSession = sessionQuery.data;
   const replay = replayQuery.data;
+  const normalizedTurnCount = Number.isNaN(turnCount)
+    ? 1
+    : Math.min(10, Math.max(1, turnCount));
 
   return (
     <main className="app-shell">
@@ -186,12 +189,38 @@ export function App() {
               type="number"
               min={1}
               max={10}
-              value={turnCount}
+              value={normalizedTurnCount}
               onChange={(event) =>
                 setTurnCount(Number.parseInt(event.target.value || '1', 10))
               }
             />
           </label>
+
+          <div className="turn-planner">
+            <div className="turn-planner-copy">
+              <strong>Run planner</strong>
+              <p>
+                Queue the next {normalizedTurnCount} turn
+                {normalizedTurnCount === 1 ? '' : 's'} for the active session.
+              </p>
+            </div>
+            <div className="turn-preset-row">
+              {[1, 2, 4, 8].map((preset) => (
+                <button
+                  key={preset}
+                  className={
+                    preset === normalizedTurnCount
+                      ? 'turn-preset active'
+                      : 'turn-preset'
+                  }
+                  type="button"
+                  onClick={() => setTurnCount(preset)}
+                >
+                  {preset} turn{preset === 1 ? '' : 's'}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <button
             className="action-button"
@@ -200,8 +229,8 @@ export function App() {
             onClick={() => orchestrateMutation.mutate()}
           >
             {orchestrateMutation.isPending
-              ? 'Running turns...'
-              : 'Run agent turns'}
+              ? `Running ${normalizedTurnCount} turn${normalizedTurnCount === 1 ? '' : 's'}...`
+              : `Run next ${normalizedTurnCount} turn${normalizedTurnCount === 1 ? '' : 's'}`}
           </button>
 
           <div className="feedback-block">
