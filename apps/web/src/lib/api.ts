@@ -86,7 +86,11 @@ export interface OrchestratedRoundRecord {
 }
 
 export interface AgentSessionEventRecord {
-  type: 'turn_completed' | 'round_completed';
+  type:
+    | 'action_progressed'
+    | 'transfer_settled'
+    | 'turn_completed'
+    | 'round_completed';
   gameSessionId: string;
   roundNumber: number;
   occurredAt: string;
@@ -94,6 +98,20 @@ export interface AgentSessionEventRecord {
   turnCount?: number;
   actionCount?: number;
   messageCount?: number;
+  agentId?: string;
+  agentName?: string;
+  actionType?:
+    | 'send_public_message'
+    | 'send_private_message'
+    | 'propose_direct_transfer'
+    | 'counter_direct_transfer_proposal'
+    | 'accept_direct_transfer_proposal'
+    | 'reject_direct_transfer_proposal';
+  messageId?: string;
+  messageVisibility?: 'public' | 'private';
+  sourceAgentId?: string;
+  destinationAgentId?: string;
+  amount?: string;
 }
 
 const defaultApiBaseUrl = 'http://localhost:3000/api';

@@ -3,6 +3,34 @@ import { Subject, filter } from 'rxjs';
 
 export type AgentSessionEvent =
   | {
+      type: 'action_progressed';
+      gameSessionId: string;
+      roundNumber: number;
+      turnNumber: number;
+      agentId: string;
+      agentName: string;
+      actionType:
+        | 'send_public_message'
+        | 'send_private_message'
+        | 'propose_direct_transfer'
+        | 'counter_direct_transfer_proposal'
+        | 'accept_direct_transfer_proposal'
+        | 'reject_direct_transfer_proposal';
+      messageId?: string;
+      messageVisibility?: 'public' | 'private';
+      occurredAt: string;
+    }
+  | {
+      type: 'transfer_settled';
+      gameSessionId: string;
+      roundNumber: number;
+      turnNumber: number;
+      sourceAgentId: string;
+      destinationAgentId: string;
+      amount: string;
+      occurredAt: string;
+    }
+  | {
       type: 'turn_completed';
       gameSessionId: string;
       roundNumber: number;

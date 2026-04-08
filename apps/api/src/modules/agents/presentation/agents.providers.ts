@@ -57,18 +57,21 @@ export function createAgentsProviders() {
         agentActionRepository: PrismaAgentActionRepository,
         agentMessageRepository: PrismaAgentMessageRepository,
         agentGateway: MockAgentGateway | OpenAiAgentGateway,
+        agentSessionEventStreamService: AgentSessionEventStreamService,
       ) =>
         new RunAgentCommunicationTurnUseCase(
           gameSessionRepository,
           agentMessageRepository,
           agentActionRepository,
           agentGateway,
+          agentSessionEventStreamService,
         ),
       inject: [
         GAME_SESSION_REPOSITORY,
         AGENT_ACTION_REPOSITORY,
         AGENT_MESSAGE_REPOSITORY,
         AGENT_GATEWAY,
+        AgentSessionEventStreamService,
       ],
     },
     {

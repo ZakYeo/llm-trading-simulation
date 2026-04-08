@@ -137,6 +137,16 @@ export class OrchestrateAgentRoundUseCase {
         destinationAgentId: proposal.agentId,
         amount: proposal.amount,
       });
+      this.agentSessionEventStreamService.publish({
+        type: 'transfer_settled',
+        gameSessionId,
+        roundNumber: proposal.roundNumber,
+        turnNumber,
+        sourceAgentId: proposal.recipientAgentId,
+        destinationAgentId: proposal.agentId,
+        amount: proposal.amount,
+        occurredAt: new Date().toISOString(),
+      });
     }
   }
 }

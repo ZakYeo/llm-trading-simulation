@@ -17,6 +17,7 @@ import type {
   AgentMessageRecord,
   AgentMessageRepositoryPort,
 } from '../ports/agent-message-repository.port.js';
+import type { AgentSessionEventStreamService } from '../services/agent-session-event-stream.service.js';
 
 function isTransferProposalActionType(
   actionType: AgentActionRecord['actionType'],
@@ -248,6 +249,7 @@ export class RunAgentCommunicationTurnUseCase {
     private readonly agentMessageRepository: AgentMessageRepositoryPort,
     private readonly agentActionRepository: AgentActionRepositoryPort,
     private readonly agentGateway: AgentGatewayPort,
+    private readonly agentSessionEventStreamService: AgentSessionEventStreamService,
   ) {}
 
   async execute(
@@ -474,9 +476,10 @@ export class RunAgentCommunicationTurnUseCase {
 
       recentActions.push(savedAction);
       savedActions.push(savedAction);
+      let savedMessage: AgentMessageRecord | undefined;
 
       if (action.type === 'send_private_message') {
-        const savedMessage = await this.agentMessageRepository.save({
+        savedMessage = await this.agentMessageRepository.save({
           gameSessionId: session.id,
           roundNumber: session.currentRound,
           turnNumber,
@@ -491,7 +494,7 @@ export class RunAgentCommunicationTurnUseCase {
       }
 
       if (action.type === 'send_public_message') {
-        const savedMessage = await this.agentMessageRepository.save({
+        savedMessage = await this.agentMessageRepository.save({
           gameSessionId: session.id,
           roundNumber: session.currentRound,
           turnNumber,
@@ -503,6 +506,21 @@ export class RunAgentCommunicationTurnUseCase {
 
         recentMessages.push(savedMessage);
         savedMessages.push(savedMessage);
+      }
+
+      if (action.type !== 'finalize_turn') {
+        this.agentSessionEventStreamService.publish({
+          type: 'action_progressed',
+          gameSessionId: session.id,
+          roundNumber: session.currentRound,
+          turnNumber,
+          agentId: agent.id,
+          agentName: agent.name,
+          actionType: action.type,
+          messageId: savedMessage?.id,
+          messageVisibility: savedMessage?.visibility,
+          occurredAt: new Date().toISOString(),
+        });
       }
 
       actions.push({

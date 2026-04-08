@@ -20,6 +20,14 @@ import type {
 } from '../ports/agent-message-repository.port.js';
 import { RunAgentCommunicationTurnUseCase } from './run-agent-communication-turn.use-case.js';
 
+class RecordingAgentSessionEventStreamService {
+  published: unknown[] = [];
+
+  publish(event: unknown): void {
+    this.published.push(event);
+  }
+}
+
 class InMemoryGameSessionRepository implements GameSessionRepositoryPort {
   constructor(private readonly session: GameSession | null) {}
 
@@ -132,6 +140,7 @@ function createSession() {
 
 describe('RunAgentCommunicationTurnUseCase', () => {
   it('persists agent actions and messages produced during an orchestrated communication turn', async () => {
+    const eventStreamService = new RecordingAgentSessionEventStreamService();
     const useCase = new RunAgentCommunicationTurnUseCase(
       new InMemoryGameSessionRepository(createSession()),
       new InMemoryAgentMessageRepository(),
@@ -149,6 +158,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
           rationale: 'I can turn this into a higher-return trade quickly.',
         },
       ]),
+      eventStreamService as never,
     );
 
     const result = await useCase.execute({
@@ -180,6 +190,32 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       visibility: 'private',
       turnNumber: 2,
     });
+    expect(eventStreamService.published).toEqual([
+      {
+        type: 'action_progressed',
+        gameSessionId: 'game-1',
+        roundNumber: 1,
+        turnNumber: 2,
+        agentId: 'agent-1',
+        agentName: 'Banker Bot',
+        actionType: 'send_private_message',
+        messageId: 'message-1',
+        messageVisibility: 'private',
+        occurredAt: expect.any(String),
+      },
+      {
+        type: 'action_progressed',
+        gameSessionId: 'game-1',
+        roundNumber: 1,
+        turnNumber: 2,
+        agentId: 'agent-2',
+        agentName: 'Trader Bot',
+        actionType: 'propose_direct_transfer',
+        messageId: undefined,
+        messageVisibility: undefined,
+        occurredAt: expect.any(String),
+      },
+    ]);
   });
 
   it('rejects resolving a proposal that has already been accepted or rejected', async () => {
@@ -218,6 +254,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
           type: 'finalize_turn',
         },
       ]),
+      new RecordingAgentSessionEventStreamService() as never,
     );
 
     await expect(
@@ -257,6 +294,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
           type: 'finalize_turn',
         },
       ]),
+      new RecordingAgentSessionEventStreamService() as never,
     );
 
     const result = await useCase.execute({
@@ -313,6 +351,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       messageRepository,
       actionRepository,
       gateway,
+      new RecordingAgentSessionEventStreamService() as never,
     );
 
     await useCase.execute({
@@ -392,6 +431,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       messageRepository,
       new InMemoryAgentActionRepository(),
       gateway,
+      new RecordingAgentSessionEventStreamService() as never,
     );
 
     await useCase.execute({

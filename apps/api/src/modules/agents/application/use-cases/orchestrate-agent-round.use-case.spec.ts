@@ -226,6 +226,16 @@ describe('OrchestrateAgentRoundUseCase', () => {
       destinationAgentId: 'trader-1',
       amount: '12.5000',
     });
+    expect(agentSessionEventStreamService.publish).toHaveBeenCalledWith({
+      type: 'transfer_settled',
+      gameSessionId: 'game-1',
+      roundNumber: 1,
+      turnNumber: 3,
+      sourceAgentId: 'banker-1',
+      destinationAgentId: 'trader-1',
+      amount: '12.5000',
+      occurredAt: expect.any(String),
+    });
   });
 
   it('does not execute transfers for rejected proposals', async () => {
