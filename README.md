@@ -52,11 +52,12 @@ The project roadmap lives in [plan.md](./plan.md) and [steps.md](./steps.md).
 
 ## Local development
 
-1. Copy `.env.example` to `.env`.
-2. Start Postgres with `docker compose up -d`.
-3. Install dependencies with `corepack pnpm install`.
-4. Apply database changes with `corepack pnpm db:migrate:deploy`.
-5. Run the API and frontend with `corepack pnpm dev`.
+1. Copy `.env.example` to `.env` and keep the database/runtime values.
+2. If you want to prepare for later LLM work, add `OPENAI_API_KEY` to `.env`.
+3. Start Postgres with `docker compose up -d`.
+4. Install dependencies with `corepack pnpm install`.
+5. Apply database changes with `corepack pnpm db:migrate:deploy`.
+6. Run the API and frontend with `corepack pnpm dev`.
 
 ## Database bootstrap
 
