@@ -12,15 +12,18 @@ Implemented today:
 - pnpm workspace with shared packages, linting, formatting, and tests
 - NestJS API scaffold and React/Vite frontend scaffold
 - Prisma schema for sessions, agents, balances, deposit accounts, transfers, deposits, and withdrawals
+- initial Prisma migration and Postgres-backed test database bootstrap flow
 - core money, balance, deposit-account, and ledger domain primitives
 - game session creation, bank deposit/withdrawal, and direct transfer use cases
 - Prisma mapper/repository adapter tests for session persistence boundaries
+- real repository integration coverage against Postgres for game-session persistence
 
 Current backend quality notes:
 
 - domain and application logic are covered by unit tests
-- repository persistence is only validated with fake Prisma delegates so far
-- NestJS dependency wiring, HTTP mutation endpoints, and real Postgres integration tests are not implemented yet
+- game-session repository persistence is validated both with fake delegates and a real Postgres-backed integration test
+- NestJS dependency wiring and one validated HTTP mutation endpoint are implemented
+- broader integration coverage for additional use cases and API flows is still missing
 
 ## Workspace
 
@@ -40,7 +43,21 @@ The project roadmap lives in [plan.md](./plan.md) and [steps.md](./steps.md).
 1. Copy `.env.example` to `.env`.
 2. Start Postgres with `docker compose up -d`.
 3. Install dependencies with `corepack pnpm install`.
-4. Run the API and frontend with `corepack pnpm dev`.
+4. Apply database changes with `corepack pnpm db:migrate:deploy`.
+5. Run the API and frontend with `corepack pnpm dev`.
+
+## Database bootstrap
+
+Primary database:
+
+1. `corepack pnpm db:generate`
+2. `corepack pnpm db:migrate:deploy`
+
+Test database:
+
+1. Ensure Docker Postgres is running
+2. `TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/llm_trading_simulation_test?schema=public" corepack pnpm db:test:prepare`
+3. `TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/llm_trading_simulation_test?schema=public" corepack pnpm --filter @llm-sim/api test:integration`
 
 ## Docker
 
@@ -58,12 +75,13 @@ Run these before committing:
 
 1. `corepack pnpm lint`
 2. `corepack pnpm test`
-3. `corepack pnpm typecheck`
-4. `corepack pnpm build`
+3. `corepack pnpm test:integration`
+4. `corepack pnpm typecheck`
+5. `corepack pnpm build`
 
 ## Immediate next work
 
-1. Add NestJS providers for Prisma and repository wiring.
-2. Add real integration tests against Prisma/Postgres instead of only fake delegates.
-3. Add round and interest-accrual application flows.
-4. Add validated REST/SSE entry points on top of the current use cases.
+1. Extend real Postgres-backed integration coverage to deposit, withdrawal, and transfer flows.
+2. Add round and interest-accrual application flows.
+3. Add more validated REST endpoints on top of the current use cases.
+4. Start introducing replay and event recording boundaries.

@@ -2,6 +2,7 @@ import type { IdGeneratorPort } from '../../shared/application/ports/id-generato
 import { LedgerService } from '../domain/services/ledger.service.js';
 import type { GameSessionRepositoryPort } from '../application/ports/game-session-repository.port.js';
 import { PrismaGameSessionRepository } from '../infrastructure/prisma/prisma-game-session.repository.js';
+import type { PrismaClientLike } from '../infrastructure/prisma/game-session-prisma.contracts.js';
 import { CreateGameSessionUseCase } from '../application/use-cases/create-game-session.use-case.js';
 import { DepositToBankUseCase } from '../application/use-cases/deposit-to-bank.use-case.js';
 import { WithdrawFromBankUseCase } from '../application/use-cases/withdraw-from-bank.use-case.js';
@@ -20,7 +21,9 @@ export function createGameProviders() {
     {
       provide: GAME_SESSION_REPOSITORY,
       useFactory: (prismaService: PrismaService) =>
-        new PrismaGameSessionRepository(prismaService),
+        new PrismaGameSessionRepository(
+          prismaService as unknown as PrismaClientLike,
+        ),
       inject: [PrismaService],
     },
     {

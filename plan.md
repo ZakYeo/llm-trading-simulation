@@ -9,7 +9,9 @@ Quality status:
 
 - green workspace on `lint`, `test`, `typecheck`, and `build`
 - unit tests cover money, ledger, session creation, bank mutations, transfers, and Prisma mapping/repository adapters
-- main remaining quality gap is lack of real database-backed integration tests and NestJS wiring coverage
+- Docker-isolated local runtime is working for API, web, and Postgres
+- Prisma migration and test database bootstrap flow now exist
+- real Postgres-backed integration coverage exists for game-session repository persistence
 
 Completed this session:
 
@@ -23,14 +25,18 @@ Completed this session:
 - added game session creation, deposit, withdrawal, and transfer application use cases
 - added Prisma mapper and repository adapter coverage for game sessions
 - tightened MVP invariants so sessions require the five core roles and transfers reject self-transfer
+- wired NestJS providers for Prisma, repository, and core game use cases
+- added a validated session-creation API endpoint
+- added a Docker-first isolated runtime and verified it against the running stack
+- added Prisma migration files plus a test database bootstrap script
+- added a Postgres-backed repository integration test and generic integration test runner
 
 Immediate next steps:
 
-- add real Prisma/NestJS infrastructure wiring instead of adapter-only tests
-- add integration tests against a real test database for repository and use-case flows
+- extend integration tests against the real test database for deposit, withdrawal, transfer, and session-creation API flows
 - add interest accrual and round-oriented application services
 - add API boundary validation with Zod for request DTOs before exposing mutation endpoints
-- add isolated Docker-based app execution so the full stack can run predictably without local toolchain drift
+- add migration/bootstrap documentation and make integration test setup friction-free for future contributors
 
 Execution guidance for code quality
 
@@ -52,12 +58,11 @@ Working well:
 
 Needs improvement next:
 
-- no real Prisma client integration in Nest modules yet
-- no migration files or repository integration tests yet
+- no round-engine or bank-flow integration tests against the real database yet
 - no domain events, replay records, or round engine yet
-- no API mutation layer, request validation, or idempotency handling yet
+- API mutation layer has only one validated endpoint so far and no idempotency handling yet
 - no agent-to-agent integration tests yet
-- no fully isolated Docker runtime for the whole project yet
+- Docker runtime exists, but it still uses dev-mode web serving and no container-level automated smoke test
 
 Quality additions to include in later phases
 

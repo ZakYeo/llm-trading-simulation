@@ -14,12 +14,12 @@ export interface PersistedGameSessionRecord {
     name: string;
     role: 'BANKER' | 'ANALYST' | 'LAWYER' | 'INFLUENCER' | 'TRADER';
     balance: {
-      available: string;
-      reserved: string;
+      available: string | { toString(): string };
+      reserved: string | { toString(): string };
     } | null;
     depositAccount: {
-      principal: string;
-      accrued: string;
+      principal: string | { toString(): string };
+      accrued: string | { toString(): string };
     } | null;
   }>;
 }
@@ -55,6 +55,12 @@ const roleFromPersistence = {
   INFLUENCER: 'influencer',
   TRADER: 'trader',
 } as const;
+
+function decimalLikeToString(
+  value: string | { toString(): string } | undefined,
+): string {
+  return value?.toString() ?? '0.0000';
+}
 
 export class GameSessionPrismaMapper {
   static toCreateInput(session: GameSession) {
@@ -100,12 +106,12 @@ export class GameSessionPrismaMapper {
           name: agent.name,
           role: roleFromPersistence[agent.role],
           balance: AccountBalance.restore(
-            Money.fromDecimal(balance?.available ?? '0.0000'),
-            Money.fromDecimal(balance?.reserved ?? '0.0000'),
+            Money.fromDecimal(decimalLikeToString(balance?.available)),
+            Money.fromDecimal(decimalLikeToString(balance?.reserved)),
           ),
           depositAccount: DepositAccount.restore(
-            Money.fromDecimal(depositAccount?.principal ?? '0.0000'),
-            Money.fromDecimal(depositAccount?.accrued ?? '0.0000'),
+            Money.fromDecimal(decimalLikeToString(depositAccount?.principal)),
+            Money.fromDecimal(decimalLikeToString(depositAccount?.accrued)),
           ),
         });
       }),

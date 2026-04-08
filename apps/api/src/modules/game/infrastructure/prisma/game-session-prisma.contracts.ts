@@ -18,7 +18,7 @@ export interface PrismaGameSessionDelegate {
         >['agents']['create'];
       };
     };
-  }): Promise<void>;
+  }): Promise<unknown>;
   findUnique(args: {
     where: { id: string };
     include: {

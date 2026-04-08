@@ -15,7 +15,12 @@ export default tseslint.config(
       parserOptions: {
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
-        allowDefaultProject: ['eslint.config.mjs', 'vitest.workspace.ts'],
+        allowDefaultProject: [
+          'eslint.config.mjs',
+          'vitest.workspace.ts',
+          'apps/api/vitest.config.ts',
+          'apps/api/vitest.integration.config.ts',
+        ],
       },
     },
     rules: {

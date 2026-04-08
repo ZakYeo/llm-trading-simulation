@@ -5,6 +5,7 @@
   "packageManager": "pnpm@9.12.3",
   "scripts": {
     "build": "corepack pnpm -r build",
+    "db:test:prepare": "./scripts/prepare-test-db.sh",
     "dev": "corepack pnpm --parallel --filter @llm-sim/api --filter @llm-sim/web dev",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",
@@ -12,9 +13,11 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "corepack pnpm -r test",
+    "test:integration": "corepack pnpm -r --if-present test:integration",
     "typecheck": "corepack pnpm -r typecheck",
     "db:generate": "corepack pnpm --filter @llm-sim/api exec prisma generate --schema prisma/schema.prisma",
     "db:migrate": "corepack pnpm --filter @llm-sim/api exec prisma migrate dev --schema prisma/schema.prisma",
+    "db:migrate:deploy": "corepack pnpm --filter @llm-sim/api exec prisma migrate deploy --schema prisma/schema.prisma",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -32,7 +35,7 @@
     "*.{ts,tsx,js,jsx,json,md,css}": [
       "prettier --write"
     ],
-    "{apps,packages}/**/*.{ts,tsx,js,jsx}": [
+    "{apps,packages}/**/src/**/*.{ts,tsx,js,jsx}": [
       "eslint --fix"
     ]
   }

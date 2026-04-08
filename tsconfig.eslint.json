@@ -11,6 +11,8 @@
     "packages/**/*.ts",
     "packages/**/*.tsx",
     "eslint.config.mjs",
-    "vitest.workspace.ts"
+    "vitest.workspace.ts",
+    "apps/api/vitest.config.ts",
+    "apps/api/vitest.integration.config.ts"
   ]
 }

@@ -8,7 +8,8 @@
     "dev": "nest start --watch",
     "lint": "eslint src --ext .ts",
     "start": "node dist/main.js",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
