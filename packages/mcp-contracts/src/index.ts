@@ -56,6 +56,33 @@ export const agentTurnContextSchema = z.object({
   ),
   recentMessages: z.array(recentAgentMessageSchema),
   recentActions: z.array(recentAgentActionSchema),
+  actionableProposalsForSelf: z.array(
+    z.object({
+      proposalActionId: z.string().min(1),
+      proposerAgentId: z.string().min(1),
+      proposerName: z.string().min(1),
+      amount: z.string().min(1),
+      rationale: z.string().min(1),
+    }),
+  ),
+  economicContext: z.object({
+    objective: z.string().min(1),
+    messagesDoNotMoveMoney: z.boolean(),
+    proposalsCanMoveMoney: z.boolean(),
+    acceptedProposalChangesBalances: z.boolean(),
+    finalizeDoesNotChangeState: z.boolean(),
+    unresolvedIncomingProposalCount: z.number().int().nonnegative(),
+    unresolvedOutgoingProposalCount: z.number().int().nonnegative(),
+  }),
+  actionSemantics: z.object({
+    sendPublicMessage: z.string().min(1),
+    sendPrivateMessage: z.string().min(1),
+    proposeDirectTransfer: z.string().min(1),
+    counterDirectTransferProposal: z.string().min(1),
+    acceptDirectTransferProposal: z.string().min(1),
+    rejectDirectTransferProposal: z.string().min(1),
+    finalizeTurn: z.string().min(1),
+  }),
 });
 
 export const agentActionSchema = z.discriminatedUnion('type', [

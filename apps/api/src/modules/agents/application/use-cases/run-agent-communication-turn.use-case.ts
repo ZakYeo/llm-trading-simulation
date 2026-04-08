@@ -42,6 +42,26 @@ function isTransferProposalResolutionType(
   );
 }
 
+function isPendingTransferProposalForAgent(
+  action: AgentActionRecord,
+  agentId: string,
+  recentActions: AgentActionRecord[],
+): boolean {
+  if (
+    !isTransferProposalActionType(action.actionType) ||
+    action.recipientAgentId !== agentId ||
+    !action.id
+  ) {
+    return false;
+  }
+
+  return !recentActions.some(
+    (candidate) =>
+      candidate.relatedProposalActionId === action.id &&
+      isTransferProposalResolutionType(candidate.actionType),
+  );
+}
+
 export interface RunAgentCommunicationTurnInput {
   gameSessionId: string;
   turnNumber?: number;
@@ -89,6 +109,26 @@ function toRecentAction(
     roundNumber: action.roundNumber,
     turnNumber: action.turnNumber,
   };
+}
+
+function findActionableProposalsForAgent(
+  agentId: string,
+  session: Awaited<ReturnType<GameSessionRepositoryPort['findById']>>,
+  recentActions: AgentActionRecord[],
+) {
+  return recentActions
+    .filter((action) =>
+      isPendingTransferProposalForAgent(action, agentId, recentActions),
+    )
+    .map((action) => ({
+      proposalActionId: action.id ?? 'pending-action',
+      proposerAgentId: action.agentId,
+      proposerName:
+        session?.agents.find((candidate) => candidate.id === action.agentId)
+          ?.name ?? 'Unknown Agent',
+      amount: action.amount ?? '0.0000',
+      rationale: action.content ?? 'No rationale provided.',
+    }));
 }
 
 export class RunAgentCommunicationTurnUseCase {
@@ -160,6 +200,49 @@ export class RunAgentCommunicationTurnUseCase {
 
           return toRecentAction(action, agentName);
         }),
+        actionableProposalsForSelf: findActionableProposalsForAgent(
+          agent.id,
+          session,
+          recentActions,
+        ),
+        economicContext: {
+          objective:
+            'Maximize your own expected fake-money outcome. Use communication, proposals, and responses when they improve your expected position.',
+          messagesDoNotMoveMoney: true,
+          proposalsCanMoveMoney: true,
+          acceptedProposalChangesBalances: true,
+          finalizeDoesNotChangeState: true,
+          unresolvedIncomingProposalCount: recentActions.filter((action) =>
+            isPendingTransferProposalForAgent(action, agent.id, recentActions),
+          ).length,
+          unresolvedOutgoingProposalCount: recentActions.filter(
+            (action) =>
+              isTransferProposalActionType(action.actionType) &&
+              action.agentId === agent.id &&
+              Boolean(action.id) &&
+              !recentActions.some(
+                (candidate) =>
+                  candidate.relatedProposalActionId === action.id &&
+                  isTransferProposalResolutionType(candidate.actionType),
+              ),
+          ).length,
+        },
+        actionSemantics: {
+          sendPublicMessage:
+            'Shares public information or narrative. Does not move money directly.',
+          sendPrivateMessage:
+            'Opens or continues a bilateral negotiation. Does not move money directly.',
+          proposeDirectTransfer:
+            'Creates a concrete executable transfer proposal with an amount for the counterparty to accept, reject, or counter.',
+          counterDirectTransferProposal:
+            'Replaces a pending transfer proposal with a new executable amount back to the original proposer.',
+          acceptDirectTransferProposal:
+            'Accepts a pending transfer proposal so it can execute and change balances.',
+          rejectDirectTransferProposal:
+            'Closes a pending transfer proposal without changing balances.',
+          finalizeTurn:
+            'Take no further action this turn. This does not move money or improve information by itself.',
+        },
       };
 
       const action = await this.agentGateway.decideNextAction(context);

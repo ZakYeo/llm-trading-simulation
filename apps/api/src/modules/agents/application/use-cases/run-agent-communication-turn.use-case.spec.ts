@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AgentAction } from '@llm-sim/mcp-contracts';
+import type { AgentAction, AgentTurnContext } from '@llm-sim/mcp-contracts';
 
 import { DepositAccount } from '../../../bank/domain/entities/deposit-account.js';
 import type { GameSessionRepositoryPort } from '../../../game/application/ports/game-session-repository.port.js';
@@ -91,6 +91,17 @@ class ScriptedAgentGateway implements AgentGatewayPort {
 
     this.index += 1;
     return action;
+  }
+}
+
+class RecordingAgentGateway implements AgentGatewayPort {
+  contexts: AgentTurnContext[] = [];
+
+  async decideNextAction(context: AgentTurnContext): Promise<AgentAction> {
+    this.contexts.push(context);
+    return {
+      type: 'finalize_turn',
+    };
   }
 }
 
@@ -262,5 +273,62 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       content: 'I can fund this trade, but only at a lower amount.',
       turnNumber: 3,
     });
+  });
+
+  it('provides the gateway with economic context and action semantics', async () => {
+    const actionRepository = new InMemoryAgentActionRepository();
+    await actionRepository.save({
+      gameSessionId: 'game-1',
+      roundNumber: 1,
+      turnNumber: 2,
+      agentId: 'agent-2',
+      recipientAgentId: 'agent-1',
+      actionType: 'propose_direct_transfer',
+      amount: '15.0000',
+      content: 'I can turn this into a higher-return trade quickly.',
+    });
+
+    const gateway = new RecordingAgentGateway();
+    const useCase = new RunAgentCommunicationTurnUseCase(
+      new InMemoryGameSessionRepository(createSession()),
+      new InMemoryAgentMessageRepository(),
+      actionRepository,
+      gateway,
+    );
+
+    await useCase.execute({
+      gameSessionId: 'game-1',
+      turnNumber: 3,
+    });
+
+    expect(gateway.contexts).toHaveLength(2);
+    expect(gateway.contexts[0].economicContext).toMatchObject({
+      messagesDoNotMoveMoney: true,
+      proposalsCanMoveMoney: true,
+      acceptedProposalChangesBalances: true,
+      finalizeDoesNotChangeState: true,
+      unresolvedIncomingProposalCount: 1,
+      unresolvedOutgoingProposalCount: 0,
+    });
+    expect(gateway.contexts[0].actionableProposalsForSelf).toMatchObject([
+      {
+        proposalActionId: 'action-1',
+        proposerAgentId: 'agent-2',
+        proposerName: 'Trader Bot',
+        amount: '15.0000',
+      },
+    ]);
+    expect(gateway.contexts[0].actionSemantics).toMatchObject({
+      proposeDirectTransfer: expect.stringContaining(
+        'concrete executable transfer proposal',
+      ),
+      acceptDirectTransferProposal: expect.stringContaining('change balances'),
+      finalizeTurn: expect.stringContaining('does not move money'),
+    });
+    expect(gateway.contexts[1].economicContext).toMatchObject({
+      unresolvedIncomingProposalCount: 0,
+      unresolvedOutgoingProposalCount: 1,
+    });
+    expect(gateway.contexts[1].actionableProposalsForSelf).toHaveLength(0);
   });
 });

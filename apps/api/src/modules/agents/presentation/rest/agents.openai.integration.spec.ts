@@ -136,7 +136,10 @@ describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
       gameSessionId: string;
       turns: Array<{
         turnNumber: number;
-        actions: Array<{ action: { type: string } }>;
+        actions: Array<{
+          agentName: string;
+          action: { type: string };
+        }>;
         actionRecords: Array<{ actionType: string }>;
         messages: Array<{ visibility: string; content: string }>;
       }>;
@@ -152,8 +155,23 @@ describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
     const flattenedActionTypes = body.turns.flatMap((turn) =>
       turn.actionRecords.map((record) => record.actionType),
     );
+    const flattenedActions = body.turns.flatMap((turn) => turn.actions);
     const nonFinalizeActionTypes = flattenedActionTypes.filter(
       (actionType) => actionType !== 'finalize_turn',
+    );
+    const bankerOrTraderNonFinalizeActions = flattenedActions.filter(
+      (entry) =>
+        (entry.agentName === 'Banker Bot' ||
+          entry.agentName === 'Trader Bot') &&
+        entry.action.type !== 'finalize_turn',
+    );
+    const substantiveInteractionActionTypes = flattenedActionTypes.filter(
+      (actionType) =>
+        actionType === 'send_private_message' ||
+        actionType === 'propose_direct_transfer' ||
+        actionType === 'counter_direct_transfer_proposal' ||
+        actionType === 'accept_direct_transfer_proposal' ||
+        actionType === 'reject_direct_transfer_proposal',
     );
 
     expect(body.gameSessionId).toBe(createdSession.id);
@@ -165,6 +183,14 @@ describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
     expect(nonFinalizeActionTypes.length, JSON.stringify(body)).toBeGreaterThan(
       0,
     );
+    expect(
+      bankerOrTraderNonFinalizeActions.length,
+      JSON.stringify(body),
+    ).toBeGreaterThan(0);
+    expect(
+      substantiveInteractionActionTypes.length,
+      JSON.stringify(body),
+    ).toBeGreaterThan(0);
     expect(replay.events.some((event) => event.type === 'action')).toBe(true);
   }, 120_000);
 });
