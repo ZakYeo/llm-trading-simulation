@@ -48,6 +48,15 @@ export class PrismaReplayReadModel implements ReplayReadModelPort {
             createdAt: 'asc',
           },
         },
+        agentMessages: {
+          include: {
+            senderAgent: true,
+            recipientAgent: true,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
       },
     });
 
@@ -82,6 +91,23 @@ export class PrismaReplayReadModel implements ReplayReadModelPort {
         agentId: withdrawal.agentId,
         agentName: withdrawal.agent.name,
       })),
+      ...session.agentMessages.map((message) => {
+        const visibility: ReplayEventRecord['visibility'] =
+          message.visibility === 'PUBLIC' ? 'public' : 'private';
+
+        return {
+          id: message.id,
+          type: 'message' as const,
+          createdAt: message.createdAt.toISOString(),
+          roundNumber: message.roundNumber,
+          senderAgentId: message.senderAgentId,
+          senderAgentName: message.senderAgent.name,
+          recipientAgentId: message.recipientAgentId,
+          recipientAgentName: message.recipientAgent?.name,
+          visibility,
+          content: message.content,
+        };
+      }),
     ].sort((left, right) => {
       const createdAtCompare = left.createdAt.localeCompare(right.createdAt);
 

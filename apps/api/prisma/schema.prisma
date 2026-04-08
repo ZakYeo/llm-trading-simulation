@@ -23,6 +23,11 @@ enum AgentRole {
   TRADER
 }
 
+enum AgentMessageVisibility {
+  PUBLIC
+  PRIVATE
+}
+
 model GameSession {
   id           String       @id @default(uuid())
   name         String
@@ -32,6 +37,7 @@ model GameSession {
   updatedAt    DateTime     @updatedAt
   agents       Agent[]
   rounds       GameRound[]
+  agentMessages AgentMessage[]
   transfers    Transfer[]
   deposits     Deposit[]
   withdrawals  Withdrawal[]
@@ -47,6 +53,8 @@ model Agent {
   gameSession   GameSession        @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
   balance       AgentBalance?
   depositAccount AgentDepositAccount?
+  sentMessages AgentMessage[] @relation("AgentMessageSender")
+  receivedMessages AgentMessage[] @relation("AgentMessageRecipient")
   outgoingTransfers Transfer[]     @relation("TransferSourceAgent")
   incomingTransfers Transfer[]     @relation("TransferDestinationAgent")
   deposits      Deposit[]
@@ -77,6 +85,20 @@ model GameRound {
   roundNumber   Int
   createdAt     DateTime    @default(now())
   gameSession   GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+}
+
+model AgentMessage {
+  id               String                 @id @default(uuid())
+  gameSessionId    String
+  roundNumber      Int
+  senderAgentId    String
+  recipientAgentId String?
+  visibility       AgentMessageVisibility
+  content          String
+  createdAt        DateTime               @default(now())
+  gameSession      GameSession            @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  senderAgent      Agent                  @relation("AgentMessageSender", fields: [senderAgentId], references: [id], onDelete: Cascade)
+  recipientAgent   Agent?                 @relation("AgentMessageRecipient", fields: [recipientAgentId], references: [id], onDelete: SetNull)
 }
 
 model Transfer {

@@ -17,12 +17,15 @@ Quality status:
 - session updates now preserve the `GameSession` row and durable `GameRound` history in Postgres
 - transfer, deposit, and withdrawal actions now persist durable ledger history rows in Postgres
 - replay-oriented read models and API endpoints now exist over stored round and ledger history
+- backend-only agent communication now exists with persisted public/private messages
+- OpenAI is now wired behind an `AgentGatewayPort`, with mock runtime selection available for deterministic tests
 
 Readiness assessment:
 
 - close to a real fake-money backend MVP
-- not yet close to the full MCP multi-agent + LLM system
-- OpenAI credentials can be added now, but they are not yet used by the application because no `LlmPort`, provider adapter, or agent runtime has been implemented
+- now entering the first backend agent-communication milestone
+- still not yet close to the full MCP multi-agent system with standalone agent servers and multi-turn negotiation
+- OpenAI credentials are now usable through the backend agent gateway, but the current implementation is still a minimal single-turn slice rather than a full agent runtime
 
 Completed this session:
 
@@ -50,14 +53,19 @@ Completed this session:
 - rewrote the Prisma session repository update path so it preserves session identity and persists round history instead of deleting and recreating the parent row
 - added explicit ledger-history persistence for transfer, deposit, and withdrawal flows through the repository port and Prisma adapter
 - added replay read-model plumbing plus a replay HTTP endpoint over durable stored history
+- added minimal MCP-style agent message/action contracts for backend orchestration
+- added `AgentGatewayPort`, mock agent runtime, and OpenAI-backed agent gateway wiring
+- added a backend communication-turn use case plus `POST /api/agents/sessions/:id/turns/communicate`
+- added durable agent-message persistence and replay exposure for stored public/private messages
+- added unit and Postgres-backed HTTP integration coverage for the agent communication slice
 
 Immediate next steps:
 
-- add a backend-only agent communication slice with mock/local agent runtimes before building more UI
-- introduce `AgentGatewayPort` and minimal MCP-style agent action/message contracts
-- add one orchestrated multi-agent turn that exchanges messages and commits a validated outcome
-- add agent-to-agent integration tests over the backend orchestration path
-- keep frontend integration deferred until backend agent communication is real and testable
+- extend the current single communication turn into a backend round orchestrator that can execute multiple agent turns in sequence
+- decide and persist richer communication outcomes than messages alone, such as proposals, acceptances, or validated transfer intents
+- add agent-to-agent integration tests that prove multi-turn communication and resulting persisted state transitions
+- keep frontend integration deferred until backend communication and replay become richer
+- only after that, split the current in-process contract into true MCP-facing agent boundaries
 
 Execution guidance for code quality
 
@@ -79,29 +87,30 @@ Working well:
 
 Needs improvement next:
 
-- no domain events, replay records, or round engine yet
-- durable history now exists and replay reads are exposed, but there is still no agent runtime, MCP boundary implementation, or orchestrated multi-agent turn flow
+- no domain event bus or full round engine yet
+- durable history now exists and replay reads are exposed, but the agent layer is still only a minimal backend slice rather than a standalone MCP boundary
 - no idempotency handling yet
-- no agent-to-agent integration tests yet
+- no multi-turn agent-to-agent integration tests yet
 - Docker runtime exists, but it still uses dev-mode web serving and no container-level automated smoke test
-- no `LlmPort`, prompt factory, model provider adapter, or OpenAI-backed decision loop yet
+- no prompt factory, multi-turn policy layer, or negotiation engine yet
 
 What counts as “real working and testable” next
 
 - a backend flow that can create a session, mutate balances through transfer/deposit/withdraw, and read the resulting persisted state back through HTTP
 - real Postgres-backed integration tests that prove those flows end to end through the Nest HTTP boundary
 - a backend-only orchestrated agent turn with persisted messages/actions and integration coverage
+- at least one multi-turn agent communication integration test that proves stateful interaction, not just a single exchange
 
 What is still later-stage work
 
 - MCP agent servers
-- orchestrated multi-agent turns
-- OpenAI-driven decisions
+- standalone MCP transport boundaries
+- richer orchestrated multi-agent turns
 - agent-to-agent negotiation through MCP boundaries
 
 Quality additions to include in later phases
 
-- add agent-to-agent integration tests once MCP agent boundaries are in place so message exchange, transfer proposals, and turn orchestration are exercised end to end
+- add agent-to-agent integration tests over the current backend slice first, then retain them when MCP agent boundaries are introduced
 - add a Docker-first local run mode with the backend, frontend, database, and supporting services orchestrated together for reproducible development and demos
 
 Project concept

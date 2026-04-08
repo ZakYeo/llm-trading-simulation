@@ -42,6 +42,18 @@ describe('GetGameReplayUseCase', () => {
           destinationAgentId: 'agent-2',
           destinationAgentName: 'Banker Bot',
         },
+        {
+          id: 'message-1',
+          type: 'message',
+          createdAt: '2026-04-08T10:02:00.000Z',
+          roundNumber: 1,
+          senderAgentId: 'agent-1',
+          senderAgentName: 'Trader Bot',
+          recipientAgentId: 'agent-2',
+          recipientAgentName: 'Banker Bot',
+          visibility: 'private',
+          content: 'I can move first if you can match funds.',
+        },
       ],
     };
 

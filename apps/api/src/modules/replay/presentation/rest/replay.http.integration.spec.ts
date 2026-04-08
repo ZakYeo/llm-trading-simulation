@@ -12,6 +12,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
 
   beforeAll(async () => {
     process.env.DATABASE_URL = testDatabaseUrl;
+    process.env.AGENT_RUNTIME_PROVIDER = 'mock';
 
     const app = await createApp();
     await app.listen(0, '127.0.0.1');
@@ -30,9 +31,10 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
   afterAll(async () => {
     await prismaService.gameSession.deleteMany();
     await closeApp?.();
+    delete process.env.AGENT_RUNTIME_PROVIDER;
   });
 
-  it('returns replay-oriented round and ledger history for a game session', async () => {
+  it('returns replay-oriented round, ledger, and agent-message history for a game session', async () => {
     const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
       method: 'POST',
       headers: {
@@ -104,6 +106,12 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
         }),
       },
     );
+    await fetch(
+      `${baseUrl}/api/agents/sessions/${createdSession.id}/turns/communicate`,
+      {
+        method: 'POST',
+      },
+    );
 
     const replayResponse = await fetch(
       `${baseUrl}/api/replay/sessions/${createdSession.id}`,
@@ -111,7 +119,12 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
     const replay = (await replayResponse.json()) as {
       gameSession: { id: string; currentRound: number; status: string };
       rounds: Array<{ roundNumber: number }>;
-      events: Array<{ type: string; amount: string }>;
+      events: Array<{
+        type: string;
+        amount?: string;
+        visibility?: string;
+        content?: string;
+      }>;
     };
 
     expect(replayResponse.status).toBe(200);
@@ -119,16 +132,29 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
     expect(replay.gameSession.currentRound).toBe(1);
     expect(replay.gameSession.status).toBe('active');
     expect(replay.rounds.map((round) => round.roundNumber)).toEqual([1]);
-    expect(replay.events.map((event) => event.type)).toEqual([
-      'transfer',
-      'deposit',
-      'withdrawal',
-    ]);
-    expect(replay.events.map((event) => event.amount)).toEqual([
-      '15',
-      '20',
-      '5',
-    ]);
+    expect(
+      replay.events.filter((event) => event.type !== 'message'),
+    ).toHaveLength(3);
+    expect(
+      replay.events
+        .filter((event) => event.type !== 'message')
+        .map((event) => event.type),
+    ).toEqual(['transfer', 'deposit', 'withdrawal']);
+    expect(
+      replay.events
+        .filter((event) => event.type !== 'message')
+        .map((event) => event.amount),
+    ).toEqual(['15', '20', '5']);
+    expect(replay.events.some((event) => event.type === 'message')).toBe(true);
+    expect(
+      replay.events.some(
+        (event) =>
+          event.type === 'message' &&
+          event.visibility === 'private' &&
+          typeof event.content === 'string' &&
+          event.content.length > 0,
+      ),
+    ).toBe(true);
   });
 
   it('returns 404 when replay data is not found', async () => {

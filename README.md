@@ -10,8 +10,8 @@ Phase 0 is complete. Phase 1 is in progress.
 Reality check:
 
 - the project is close to a real fake-money backend MVP
-- it is not yet close to the full MCP multi-agent + LLM system
-- the OpenAI key can be used later, but there is no LLM provider integration or agent runtime wired yet
+- it is now entering the first real backend agent-communication slice
+- it is not yet close to the full MCP multi-agent system with standalone MCP servers
 
 Implemented today:
 
@@ -26,6 +26,8 @@ Implemented today:
 - durable round-history persistence for advanced sessions
 - durable transfer, deposit, and withdrawal history persistence
 - replay-oriented read model and HTTP endpoint over stored round and ledger history
+- backend-only agent communication endpoint with persisted public/private agent messages
+- OpenAI-backed agent gateway behind a backend port, with a mock runtime used for integration tests
 - shared Nest app bootstrap and HTTP exception mapping for validation and domain errors
 - Prisma mapper/repository adapter tests for session persistence boundaries
 - real repository integration coverage against Postgres for game-session persistence
@@ -43,7 +45,10 @@ Current backend quality notes:
 - round advancement now leaves durable `GameRound` history in Postgres
 - transfer, deposit, and withdrawal flows now leave durable ledger history rows in Postgres
 - replay data can now be read through `GET /api/replay/sessions/:id`
-- there is no round engine, replay/event stream, MCP runtime, or OpenAI-backed agent behavior yet
+- replay data now includes agent-message history as well as money-flow history
+- one backend agent communication turn is now implemented and covered through unit and Postgres-backed HTTP integration tests
+- the OpenAI key is now usable through the backend agent gateway when `AGENT_RUNTIME_PROVIDER` is not set to `mock`
+- there is still no standalone MCP server runtime, negotiation engine, or multi-turn agent loop yet
 
 ## Workspace
 
@@ -61,11 +66,13 @@ The project roadmap lives in [plan.md](./plan.md) and [steps.md](./steps.md).
 ## Local development
 
 1. Copy `.env.example` to `.env` and keep the database/runtime values.
-2. If you want to prepare for later LLM work, add `OPENAI_API_KEY` to `.env`.
+2. Add `OPENAI_API_KEY` to `.env` if you want to exercise the real OpenAI-backed agent gateway.
 3. Start Postgres with `docker compose up -d`.
 4. Install dependencies with `corepack pnpm install`.
 5. Apply database changes with `corepack pnpm db:migrate:deploy`.
 6. Run the API and frontend with `corepack pnpm dev`.
+
+For deterministic backend integration tests, use `AGENT_RUNTIME_PROVIDER=mock`.
 
 ## Database bootstrap
 
@@ -104,8 +111,8 @@ Run these before committing:
 
 ## Immediate next work
 
-1. Add a backend-only agent communication slice with mock/local agent runtimes.
-2. Introduce minimal MCP-style agent message and action contracts plus an `AgentGatewayPort`.
-3. Add one orchestrated multi-agent backend turn and integration tests around it.
-4. Keep frontend integration deferred until backend agent communication is real and testable.
-5. After that, wire real LLM/runtime layers behind the same backend abstractions.
+1. Extend the single communication turn into a multi-turn orchestration flow with explicit round outcomes.
+2. Persist agent actions and communication as richer replay-ready event records.
+3. Add agent-to-agent integration tests that prove negotiation behavior over multiple backend turns.
+4. Keep frontend integration deferred until backend agent communication and replay are richer.
+5. Introduce standalone MCP-facing agent adapters after the backend communication loop is stable.

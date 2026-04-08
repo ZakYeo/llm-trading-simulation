@@ -1,0 +1,77 @@
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+
+import { createApp } from '../../../../app.factory.js';
+import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service.js';
+
+const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+
+describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
+  let prismaService: PrismaService;
+  let baseUrl: string;
+  let closeApp: (() => Promise<void>) | undefined;
+
+  beforeAll(async () => {
+    process.env.DATABASE_URL = testDatabaseUrl;
+    process.env.AGENT_RUNTIME_PROVIDER = 'mock';
+
+    const app = await createApp();
+    await app.listen(0, '127.0.0.1');
+
+    prismaService = app.get(PrismaService);
+    baseUrl = await app.getUrl();
+    closeApp = async () => {
+      await app.close();
+    };
+  });
+
+  beforeEach(async () => {
+    await prismaService.gameSession.deleteMany();
+  });
+
+  afterAll(async () => {
+    await prismaService.gameSession.deleteMany();
+    await closeApp?.();
+    delete process.env.AGENT_RUNTIME_PROVIDER;
+  });
+
+  it('orchestrates a backend-only agent communication turn and persists messages', async () => {
+    const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'Agent Communication Table',
+        initialBalance: '100.0000',
+        agents: [
+          { name: 'Banker Bot', role: 'banker' },
+          { name: 'Analyst Bot', role: 'analyst' },
+          { name: 'Lawyer Bot', role: 'lawyer' },
+          { name: 'Influencer Bot', role: 'influencer' },
+          { name: 'Trader Bot', role: 'trader' },
+        ],
+      }),
+    });
+    const createdSession = (await createResponse.json()) as { id: string };
+
+    const response = await fetch(
+      `${baseUrl}/api/agents/sessions/${createdSession.id}/turns/communicate`,
+      {
+        method: 'POST',
+      },
+    );
+    const body = (await response.json()) as {
+      gameSessionId: string;
+      actions: Array<{ action: { type: string } }>;
+      messages: Array<{ visibility: string; content: string }>;
+    };
+
+    expect(response.status).toBe(201);
+    expect(body.gameSessionId).toBe(createdSession.id);
+    expect(body.actions.length).toBe(5);
+    expect(body.messages.length).toBeGreaterThan(0);
+    expect(
+      body.messages.some((message) => message.visibility === 'private'),
+    ).toBe(true);
+  });
+});

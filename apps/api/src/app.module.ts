@@ -1,3 +1,4 @@
+import { AgentsModule } from './modules/agents/presentation/agents.module.js';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
@@ -10,6 +11,7 @@ import { ReplayModule } from './modules/replay/presentation/replay.module.js';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    AgentsModule,
     GameModule,
     BankModule,
     ReplayModule,
