@@ -64,6 +64,33 @@ const runLiveOpenAiTests =
   process.env.ENABLE_OPENAI_LIVE_TESTS === '1' &&
   Boolean(testDatabaseUrl) &&
   Boolean(liveOpenAiApiKey);
+const liveRunCount = Number.parseInt(
+  process.env.OPENAI_LIVE_TEST_RUN_COUNT ?? '3',
+  10,
+);
+const liveTurnCount = Number.parseInt(
+  process.env.OPENAI_LIVE_TEST_TURN_COUNT ?? '2',
+  10,
+);
+
+interface OrchestratedRunResult {
+  sessionId: string;
+  body: {
+    gameSessionId: string;
+    turns: Array<{
+      turnNumber: number;
+      actions: Array<{
+        agentName: string;
+        action: { type: string };
+      }>;
+      actionRecords: Array<{ actionType: string }>;
+      messages: Array<{ visibility: string; content: string }>;
+    }>;
+  };
+  replay: {
+    events: Array<{ type: string; actionType?: string }>;
+  };
+}
 
 describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
   let prismaService: PrismaService;
@@ -99,14 +126,14 @@ describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
     delete process.env.AGENT_RUNTIME_PROVIDER;
   });
 
-  it('does not allow all agents to finalize across all four turns on the live provider path', async () => {
+  async function runScenario(runIndex: number): Promise<OrchestratedRunResult> {
     const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        name: 'Live OpenAI Table',
+        name: `Live OpenAI Table ${runIndex + 1}`,
         initialBalance: '100.0000',
         agents: [
           { name: 'Banker Bot', role: 'banker' },
@@ -128,69 +155,104 @@ describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          turnCount: 4,
+          turnCount: liveTurnCount,
         }),
       },
     );
-    const body = (await response.json()) as {
-      gameSessionId: string;
-      turns: Array<{
-        turnNumber: number;
-        actions: Array<{
-          agentName: string;
-          action: { type: string };
-        }>;
-        actionRecords: Array<{ actionType: string }>;
-        messages: Array<{ visibility: string; content: string }>;
-      }>;
-    };
+    const body = (await response.json()) as OrchestratedRunResult['body'];
     expect(response.status, JSON.stringify(body)).toBe(201);
+
     const replayResponse = await fetch(
       `${baseUrl}/api/replay/sessions/${createdSession.id}`,
     );
     expect(replayResponse.status).toBe(200);
-    const replay = (await replayResponse.json()) as {
-      events: Array<{ type: string; actionType?: string }>;
-    };
-    const flattenedActionTypes = body.turns.flatMap((turn) =>
-      turn.actionRecords.map((record) => record.actionType),
-    );
-    const flattenedActions = body.turns.flatMap((turn) => turn.actions);
-    const nonFinalizeActionTypes = flattenedActionTypes.filter(
-      (actionType) => actionType !== 'finalize_turn',
-    );
-    const bankerOrTraderNonFinalizeActions = flattenedActions.filter(
-      (entry) =>
-        (entry.agentName === 'Banker Bot' ||
-          entry.agentName === 'Trader Bot') &&
-        entry.action.type !== 'finalize_turn',
-    );
-    const substantiveInteractionActionTypes = flattenedActionTypes.filter(
-      (actionType) =>
-        actionType === 'send_private_message' ||
-        actionType === 'propose_direct_transfer' ||
-        actionType === 'counter_direct_transfer_proposal' ||
-        actionType === 'accept_direct_transfer_proposal' ||
-        actionType === 'reject_direct_transfer_proposal',
-    );
+    const replay =
+      (await replayResponse.json()) as OrchestratedRunResult['replay'];
 
-    expect(body.gameSessionId).toBe(createdSession.id);
-    expect(body.turns).toHaveLength(4);
-    expect(body.turns.every((turn) => turn.actions.length === 5)).toBe(true);
-    expect(body.turns.every((turn) => turn.actionRecords.length === 5)).toBe(
-      true,
-    );
-    expect(nonFinalizeActionTypes.length, JSON.stringify(body)).toBeGreaterThan(
-      0,
-    );
+    return {
+      sessionId: createdSession.id,
+      body,
+      replay,
+    };
+  }
+
+  it('builds live confidence over repeated runs without forcing one exact move', async () => {
+    const results: OrchestratedRunResult[] = [];
+
+    for (let runIndex = 0; runIndex < liveRunCount; runIndex += 1) {
+      results.push(await runScenario(runIndex));
+    }
+
+    const runsWithStructuredEconomicActions = results.filter((result) => {
+      const flattenedActionTypes = result.body.turns.flatMap((turn) =>
+        turn.actionRecords.map((record) => record.actionType),
+      );
+
+      return flattenedActionTypes.some(
+        (actionType) =>
+          actionType === 'propose_direct_transfer' ||
+          actionType === 'counter_direct_transfer_proposal' ||
+          actionType === 'accept_direct_transfer_proposal' ||
+          actionType === 'reject_direct_transfer_proposal',
+      );
+    });
+
+    for (const result of results) {
+      const body = result.body;
+      const replay = result.replay;
+      const flattenedActionTypes = body.turns.flatMap((turn) =>
+        turn.actionRecords.map((record) => record.actionType),
+      );
+      const flattenedActions = body.turns.flatMap((turn) => turn.actions);
+      const nonFinalizeActionTypes = flattenedActionTypes.filter(
+        (actionType) => actionType !== 'finalize_turn',
+      );
+      const bankerOrTraderNonFinalizeActions = flattenedActions.filter(
+        (entry) =>
+          (entry.agentName === 'Banker Bot' ||
+            entry.agentName === 'Trader Bot') &&
+          entry.action.type !== 'finalize_turn',
+      );
+      const substantiveInteractionActionTypes = flattenedActionTypes.filter(
+        (actionType) =>
+          actionType === 'send_private_message' ||
+          actionType === 'propose_direct_transfer' ||
+          actionType === 'counter_direct_transfer_proposal' ||
+          actionType === 'accept_direct_transfer_proposal' ||
+          actionType === 'reject_direct_transfer_proposal',
+      );
+
+      expect(body.gameSessionId).toBe(result.sessionId);
+      expect(body.turns).toHaveLength(liveTurnCount);
+      expect(body.turns.every((turn) => turn.actions.length === 5)).toBe(true);
+      expect(body.turns.every((turn) => turn.actionRecords.length === 5)).toBe(
+        true,
+      );
+      expect(
+        nonFinalizeActionTypes.length,
+        JSON.stringify({ sessionId: result.sessionId, body }),
+      ).toBeGreaterThan(0);
+      expect(
+        bankerOrTraderNonFinalizeActions.length,
+        JSON.stringify({ sessionId: result.sessionId, body }),
+      ).toBeGreaterThan(0);
+      expect(
+        substantiveInteractionActionTypes.length,
+        JSON.stringify({ sessionId: result.sessionId, body }),
+      ).toBeGreaterThan(0);
+      expect(replay.events.some((event) => event.type === 'action')).toBe(true);
+    }
+
     expect(
-      bankerOrTraderNonFinalizeActions.length,
-      JSON.stringify(body),
+      runsWithStructuredEconomicActions.length,
+      JSON.stringify(
+        results.map((result) => ({
+          sessionId: result.sessionId,
+          actionTypes: result.body.turns.flatMap((turn) =>
+            turn.actionRecords.map((record) => record.actionType),
+          ),
+        })),
+      ),
     ).toBeGreaterThan(0);
-    expect(
-      substantiveInteractionActionTypes.length,
-      JSON.stringify(body),
-    ).toBeGreaterThan(0);
-    expect(replay.events.some((event) => event.type === 'action')).toBe(true);
-  }, 120_000);
+  }, 240_000);
 });
