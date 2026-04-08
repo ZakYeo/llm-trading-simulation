@@ -292,6 +292,8 @@ Convenience command:
 corepack pnpm test:integration:openai
 ```
 
+This command uses a separate default test database name, `llm_trading_simulation_openai_test`, so it can run without colliding with the standard integration suite.
+
 Equivalent explicit example:
 
 ```bash

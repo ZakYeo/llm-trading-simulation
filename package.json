@@ -15,7 +15,7 @@
     "test": "corepack pnpm -r test",
     "test:all": "corepack pnpm test && corepack pnpm test:integration",
     "test:integration": "corepack pnpm db:test:prepare && corepack pnpm -r --if-present test:integration",
-    "test:integration:openai": "ENABLE_OPENAI_LIVE_TESTS=1 corepack pnpm test:integration",
+    "test:integration:openai": "TEST_DB_NAME=llm_trading_simulation_openai_test ENABLE_OPENAI_LIVE_TESTS=1 corepack pnpm test:integration",
     "typecheck": "corepack pnpm -r typecheck",
     "db:generate": "corepack pnpm --filter @llm-sim/api exec prisma generate",
     "db:migrate": "corepack pnpm --filter @llm-sim/api exec prisma migrate dev",

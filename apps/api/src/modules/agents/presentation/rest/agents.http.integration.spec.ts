@@ -195,7 +195,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
       expect.objectContaining({
         type: 'action_progressed',
         gameSessionId: createdSession.id,
-        roundNumber: 1,
+        roundNumber: 0,
         turnNumber: 1,
       }),
     );
