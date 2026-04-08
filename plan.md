@@ -27,9 +27,10 @@ Quality status:
 Readiness assessment:
 
 - close to a real fake-money backend MVP
-- now in the first backend agent-communication milestone
-- still not yet close to the full MCP multi-agent system with standalone agent servers and negotiated multi-turn resolution
-- OpenAI credentials are now usable through the backend agent gateway, but the current implementation is still an early orchestration slice rather than a full agent runtime
+- already at the first credible backend agent-communication milestone
+- strong enough to demo backend-only agent interaction through HTTP, replay, and live-provider smoke coverage
+- still not yet close to the full MCP multi-agent system with standalone agent servers and generalized negotiated multi-turn resolution
+- OpenAI credentials are now usable through the backend agent gateway, but the current implementation is still an orchestration slice rather than a full agent runtime
 
 Completed this session:
 
@@ -76,6 +77,7 @@ Immediate next steps:
 - extend the negotiation vocabulary beyond direct transfer proposals into richer primitives
 - add explicit lifecycle semantics for resolved proposals beyond the current accept/reject pair where needed
 - decide whether proposal resolution should live inside the agent orchestrator or in a dedicated negotiation/settlement application service
+- strengthen the gated live OpenAI test so it proves meaningful agent behavior without becoming flaky
 - keep the gated live OpenAI test healthy as the real-provider smoke path while deterministic mock tests remain the main regression suite
 - keep frontend integration deferred until backend communication and replay become richer
 - only after that, split the current in-process contract into true MCP-facing agent boundaries
@@ -107,7 +109,7 @@ Needs improvement next:
 - Docker runtime exists, but it still uses dev-mode web serving and no container-level automated smoke test
 - no prompt factory, generalized negotiation engine, or settlement layer beyond direct transfer proposal resolution yet
 
-What counts as “real working and testable” next
+What counts as “real working and testable” now
 
 - a backend flow that can create a session, mutate balances through transfer/deposit/withdraw, and read the resulting persisted state back through HTTP
 - real Postgres-backed integration tests that prove those flows end to end through the Nest HTTP boundary
@@ -121,6 +123,7 @@ Recommended next slice
 - keep `propose_direct_transfer` as the reference negotiation primitive now that it resolves end to end
 - add a second negotiable primitive, or broaden proposal metadata so different deal structures can be expressed
 - decide whether proposal settlement should stay inside the current orchestrator or move into a dedicated settlement service
+- strengthen live-provider assertions around proposal, response, and settlement while keeping deterministic mock coverage as the main regression suite
 - keep agent-to-agent integration coverage for both accepted and rejected proposals as the baseline for future negotiation primitives
 - retain replay fidelity so proposal, response, and settlement stay auditable
 

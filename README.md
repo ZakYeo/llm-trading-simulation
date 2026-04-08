@@ -5,12 +5,12 @@ a NestJS orchestration backend, and a React monitoring frontend.
 
 ## Current status
 
-Phase 0 and the core Phase 1 backend ledger work are complete. The repo is now in the first backend agent-orchestration phase.
+Phase 0 and the core Phase 1 backend ledger work are complete. The repo is now in the backend agent-orchestration phase.
 
 Reality check:
 
 - the project is close to a real fake-money backend MVP
-- it is now entering the first real backend agent-communication slice
+- it already has a real backend agent-communication slice
 - it is not yet close to the full MCP multi-agent system with standalone MCP servers
 
 Implemented so far:
@@ -125,8 +125,8 @@ Run these before committing:
 
 ## Immediate next work
 
-1. Resolve persisted agent proposals into validated game-state mutations instead of leaving them as replay-only intents.
-2. Extend the action vocabulary beyond direct transfer proposals into richer negotiation primitives.
-3. Decide whether proposal settlement should stay in the current orchestrator or move into a dedicated settlement service.
-4. Keep frontend integration deferred until backend agent communication and replay are richer.
+1. Extend the action vocabulary beyond direct transfer proposals into richer negotiation primitives.
+2. Decide whether proposal settlement should stay in the current orchestrator or move into a dedicated settlement service.
+3. Add stronger live-provider assertions so the gated OpenAI integration path proves meaningful agent interaction, not just successful orchestration.
+4. Keep frontend integration deferred until backend communication and replay are richer.
 5. Introduce standalone MCP-facing agent adapters after the backend communication loop is stable.
