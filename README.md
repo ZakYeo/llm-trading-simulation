@@ -5,7 +5,7 @@ a NestJS orchestration backend, and a React monitoring frontend.
 
 ## Current status
 
-Phase 0 is complete. Phase 1 is in progress.
+Phase 0 and the core Phase 1 backend ledger work are complete. The repo is now in the first backend agent-orchestration phase.
 
 Reality check:
 
@@ -13,7 +13,7 @@ Reality check:
 - it is now entering the first real backend agent-communication slice
 - it is not yet close to the full MCP multi-agent system with standalone MCP servers
 
-Implemented today:
+Implemented so far:
 
 - pnpm workspace with shared packages, linting, formatting, and tests
 - NestJS API scaffold and React/Vite frontend scaffold
@@ -113,8 +113,8 @@ Run these before committing:
 
 ## Immediate next work
 
-1. Extend the single communication turn into a multi-turn orchestration flow with explicit round outcomes.
-2. Resolve persisted agent proposals into validated game-state mutations instead of leaving them as replay-only intents.
-3. Add stronger agent-to-agent integration tests that prove negotiation behavior over multiple backend turns.
+1. Resolve persisted agent proposals into validated game-state mutations instead of leaving them as replay-only intents.
+2. Add richer action vocabulary beyond transfer proposals, such as accept or decline semantics.
+3. Add stronger agent-to-agent integration tests that prove negotiation behavior over multiple backend turns and resulting state transitions.
 4. Keep frontend integration deferred until backend agent communication and replay are richer.
 5. Introduce standalone MCP-facing agent adapters after the backend communication loop is stable.

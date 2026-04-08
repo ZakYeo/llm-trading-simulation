@@ -2,7 +2,7 @@ a multi-agent negotiation and treasury simulator where each agent is exposed as 
 
 Execution tracker
 
-Current phase: Phase 1 — Domain model and core ledger
+Current phase: Phase 2 — Backend agent orchestration foundation
 Status: in progress
 
 Quality status:
@@ -24,7 +24,7 @@ Quality status:
 Readiness assessment:
 
 - close to a real fake-money backend MVP
-- now entering the first backend agent-communication milestone
+- now in the first backend agent-communication milestone
 - still not yet close to the full MCP multi-agent system with standalone agent servers and negotiated multi-turn resolution
 - OpenAI credentials are now usable through the backend agent gateway, but the current implementation is still an early orchestration slice rather than a full agent runtime
 
@@ -69,6 +69,7 @@ Immediate next steps:
 - resolve persisted transfer proposals into validated state mutations or explicit rejection records
 - add richer action vocabulary beyond transfer proposals, such as accept or decline semantics
 - add agent-to-agent integration tests that prove multi-turn communication and resulting persisted state transitions
+- decide whether proposal resolution should live inside the agent orchestrator or in a dedicated negotiation/settlement application service
 - keep frontend integration deferred until backend communication and replay become richer
 - only after that, split the current in-process contract into true MCP-facing agent boundaries
 
@@ -106,6 +107,14 @@ What counts as “real working and testable” next
 - a backend-only orchestrated agent turn with persisted messages/actions and integration coverage
 - at least one multi-turn agent communication integration test that proves stateful interaction, not just a single exchange
 - a path that resolves at least one persisted agent proposal into an actual validated state transition
+
+Recommended next slice
+
+- keep the current `propose_direct_transfer` action as the first resolvable negotiation primitive
+- add `accept_transfer_proposal` and `reject_transfer_proposal` actions
+- persist proposal lifecycle records so replay can show proposal, response, and settlement
+- execute accepted proposals through the existing validated transfer use case rather than duplicating ledger logic
+- prove the full proposal -> acceptance -> transfer path with Postgres-backed HTTP integration tests
 
 What is still later-stage work
 
