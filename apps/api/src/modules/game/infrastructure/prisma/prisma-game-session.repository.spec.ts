@@ -9,82 +9,28 @@ import { PrismaGameSessionRepository } from './prisma-game-session.repository.js
 
 describe('PrismaGameSessionRepository', () => {
   it('creates a session when it does not already exist', async () => {
-    let receivedArgs: unknown;
+    const receivedArgs: unknown[] = [];
 
     const repository = new PrismaGameSessionRepository({
+      async $transaction(callback) {
+        return callback(this as unknown as never);
+      },
+      agent: {
+        async create() {},
+        async deleteMany() {},
+      },
       gameSession: {
         async create(args) {
-          receivedArgs = args;
+          receivedArgs.push(args);
         },
         async findUnique() {
           return null;
         },
-        async delete() {},
+        async update() {},
       },
-    });
-
-    await repository.save(
-      new GameSession({
-        id: 'game-1',
-        name: 'Treasury Table',
-        status: 'setup',
-        currentRound: 0,
-        agents: [
-          new GameAgent({
-            id: 'agent-1',
-            name: 'Banker Bot',
-            role: 'banker',
-            balance: AccountBalance.open(Money.fromDecimal('100.0000')),
-            depositAccount: DepositAccount.open(),
-          }),
-        ],
-      }),
-    );
-
-    expect(receivedArgs).toEqual({
-      data: {
-        id: 'game-1',
-        name: 'Treasury Table',
-        status: 'SETUP',
-        currentRound: 0,
-        agents: {
-          create: [
-            {
-              id: 'agent-1',
-              name: 'Banker Bot',
-              role: 'BANKER',
-              balance: {
-                create: {
-                  available: '100.0000',
-                  reserved: '0.0000',
-                },
-              },
-              depositAccount: {
-                create: {
-                  principal: '0.0000',
-                  accrued: '0.0000',
-                },
-              },
-            },
-          ],
-        },
-      },
-    });
-  });
-
-  it('updates a session when it already exists', async () => {
-    const receivedArgs: unknown[] = [];
-
-    const repository = new PrismaGameSessionRepository({
-      gameSession: {
-        async create(args) {
+      gameRound: {
+        async createMany(args) {
           receivedArgs.push(args);
-        },
-        async delete(args) {
-          receivedArgs.push(args);
-        },
-        async findUnique() {
-          return { id: 'game-1' } as never;
         },
       },
     });
@@ -108,9 +54,6 @@ describe('PrismaGameSessionRepository', () => {
     );
 
     expect(receivedArgs).toEqual([
-      {
-        where: { id: 'game-1' },
-      },
       {
         data: {
           id: 'game-1',
@@ -143,11 +86,164 @@ describe('PrismaGameSessionRepository', () => {
     ]);
   });
 
+  it('updates a session while preserving the session row and rewriting agents', async () => {
+    const receivedArgs: unknown[] = [];
+
+    const repository = new PrismaGameSessionRepository({
+      async $transaction(callback) {
+        return callback(this as unknown as never);
+      },
+      agent: {
+        async create(args) {
+          receivedArgs.push(args);
+        },
+        async deleteMany(args) {
+          receivedArgs.push(args);
+        },
+      },
+      gameSession: {
+        async findUnique() {
+          return { id: 'game-1', currentRound: 0 } as never;
+        },
+        async create() {},
+        async update(args) {
+          receivedArgs.push(args);
+        },
+      },
+      gameRound: {
+        async createMany(args) {
+          receivedArgs.push(args);
+        },
+      },
+    });
+
+    await repository.save(
+      new GameSession({
+        id: 'game-1',
+        name: 'Treasury Table',
+        status: 'setup',
+        currentRound: 0,
+        agents: [
+          new GameAgent({
+            id: 'agent-1',
+            name: 'Banker Bot',
+            role: 'banker',
+            balance: AccountBalance.open(Money.fromDecimal('100.0000')),
+            depositAccount: DepositAccount.open(),
+          }),
+        ],
+      }),
+    );
+
+    expect(receivedArgs).toEqual([
+      {
+        where: { id: 'game-1' },
+        data: {
+          name: 'Treasury Table',
+          status: 'SETUP',
+          currentRound: 0,
+        },
+      },
+      {
+        where: { gameSessionId: 'game-1' },
+      },
+      {
+        data: {
+          id: 'agent-1',
+          gameSessionId: 'game-1',
+          name: 'Banker Bot',
+          role: 'BANKER',
+          balance: {
+            create: {
+              available: '100.0000',
+              reserved: '0.0000',
+            },
+          },
+          depositAccount: {
+            create: {
+              principal: '0.0000',
+              accrued: '0.0000',
+            },
+          },
+        },
+      },
+    ]);
+  });
+
+  it('creates durable round records when currentRound advances', async () => {
+    const receivedArgs: unknown[] = [];
+
+    const repository = new PrismaGameSessionRepository({
+      async $transaction(callback) {
+        return callback(this as unknown as never);
+      },
+      agent: {
+        async create(args) {
+          receivedArgs.push(args);
+        },
+        async deleteMany(args) {
+          receivedArgs.push(args);
+        },
+      },
+      gameSession: {
+        async findUnique() {
+          return { id: 'game-1', currentRound: 1 } as never;
+        },
+        async create() {},
+        async update(args) {
+          receivedArgs.push(args);
+        },
+      },
+      gameRound: {
+        async createMany(args) {
+          receivedArgs.push(args);
+        },
+      },
+    });
+
+    await repository.save(
+      new GameSession({
+        id: 'game-1',
+        name: 'Treasury Table',
+        status: 'active',
+        currentRound: 3,
+        agents: [
+          new GameAgent({
+            id: 'agent-1',
+            name: 'Banker Bot',
+            role: 'banker',
+            balance: AccountBalance.open(Money.fromDecimal('100.0000')),
+            depositAccount: DepositAccount.open(),
+          }),
+        ],
+      }),
+    );
+
+    expect(receivedArgs).toContainEqual({
+      data: [
+        {
+          gameSessionId: 'game-1',
+          roundNumber: 2,
+        },
+        {
+          gameSessionId: 'game-1',
+          roundNumber: 3,
+        },
+      ],
+    });
+  });
+
   it('hydrates a session from prisma records', async () => {
     const repository = new PrismaGameSessionRepository({
+      async $transaction(callback) {
+        return callback(this as unknown as never);
+      },
+      agent: {
+        async create() {},
+        async deleteMany() {},
+      },
       gameSession: {
         async create() {},
-        async delete() {},
         async findUnique() {
           return {
             id: 'game-1',
@@ -171,6 +267,10 @@ describe('PrismaGameSessionRepository', () => {
             ],
           };
         },
+        async update() {},
+      },
+      gameRound: {
+        async createMany() {},
       },
     });
 

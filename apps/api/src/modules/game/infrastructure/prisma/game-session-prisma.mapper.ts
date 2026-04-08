@@ -70,23 +70,65 @@ export class GameSessionPrismaMapper {
       status: statusToPersistence[session.status],
       currentRound: session.currentRound,
       agents: {
-        create: session.agents.map((agent) => ({
-          id: agent.id,
-          name: agent.name,
-          role: roleToPersistence[agent.role],
-          balance: {
-            create: {
-              available: agent.balance.available.toDecimal(),
-              reserved: agent.balance.reserved.toDecimal(),
-            },
-          },
-          depositAccount: {
-            create: {
-              principal: agent.depositAccount.principal.toDecimal(),
-              accrued: agent.depositAccount.accruedInterest.toDecimal(),
-            },
-          },
-        })),
+        create: session.agents.map((agent) =>
+          GameSessionPrismaMapper.toNestedAgentCreateInput(agent),
+        ),
+      },
+    };
+  }
+
+  static toUpdateInput(session: GameSession) {
+    return {
+      name: session.name,
+      status: statusToPersistence[session.status],
+      currentRound: session.currentRound,
+    };
+  }
+
+  static toAgentCreateInputs(session: GameSession) {
+    return session.agents.map((agent) => ({
+      id: agent.id,
+      gameSessionId: session.id,
+      name: agent.name,
+      role: roleToPersistence[agent.role],
+      balance: {
+        create: {
+          available: agent.balance.available.toDecimal(),
+          reserved: agent.balance.reserved.toDecimal(),
+        },
+      },
+      depositAccount: {
+        create: {
+          principal: agent.depositAccount.principal.toDecimal(),
+          accrued: agent.depositAccount.accruedInterest.toDecimal(),
+        },
+      },
+    }));
+  }
+
+  static toRoundCreateManyInput(gameSessionId: string, currentRound: number) {
+    return Array.from({ length: currentRound }, (_, index) => ({
+      gameSessionId,
+      roundNumber: index + 1,
+    }));
+  }
+
+  private static toNestedAgentCreateInput(agent: GameAgent) {
+    return {
+      id: agent.id,
+      name: agent.name,
+      role: roleToPersistence[agent.role],
+      balance: {
+        create: {
+          available: agent.balance.available.toDecimal(),
+          reserved: agent.balance.reserved.toDecimal(),
+        },
+      },
+      depositAccount: {
+        create: {
+          principal: agent.depositAccount.principal.toDecimal(),
+          accrued: agent.depositAccount.accruedInterest.toDecimal(),
+        },
       },
     };
   }

@@ -7,21 +7,57 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
   constructor(private readonly prisma: PrismaClientLike) {}
 
   async save(session: GameSession): Promise<void> {
-    const data = GameSessionPrismaMapper.toCreateInput(session);
-    const existing = await this.prisma.gameSession.findUnique({
-      where: { id: session.id },
-      select: { id: true },
-    });
+    const createData = GameSessionPrismaMapper.toCreateInput(session);
+    await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.gameSession.findUnique({
+        where: { id: session.id },
+        select: { id: true, currentRound: true },
+      });
 
-    if (!existing) {
-      await this.prisma.gameSession.create({ data });
-      return;
-    }
+      if (!existing) {
+        await tx.gameSession.create({ data: createData });
 
-    await this.prisma.gameSession.delete({
-      where: { id: session.id },
+        const roundData = GameSessionPrismaMapper.toRoundCreateManyInput(
+          session.id,
+          session.currentRound,
+        );
+
+        if (roundData.length > 0) {
+          await tx.gameRound.createMany({
+            data: roundData,
+          });
+        }
+        return;
+      }
+
+      await tx.gameSession.update({
+        where: { id: session.id },
+        data: GameSessionPrismaMapper.toUpdateInput(session),
+      });
+      await tx.agent.deleteMany({
+        where: { gameSessionId: session.id },
+      });
+
+      for (const agent of GameSessionPrismaMapper.toAgentCreateInputs(
+        session,
+      )) {
+        await tx.agent.create({ data: agent });
+      }
+
+      if (session.currentRound > existing.currentRound) {
+        await tx.gameRound.createMany({
+          data: Array.from(
+            {
+              length: session.currentRound - existing.currentRound,
+            },
+            (_, index) => ({
+              gameSessionId: session.id,
+              roundNumber: existing.currentRound + index + 1,
+            }),
+          ),
+        });
+      }
     });
-    await this.prisma.gameSession.create({ data });
   }
 
   async findById(id: string): Promise<GameSession | null> {

@@ -23,6 +23,7 @@ Implemented today:
 - game session creation, bank deposit/withdrawal, and direct transfer use cases
 - game session read, deposit, withdrawal, and transfer REST endpoints with request validation
 - round advancement with interest accrual on deposited principal
+- durable round-history persistence for advanced sessions
 - shared Nest app bootstrap and HTTP exception mapping for validation and domain errors
 - Prisma mapper/repository adapter tests for session persistence boundaries
 - real repository integration coverage against Postgres for game-session persistence
@@ -37,6 +38,7 @@ Current backend quality notes:
 - NestJS dependency wiring plus validated session-create, session-read, deposit, withdrawal, and transfer endpoints are implemented
 - the main game HTTP flows are now covered against the live Nest app and Postgres
 - round advancement and interest accrual are covered through unit, use-case integration, and HTTP integration tests
+- round advancement now leaves durable `GameRound` history in Postgres
 - there is no round engine, replay/event stream, MCP runtime, or OpenAI-backed agent behavior yet
 
 ## Workspace
@@ -74,6 +76,8 @@ Test database:
 2. `TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/llm_trading_simulation_test?schema=public" corepack pnpm db:test:prepare`
 3. `TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/llm_trading_simulation_test?schema=public" corepack pnpm --filter @llm-sim/api test:integration`
 
+Integration tests currently run with file parallelism disabled because they share a single Postgres test database.
+
 ## Docker
 
 Run the full stack in isolation with:
@@ -96,7 +100,7 @@ Run these before committing:
 
 ## Immediate next work
 
-1. Record ledger events and durable round history instead of only rewriting session snapshots.
+1. Record durable ledger events for transfers, deposits, and withdrawals instead of only rewriting session snapshots.
 2. Add a minimal frontend path that reads live session state from the backend.
 3. Add agent-to-agent integration tests once orchestration boundaries exist.
 4. Add container-level automated smoke tests for the Docker stack.

@@ -89,5 +89,36 @@ describe.runIf(Boolean(testDatabaseUrl))(
         persisted?.agents[0]?.depositAccount.accruedInterest.toDecimal(),
       ).toBe('2.0000');
     });
+
+    it('preserves durable round history when a session advances and is saved again', async () => {
+      const initialSession = new GameSession({
+        id: 'game-int-rounds',
+        name: 'Round Table',
+        status: 'setup',
+        currentRound: 0,
+        agents: [
+          new GameAgent({
+            id: 'agent-int-1',
+            name: 'Banker Bot',
+            role: 'banker',
+            balance: AccountBalance.open(Money.fromDecimal('100.0000')),
+            depositAccount: DepositAccount.open(),
+          }),
+        ],
+      });
+
+      await repository.save(initialSession);
+      await repository.save(initialSession.advanceRound());
+      await repository.save(initialSession.advanceRound().advanceRound());
+
+      const rounds = await prisma.gameRound.findMany({
+        where: { gameSessionId: initialSession.id },
+        orderBy: { roundNumber: 'asc' },
+      });
+      const persisted = await repository.findById(initialSession.id);
+
+      expect(persisted?.currentRound).toBe(2);
+      expect(rounds.map((round) => round.roundNumber)).toEqual([1, 2]);
+    });
   },
 );
