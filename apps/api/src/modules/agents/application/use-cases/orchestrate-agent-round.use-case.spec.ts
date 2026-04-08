@@ -190,4 +190,89 @@ describe('OrchestrateAgentRoundUseCase', () => {
       amount: '12.5000',
     });
   });
+
+  it('does not execute transfers for rejected proposals', async () => {
+    const agentActionRepository = {
+      findRecentByGameSessionId: vi.fn().mockResolvedValue([
+        {
+          id: 'proposal-1',
+          gameSessionId: 'game-1',
+          roundNumber: 1,
+          turnNumber: 2,
+          agentId: 'trader-1',
+          recipientAgentId: 'banker-1',
+          actionType: 'propose_direct_transfer',
+          amount: '12.5000',
+          content: 'I need short-term capital to press a momentum setup.',
+        },
+        {
+          id: 'reject-1',
+          gameSessionId: 'game-1',
+          roundNumber: 1,
+          turnNumber: 3,
+          agentId: 'banker-1',
+          recipientAgentId: null,
+          relatedProposalActionId: 'proposal-1',
+          actionType: 'reject_direct_transfer_proposal',
+          content: 'The proposed transfer is too risky for this round.',
+        },
+      ]),
+    };
+    const runAgentCommunicationTurnUseCase = {
+      execute: vi
+        .fn()
+        .mockResolvedValueOnce({
+          gameSessionId: 'game-1',
+          roundNumber: 1,
+          turnNumber: 1,
+          actions: [],
+          actionRecords: [],
+          messages: [],
+        })
+        .mockResolvedValueOnce({
+          gameSessionId: 'game-1',
+          roundNumber: 1,
+          turnNumber: 2,
+          actions: [],
+          actionRecords: [],
+          messages: [],
+        })
+        .mockResolvedValueOnce({
+          gameSessionId: 'game-1',
+          roundNumber: 1,
+          turnNumber: 3,
+          actions: [],
+          actionRecords: [
+            {
+              id: 'reject-1',
+              gameSessionId: 'game-1',
+              roundNumber: 1,
+              turnNumber: 3,
+              agentId: 'banker-1',
+              recipientAgentId: null,
+              relatedProposalActionId: 'proposal-1',
+              actionType: 'reject_direct_transfer_proposal',
+              content: 'The proposed transfer is too risky for this round.',
+            },
+          ],
+          messages: [],
+        }),
+    };
+    const transferFundsUseCase = {
+      execute: vi.fn(),
+    };
+
+    const useCase = new OrchestrateAgentRoundUseCase(
+      agentActionRepository as never,
+      runAgentCommunicationTurnUseCase as never,
+      transferFundsUseCase as never,
+    );
+
+    await useCase.execute({
+      gameSessionId: 'game-1',
+      turnCount: 3,
+    });
+
+    expect(transferFundsUseCase.execute).not.toHaveBeenCalled();
+  });
 });

@@ -20,6 +20,7 @@ Quality status:
 - backend-only agent communication now exists with persisted public/private messages
 - backend-only round orchestration now exists across multiple turns with persisted agent action records
 - accepted transfer proposals now resolve into real transfer mutations through the existing game flow
+- rejected transfer proposals are covered and remain replay-visible without mutating balances
 - OpenAI is now wired behind an `AgentGatewayPort`, with mock runtime selection available for deterministic tests
 
 Readiness assessment:
@@ -66,12 +67,12 @@ Completed this session:
 - added unit and Postgres-backed HTTP integration coverage for multi-turn orchestration
 - resolved accepted direct-transfer proposals through the existing validated transfer use case
 - added replay and HTTP integration coverage proving proposal -> acceptance -> persisted transfer state changes
+- added rejected-proposal coverage plus duplicate-resolution safeguards in unit and HTTP integration tests
 
 Immediate next steps:
 
 - extend the negotiation vocabulary beyond direct transfer proposals into richer primitives
 - add explicit lifecycle semantics for resolved proposals beyond the current accept/reject pair where needed
-- add agent-to-agent integration tests that prove multi-turn communication and resulting persisted state transitions
 - decide whether proposal resolution should live inside the agent orchestrator or in a dedicated negotiation/settlement application service
 - keep frontend integration deferred until backend communication and replay become richer
 - only after that, split the current in-process contract into true MCP-facing agent boundaries
@@ -99,7 +100,7 @@ Needs improvement next:
 - no domain event bus or full round engine yet
 - durable history now exists and replay reads are exposed, but the agent layer is still an in-process backend slice rather than a standalone MCP boundary
 - no idempotency handling yet
-- no multi-turn agent-to-agent state-mutation integration tests yet
+- multi-turn state-mutation integration exists for direct transfer proposals, but not yet for broader negotiation patterns
 - Docker runtime exists, but it still uses dev-mode web serving and no container-level automated smoke test
 - no prompt factory, generalized negotiation engine, or settlement layer beyond direct transfer proposal resolution yet
 
@@ -117,7 +118,7 @@ Recommended next slice
 - keep `propose_direct_transfer` as the reference negotiation primitive now that it resolves end to end
 - add a second negotiable primitive, or broaden proposal metadata so different deal structures can be expressed
 - decide whether proposal settlement should stay inside the current orchestrator or move into a dedicated settlement service
-- add agent-to-agent integration tests that cover both accepted and rejected proposals across multiple turns
+- keep agent-to-agent integration coverage for both accepted and rejected proposals as the baseline for future negotiation primitives
 - retain replay fidelity so proposal, response, and settlement stay auditable
 
 What is still later-stage work

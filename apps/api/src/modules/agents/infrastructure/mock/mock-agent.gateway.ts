@@ -4,6 +4,7 @@ import type { AgentGatewayPort } from '../../application/ports/agent-gateway.por
 
 export class MockAgentGateway implements AgentGatewayPort {
   async decideNextAction(context: AgentTurnContext): Promise<AgentAction> {
+    const scenario = process.env.AGENT_MOCK_SCENARIO;
     const banker = context.peers.find((peer) => peer.role === 'banker');
     const trader = context.peers.find((peer) => peer.role === 'trader');
     const pendingProposal = context.recentActions.find((action) => {
@@ -56,6 +57,14 @@ export class MockAgentGateway implements AgentGatewayPort {
       context.turnNumber >= 3 &&
       pendingProposal
     ) {
+      if (scenario === 'reject_proposal') {
+        return {
+          type: 'reject_direct_transfer_proposal',
+          proposalActionId: pendingProposal.actionId,
+          rationale: 'The proposed transfer is too risky for this round.',
+        };
+      }
+
       return {
         type: 'accept_direct_transfer_proposal',
         proposalActionId: pendingProposal.actionId,

@@ -8,6 +8,7 @@ import { AccountBalance } from '../../../game/domain/entities/account-balance.js
 import { GameAgent } from '../../../game/domain/entities/game-agent.js';
 import { GameSession } from '../../../game/domain/entities/game-session.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
+import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import type { AgentGatewayPort } from '../ports/agent-gateway.port.js';
 import type {
   AgentActionRecord,
@@ -168,5 +169,51 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       visibility: 'private',
       turnNumber: 2,
     });
+  });
+
+  it('rejects resolving a proposal that has already been accepted or rejected', async () => {
+    const actionRepository = new InMemoryAgentActionRepository();
+    await actionRepository.save({
+      gameSessionId: 'game-1',
+      roundNumber: 1,
+      turnNumber: 2,
+      agentId: 'agent-2',
+      recipientAgentId: 'agent-1',
+      actionType: 'propose_direct_transfer',
+      amount: '15.0000',
+      content: 'I can turn this into a higher-return trade quickly.',
+    });
+    await actionRepository.save({
+      gameSessionId: 'game-1',
+      roundNumber: 1,
+      turnNumber: 3,
+      agentId: 'agent-1',
+      recipientAgentId: null,
+      actionType: 'accept_direct_transfer_proposal',
+      relatedProposalActionId: 'action-1',
+    });
+
+    const useCase = new RunAgentCommunicationTurnUseCase(
+      new InMemoryGameSessionRepository(createSession()),
+      new InMemoryAgentMessageRepository(),
+      actionRepository,
+      new ScriptedAgentGateway([
+        {
+          type: 'reject_direct_transfer_proposal',
+          proposalActionId: 'action-1',
+          rationale: 'This should not be allowed twice.',
+        },
+        {
+          type: 'finalize_turn',
+        },
+      ]),
+    );
+
+    await expect(
+      useCase.execute({
+        gameSessionId: 'game-1',
+        turnNumber: 4,
+      }),
+    ).rejects.toThrow(DomainInvariantError);
   });
 });

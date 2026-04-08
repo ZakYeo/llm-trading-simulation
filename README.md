@@ -51,6 +51,7 @@ Current backend quality notes:
 - backend agent communication now supports both a single turn and a multi-turn round orchestration path
 - multi-turn orchestration is covered through unit tests and Postgres-backed HTTP integration tests
 - accepted transfer proposals now result in real persisted balance mutations, not just replay-only intents
+- rejected transfer proposals are now covered too and leave balances unchanged while remaining replay-visible
 - the OpenAI key is now usable through the backend agent gateway when `AGENT_RUNTIME_PROVIDER` is not set to `mock`
 - there is still no standalone MCP server runtime, generalized negotiation engine, or broad settlement workflow beyond direct transfer proposals yet
 
@@ -117,6 +118,6 @@ Run these before committing:
 
 1. Resolve persisted agent proposals into validated game-state mutations instead of leaving them as replay-only intents.
 2. Extend the action vocabulary beyond direct transfer proposals into richer negotiation primitives.
-3. Add stronger agent-to-agent integration tests that prove negotiation behavior over multiple backend turns and resulting state transitions.
+3. Decide whether proposal settlement should stay in the current orchestrator or move into a dedicated settlement service.
 4. Keep frontend integration deferred until backend agent communication and replay are richer.
 5. Introduce standalone MCP-facing agent adapters after the backend communication loop is stable.

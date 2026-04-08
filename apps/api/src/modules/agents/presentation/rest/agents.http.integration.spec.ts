@@ -31,6 +31,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
   afterAll(async () => {
     await prismaService.gameSession.deleteMany();
     await closeApp?.();
+    delete process.env.AGENT_MOCK_SCENARIO;
     delete process.env.AGENT_RUNTIME_PROVIDER;
   });
 
@@ -150,5 +151,70 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
     ).toBe(true);
     expect(banker?.availableBalance).toBe('87.5000');
     expect(trader?.availableBalance).toBe('112.5000');
+  });
+
+  it('persists rejected proposals without mutating balances', async () => {
+    process.env.AGENT_MOCK_SCENARIO = 'reject_proposal';
+
+    const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'Rejected Proposal Table',
+        initialBalance: '100.0000',
+        agents: [
+          { name: 'Banker Bot', role: 'banker' },
+          { name: 'Analyst Bot', role: 'analyst' },
+          { name: 'Lawyer Bot', role: 'lawyer' },
+          { name: 'Influencer Bot', role: 'influencer' },
+          { name: 'Trader Bot', role: 'trader' },
+        ],
+      }),
+    });
+    const createdSession = (await createResponse.json()) as { id: string };
+
+    const response = await fetch(
+      `${baseUrl}/api/agents/sessions/${createdSession.id}/rounds/orchestrate`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          turnCount: 3,
+        }),
+      },
+    );
+    const body = (await response.json()) as {
+      turns: Array<{
+        actionRecords: Array<{ actionType: string }>;
+      }>;
+    };
+    const sessionResponse = await fetch(
+      `${baseUrl}/api/game/sessions/${createdSession.id}`,
+    );
+    const session = (await sessionResponse.json()) as {
+      agents: Array<{
+        role: string;
+        availableBalance: string;
+      }>;
+    };
+    const banker = session.agents.find((agent) => agent.role === 'banker');
+    const trader = session.agents.find((agent) => agent.role === 'trader');
+
+    expect(response.status).toBe(201);
+    expect(
+      body.turns.some((turn) =>
+        turn.actionRecords.some(
+          (action) => action.actionType === 'reject_direct_transfer_proposal',
+        ),
+      ),
+    ).toBe(true);
+    expect(banker?.availableBalance).toBe('100.0000');
+    expect(trader?.availableBalance).toBe('100.0000');
+
+    delete process.env.AGENT_MOCK_SCENARIO;
   });
 });

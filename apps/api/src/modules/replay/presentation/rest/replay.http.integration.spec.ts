@@ -31,6 +31,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
   afterAll(async () => {
     await prismaService.gameSession.deleteMany();
     await closeApp?.();
+    delete process.env.AGENT_MOCK_SCENARIO;
     delete process.env.AGENT_RUNTIME_PROVIDER;
   });
 
@@ -199,5 +200,65 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
       error: 'Not Found',
       message: 'Game replay not found.',
     });
+  });
+
+  it('includes rejected proposal actions without an extra transfer event', async () => {
+    process.env.AGENT_MOCK_SCENARIO = 'reject_proposal';
+
+    const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'Rejected Replay Table',
+        initialBalance: '100.0000',
+        agents: [
+          { name: 'Banker Bot', role: 'banker' },
+          { name: 'Analyst Bot', role: 'analyst' },
+          { name: 'Lawyer Bot', role: 'lawyer' },
+          { name: 'Influencer Bot', role: 'influencer' },
+          { name: 'Trader Bot', role: 'trader' },
+        ],
+      }),
+    });
+    const createdSession = (await createResponse.json()) as { id: string };
+
+    await fetch(
+      `${baseUrl}/api/agents/sessions/${createdSession.id}/rounds/orchestrate`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          turnCount: 3,
+        }),
+      },
+    );
+
+    const replayResponse = await fetch(
+      `${baseUrl}/api/replay/sessions/${createdSession.id}`,
+    );
+    const replay = (await replayResponse.json()) as {
+      events: Array<{
+        type: string;
+        actionType?: string;
+      }>;
+    };
+
+    expect(replayResponse.status).toBe(200);
+    expect(
+      replay.events.filter((event) => event.type === 'transfer'),
+    ).toHaveLength(0);
+    expect(
+      replay.events.some(
+        (event) =>
+          event.type === 'action' &&
+          event.actionType === 'reject_direct_transfer_proposal',
+      ),
+    ).toBe(true);
+
+    delete process.env.AGENT_MOCK_SCENARIO;
   });
 });
