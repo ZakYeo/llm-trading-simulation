@@ -2,7 +2,7 @@ a multi-agent negotiation and treasury simulator where each agent is exposed as 
 
 Execution tracker
 
-Current phase: Phase 2 — Backend agent orchestration foundation
+Current phase: Phase 3 — Frontend MVP and operator experience
 Status: in progress
 
 Quality status:
@@ -35,6 +35,7 @@ Readiness assessment:
 - close to a real fake-money backend MVP
 - already at the first credible backend agent-communication milestone
 - strong enough to demo backend-only agent interaction through HTTP, replay, and live-provider smoke coverage
+- backend is now strong enough that frontend visibility is the highest-value next multiplier
 - still not yet close to the full MCP multi-agent system with standalone agent servers and generalized negotiated multi-turn resolution
 - OpenAI credentials are now usable through the backend agent gateway, but the current implementation is still an orchestration slice rather than a full agent runtime
 
@@ -88,12 +89,12 @@ Completed this session:
 
 Immediate next steps:
 
-- decide whether the MVP should refresh capital state between agents within a turn, not just between turns
-- continue refining prompt/context behavior before adding hard execution constraints
-- keep the repeated live confidence test healthy and use stronger-model comparisons selectively instead of changing runtime defaults prematurely
-- keep deterministic mock tests as the main regression suite while the live-provider path remains a targeted confidence check
-- keep frontend integration deferred until backend communication and replay become richer
-- only after that, split the current in-process contract into true MCP-facing agent boundaries
+- make the frontend the highest priority and turn the current backend MVP into a visible, operable product surface
+- build the web app in React with Vite and test it with Vitest plus Testing Library
+- wire the frontend to live session, orchestration, and replay endpoints before adding new backend negotiation primitives
+- use a light UI framework/component layer; recommendation: `shadcn/ui` over a heavier all-in-one framework because it fits the repo’s current control/flexibility needs
+- keep deterministic mock tests as the main backend regression suite while the live-provider path remains a targeted confidence check
+- after the frontend MVP is useful, revisit backend turn-state refresh and deeper negotiation behavior
 
 Execution guidance for code quality
 
@@ -122,6 +123,7 @@ Needs improvement next:
 - Docker runtime exists, but it still uses dev-mode web serving and no container-level automated smoke test
 - no prompt factory, generalized negotiation engine, or settlement layer beyond direct transfer proposal resolution yet
 - live-provider context is stronger now and good enough for repeated confidence checks, but multi-agent capital state is still only refreshed between turns, not within the turn after each agent acts
+- the frontend is still only a scaffold and does not yet expose the backend MVP in a useful operator-facing way
 
 What counts as “real working and testable” now
 
@@ -134,11 +136,15 @@ What counts as “real working and testable” now
 
 Recommended next slice
 
-- evaluate whether turn-by-turn capital refresh is sufficient for the MVP or whether later agents within a turn also need refreshed balance state
-- keep prompt/context changes ahead of hard constraints, since recent live comparisons show model choice changes behavior significantly
-- retain the repeated live confidence test as the main real-provider check and expand it only when runtime cost remains acceptable
-- keep agent-to-agent integration coverage for both accepted and rejected proposals as the deterministic baseline for future negotiation primitives
-- retain replay fidelity so proposal, response, settlement, and model reasoning remain auditable
+- build a frontend session dashboard that can:
+  - create a game session
+  - trigger agent orchestration runs
+  - show balances and current session state
+  - render replay events, messages, and action history
+- use React, Vite, TanStack Query, and Vitest with Testing Library as the default frontend stack
+- use `shadcn/ui` for composable primitives if a UI layer is needed; avoid a heavier framework until the product surface is clearer
+- add frontend integration tests around the main operator flows before broadening backend agent behavior further
+- retain replay fidelity so proposal, response, settlement, and model reasoning remain auditable in the UI
 
 What is still later-stage work
 
@@ -193,6 +199,7 @@ Vite
 TypeScript
 TanStack Query
 Zustand or simple local state initially
+Vitest + Testing Library
 shadcn/ui or a light component layer
 Infrastructure / tooling
 Docker Compose
