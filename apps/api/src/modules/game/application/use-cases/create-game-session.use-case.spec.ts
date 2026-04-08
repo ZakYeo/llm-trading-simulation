@@ -139,25 +139,50 @@ describe('CreateGameSessionUseCase', () => {
     expect(repository.saved[0]).toBe(session);
   });
 
-  it('rejects sessions that do not contain the five MVP roles exactly once', async () => {
+  it('allows custom rosters, including duplicate roles and omitted roles', async () => {
     const repository = new InMemoryGameSessionRepository();
     const idGenerator = new SequenceIdGenerator([
       'agent-1',
       'agent-2',
       'agent-3',
       'agent-4',
+      'agent-5',
       'game-1',
     ]);
+    const useCase = new CreateGameSessionUseCase(repository, idGenerator);
+
+    const session = await useCase.execute({
+      name: 'Custom Table',
+      initialBalance: '100.0000',
+      agents: [
+        { name: 'Banker Bot', role: 'banker' },
+        { name: 'Lawyer Bot', role: 'lawyer' },
+        { name: 'Influencer Bot', role: 'influencer' },
+        { name: 'Trader Bot Alpha', role: 'trader' },
+        { name: 'Trader Bot Beta', role: 'trader' },
+      ],
+    });
+
+    expect(session.agents.map((agent) => agent.role)).toEqual([
+      'banker',
+      'lawyer',
+      'influencer',
+      'trader',
+      'trader',
+    ]);
+    expect(session.agents).toHaveLength(5);
+  });
+
+  it('rejects empty agent rosters', async () => {
+    const repository = new InMemoryGameSessionRepository();
+    const idGenerator = new SequenceIdGenerator(['game-1']);
     const useCase = new CreateGameSessionUseCase(repository, idGenerator);
 
     await expect(
       useCase.execute({
         name: 'Broken Table',
         initialBalance: '100.0000',
-        agents: agentRoles.slice(0, 4).map((role, index) => ({
-          name: `Agent ${index + 1}`,
-          role,
-        })),
+        agents: [],
       }),
     ).rejects.toThrow(DomainInvariantError);
   });

@@ -9,14 +9,6 @@ import { GameAgent } from '../../domain/entities/game-agent.js';
 import { GameSession } from '../../domain/entities/game-session.js';
 import type { GameSessionRepositoryPort } from '../ports/game-session-repository.port.js';
 
-const requiredAgentRoles: AgentRole[] = [
-  'banker',
-  'analyst',
-  'lawyer',
-  'influencer',
-  'trader',
-];
-
 export interface CreateGameSessionAgentInput {
   name: string;
   role: AgentRole;
@@ -43,20 +35,9 @@ export class CreateGameSessionUseCase {
       );
     }
 
-    if (input.agents.length !== requiredAgentRoles.length) {
+    if (input.agents.length === 0) {
       throw new DomainInvariantError(
-        'MVP game sessions must contain exactly five agents.',
-      );
-    }
-
-    const roleSet = new Set(input.agents.map((agent) => agent.role));
-
-    if (
-      roleSet.size !== requiredAgentRoles.length ||
-      requiredAgentRoles.some((role) => !roleSet.has(role))
-    ) {
-      throw new DomainInvariantError(
-        'MVP game sessions must include each core role exactly once.',
+        'Game sessions must contain at least one agent.',
       );
     }
 

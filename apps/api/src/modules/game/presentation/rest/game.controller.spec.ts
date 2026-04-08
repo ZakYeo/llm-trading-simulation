@@ -60,10 +60,9 @@ describe('GameController', () => {
       initialBalance: '100.0000',
       agents: [
         { name: 'Banker Bot', role: 'banker' },
-        { name: 'Analyst Bot', role: 'analyst' },
         { name: 'Lawyer Bot', role: 'lawyer' },
-        { name: 'Influencer Bot', role: 'influencer' },
-        { name: 'Trader Bot', role: 'trader' },
+        { name: 'Trader Bot Alpha', role: 'trader' },
+        { name: 'Trader Bot Beta', role: 'trader' },
       ],
     });
 
@@ -72,10 +71,9 @@ describe('GameController', () => {
       initialBalance: '100.0000',
       agents: [
         { name: 'Banker Bot', role: 'banker' },
-        { name: 'Analyst Bot', role: 'analyst' },
         { name: 'Lawyer Bot', role: 'lawyer' },
-        { name: 'Influencer Bot', role: 'influencer' },
-        { name: 'Trader Bot', role: 'trader' },
+        { name: 'Trader Bot Alpha', role: 'trader' },
+        { name: 'Trader Bot Beta', role: 'trader' },
       ],
     });
     expect(result).toEqual({

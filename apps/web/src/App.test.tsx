@@ -17,5 +17,8 @@ describe('App', () => {
     expect(html).toContain('Event Timeline');
     expect(html).toContain('Run planner');
     expect(html).toContain('Run next 2 turns');
+    expect(html).toContain('Roster');
+    expect(html).toContain('Add bot');
+    expect(html).toContain('Trader Bot');
   });
 });

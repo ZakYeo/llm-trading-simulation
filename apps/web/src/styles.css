@@ -27,7 +27,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -128,12 +129,17 @@ input {
   margin-bottom: 16px;
 }
 
+.field.compact {
+  margin-bottom: 0;
+}
+
 .field span {
   font-size: 0.86rem;
   color: rgba(248, 243, 234, 0.74);
 }
 
-.field input {
+.field input,
+.field select {
   width: 100%;
   padding: 12px 14px;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -142,7 +148,8 @@ input {
   color: #f8f3ea;
 }
 
-.field input:focus {
+.field input:focus,
+.field select:focus {
   outline: 2px solid rgba(91, 154, 255, 0.45);
   outline-offset: 1px;
 }
@@ -153,17 +160,39 @@ input {
   margin: 8px 0 18px;
 }
 
-.agent-row {
+.agent-stack-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.agent-stack-button,
+.agent-remove-button {
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(104, 157, 255, 0.12);
+  color: #eef5ff;
+  cursor: pointer;
+}
+
+.agent-remove-button:disabled,
+.agent-stack-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.agent-editor-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(120px, 0.9fr) auto;
+  align-items: end;
+  gap: 10px;
   padding: 10px 12px;
   border-radius: 14px;
   background: rgba(244, 177, 94, 0.08);
   border: 1px solid rgba(244, 177, 94, 0.15);
 }
 
-.agent-row span,
 .session-meta span,
 .balance-card header span,
 .event-meta {
@@ -385,6 +414,10 @@ input {
   }
 
   .session-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-editor-row {
     grid-template-columns: 1fr;
   }
 }

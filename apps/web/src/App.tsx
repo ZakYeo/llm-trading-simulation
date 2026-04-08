@@ -9,13 +9,29 @@ import {
   type GameReplayRecord,
 } from './lib/api';
 
-const defaultAgentSetup = [
-  { name: 'Banker Bot', role: 'banker' },
-  { name: 'Analyst Bot', role: 'analyst' },
-  { name: 'Lawyer Bot', role: 'lawyer' },
-  { name: 'Influencer Bot', role: 'influencer' },
-  { name: 'Trader Bot', role: 'trader' },
+const agentRoleOptions = [
+  'banker',
+  'analyst',
+  'lawyer',
+  'influencer',
+  'trader',
 ] as const;
+
+type AgentRole = (typeof agentRoleOptions)[number];
+
+interface AgentDraft {
+  id: string;
+  name: string;
+  role: AgentRole;
+}
+
+const defaultAgentSetup: AgentDraft[] = [
+  { id: 'agent-draft-1', name: 'Banker Bot', role: 'banker' },
+  { id: 'agent-draft-2', name: 'Analyst Bot', role: 'analyst' },
+  { id: 'agent-draft-3', name: 'Lawyer Bot', role: 'lawyer' },
+  { id: 'agent-draft-4', name: 'Influencer Bot', role: 'influencer' },
+  { id: 'agent-draft-5', name: 'Trader Bot', role: 'trader' },
+];
 
 function formatCurrency(value: string) {
   const amount = Number.parseFloat(value);
@@ -59,6 +75,11 @@ export function App() {
   const [initialBalance, setInitialBalance] = useState('100.0000');
   const [turnCount, setTurnCount] = useState(2);
   const [latestRunSummary, setLatestRunSummary] = useState('');
+  const [agentDrafts, setAgentDrafts] =
+    useState<AgentDraft[]>(defaultAgentSetup);
+  const [nextAgentDraftId, setNextAgentDraftId] = useState(
+    defaultAgentSetup.length + 1,
+  );
 
   const sessionQuery = useQuery({
     queryKey: ['game-session', selectedSessionId],
@@ -76,7 +97,10 @@ export function App() {
       createGameSession({
         name: sessionName,
         initialBalance,
-        agents: defaultAgentSetup.map((agent) => ({ ...agent })),
+        agents: agentDrafts.map((agent) => ({
+          name: agent.name,
+          role: agent.role,
+        })),
       }),
     onSuccess: (session) => {
       startTransition(() => {
@@ -112,6 +136,38 @@ export function App() {
   const normalizedTurnCount = Number.isNaN(turnCount)
     ? 1
     : Math.min(10, Math.max(1, turnCount));
+  const canRemoveAgent = agentDrafts.length > 1;
+
+  function updateAgentDraft(
+    draftId: string,
+    updater: (draft: AgentDraft) => AgentDraft,
+  ) {
+    setAgentDrafts((current) =>
+      current.map((draft) => (draft.id === draftId ? updater(draft) : draft)),
+    );
+  }
+
+  function addAgentDraft() {
+    const nextIndex = nextAgentDraftId;
+
+    setAgentDrafts((current) => [
+      ...current,
+      {
+        id: `agent-draft-${nextIndex}`,
+        name: `New Bot ${nextIndex}`,
+        role: 'trader',
+      },
+    ]);
+    setNextAgentDraftId(nextIndex + 1);
+  }
+
+  function removeAgentDraft(draftId: string) {
+    setAgentDrafts((current) =>
+      current.length === 1
+        ? current
+        : current.filter((draft) => draft.id !== draftId),
+    );
+  }
 
   return (
     <main className="app-shell">
@@ -155,10 +211,57 @@ export function App() {
           </label>
 
           <div className="agent-stack">
-            {defaultAgentSetup.map((agent) => (
-              <div key={agent.role} className="agent-row">
-                <strong>{agent.name}</strong>
-                <span>{agent.role}</span>
+            <div className="agent-stack-header">
+              <span>Roster</span>
+              <button
+                className="agent-stack-button"
+                type="button"
+                onClick={addAgentDraft}
+              >
+                Add bot
+              </button>
+            </div>
+            {agentDrafts.map((agent, index) => (
+              <div key={agent.id} className="agent-editor-row">
+                <label className="field compact">
+                  <span>Bot {index + 1} name</span>
+                  <input
+                    value={agent.name}
+                    onChange={(event) =>
+                      updateAgentDraft(agent.id, (draft) => ({
+                        ...draft,
+                        name: event.target.value,
+                      }))
+                    }
+                    placeholder="Agent name"
+                  />
+                </label>
+                <label className="field compact">
+                  <span>Role</span>
+                  <select
+                    value={agent.role}
+                    onChange={(event) =>
+                      updateAgentDraft(agent.id, (draft) => ({
+                        ...draft,
+                        role: event.target.value as AgentRole,
+                      }))
+                    }
+                  >
+                    {agentRoleOptions.map((role) => (
+                      <option key={role} value={role}>
+                        {role}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  className="agent-remove-button"
+                  type="button"
+                  disabled={!canRemoveAgent}
+                  onClick={() => removeAgentDraft(agent.id)}
+                >
+                  Remove
+                </button>
               </div>
             ))}
           </div>
@@ -166,7 +269,9 @@ export function App() {
           <button
             className="action-button primary"
             type="button"
-            disabled={createSessionMutation.isPending}
+            disabled={
+              createSessionMutation.isPending || agentDrafts.length === 0
+            }
             onClick={() => createSessionMutation.mutate()}
           >
             {createSessionMutation.isPending

@@ -18,7 +18,7 @@ export const createGameSessionRequestSchema = z.object({
         role: agentRoleSchema,
       }),
     )
-    .length(5),
+    .min(1),
 });
 
 export type CreateGameSessionRequest = z.infer<

@@ -144,6 +144,40 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
     expect(finalTrader?.availableBalance).toBe('85.0000');
   });
 
+  it('creates sessions with custom agent rosters through the HTTP boundary', async () => {
+    const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'Custom Roster Table',
+        initialBalance: '100.0000',
+        agents: [
+          { name: 'Banker Bot', role: 'banker' },
+          { name: 'Lawyer Bot', role: 'lawyer' },
+          { name: 'Trader Bot Alpha', role: 'trader' },
+          { name: 'Trader Bot Beta', role: 'trader' },
+        ],
+      }),
+    });
+    const createdSession = (await createResponse.json()) as {
+      agents: Array<{
+        name: string;
+        role: string;
+      }>;
+    };
+
+    expect(createResponse.status).toBe(201);
+    expect(createdSession.agents).toHaveLength(4);
+    expect(createdSession.agents.map((agent) => agent.role)).toEqual([
+      'banker',
+      'lawyer',
+      'trader',
+      'trader',
+    ]);
+  });
+
   it('responds to CORS preflight requests for session creation', async () => {
     const response = await fetch(`${baseUrl}/api/game/sessions`, {
       method: 'OPTIONS',
