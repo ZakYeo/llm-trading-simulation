@@ -185,18 +185,18 @@ function buildRoleDirective(context: AgentTurnContext): string {
   switch (context.self.role) {
     case 'banker':
       return trader
-        ? `Role economics: as the banker, you usually improve your outcome by deploying capital selectively, gathering information, and negotiating favorable terms with trader ${trader.agentId}.`
+        ? `Role economics: as the banker, you usually improve your outcome by deploying capital selectively, gathering information, and negotiating favorable terms with trader ${trader.agentId}. You are a primary capital allocator, so private negotiation and executable transfer proposals with the trader are often your highest-leverage moves.`
         : 'Role economics: as the banker, you usually improve your outcome by deploying capital selectively and gathering information before committing funds.';
     case 'trader':
       return banker
-        ? `Role economics: as the trader, you usually improve your outcome by securing capital from banker ${banker.agentId} on favorable terms and responding quickly when negotiation openings appear.`
+        ? `Role economics: as the trader, you usually improve your outcome by securing capital from banker ${banker.agentId} on favorable terms and responding quickly when negotiation openings appear. You are a primary capital seeker, so private negotiation and executable transfer proposals with the banker are often your highest-leverage moves.`
         : 'Role economics: as the trader, you usually improve your outcome by securing capital and converting useful information into financing opportunities.';
     case 'analyst':
-      return 'Role economics: as the analyst, your edge comes from information. Useful public observations can create influence, shape counterparties, and improve future deal terms.';
+      return 'Role economics: as the analyst, your edge comes from information. Useful public observations can create influence, shape counterparties, and improve future deal terms. Your default advantage is usually public signaling, not bilateral capital negotiation, unless you have a specific concrete edge to offer one counterparty.';
     case 'lawyer':
-      return 'Role economics: as the lawyer, your edge comes from identifying risk, enforceability, and constraints that can improve negotiating leverage and future terms.';
+      return 'Role economics: as the lawyer, your edge comes from identifying risk, enforceability, and constraints that can improve negotiating leverage and future terms. Your default advantage is usually public or deal-supporting guidance, not initiating unrelated private capital negotiation, unless a concrete legal intervention is necessary for a specific deal.';
     case 'influencer':
-      return 'Role economics: as the influencer, your edge comes from shaping sentiment and narrative. Strategic public messaging can influence counterparties and deal momentum.';
+      return 'Role economics: as the influencer, your edge comes from shaping sentiment and narrative. Strategic public messaging can influence counterparties and deal momentum. Your default advantage is usually broad public signaling rather than direct bilateral capital negotiation unless you have a concrete high-value private angle.';
   }
 }
 
@@ -242,6 +242,15 @@ function buildTurnSignal(context: AgentTurnContext): string {
     context.turnNumber <= 2
   ) {
     return 'Current opportunity: the table has little public information so far, so one useful observation may create informational leverage.';
+  }
+
+  if (
+    (context.self.role === 'analyst' ||
+      context.self.role === 'lawyer' ||
+      context.self.role === 'influencer') &&
+    context.turnNumber <= 3
+  ) {
+    return 'Decision rule: unless you have a specific counterpart-specific edge to monetize right now, prefer public signaling or waiting over opening a new private bilateral negotiation.';
   }
 
   return 'Decision rule: compare the expected value of communicating, proposing, or responding against the value of waiting. Finalize only if waiting is truly best.';
