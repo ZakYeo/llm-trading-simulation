@@ -42,6 +42,16 @@ The project roadmap lives in [plan.md](./plan.md) and [steps.md](./steps.md).
 3. Install dependencies with `corepack pnpm install`.
 4. Run the API and frontend with `corepack pnpm dev`.
 
+## Docker
+
+Run the full stack in isolation with:
+
+1. `corepack pnpm docker:up`
+2. Open the frontend at `http://localhost:5173`
+3. The API is exposed at `http://localhost:3000/api`
+
+This path builds the API and web containers and runs Postgres inside Compose.
+
 ## Verification
 
 Run these before committing:

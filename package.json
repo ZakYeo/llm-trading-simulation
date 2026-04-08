@@ -6,6 +6,8 @@
   "scripts": {
     "build": "corepack pnpm -r build",
     "dev": "corepack pnpm --parallel --filter @llm-sim/api --filter @llm-sim/web dev",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
     "lint": "corepack pnpm -r lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
