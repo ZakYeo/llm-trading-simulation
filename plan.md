@@ -30,6 +30,7 @@ Immediate next steps:
 - add integration tests against a real test database for repository and use-case flows
 - add interest accrual and round-oriented application services
 - add API boundary validation with Zod for request DTOs before exposing mutation endpoints
+- add isolated Docker-based app execution so the full stack can run predictably without local toolchain drift
 
 Execution guidance for code quality
 
@@ -55,6 +56,13 @@ Needs improvement next:
 - no migration files or repository integration tests yet
 - no domain events, replay records, or round engine yet
 - no API mutation layer, request validation, or idempotency handling yet
+- no agent-to-agent integration tests yet
+- no fully isolated Docker runtime for the whole project yet
+
+Quality additions to include in later phases
+
+- add agent-to-agent integration tests once MCP agent boundaries are in place so message exchange, transfer proposals, and turn orchestration are exercised end to end
+- add a Docker-first local run mode with the backend, frontend, database, and supporting services orchestrated together for reproducible development and demos
 
 Project concept
 

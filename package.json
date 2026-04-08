@@ -13,8 +13,8 @@
     "format:check": "prettier --check .",
     "test": "corepack pnpm -r test",
     "typecheck": "corepack pnpm -r typecheck",
-    "db:generate": "corepack pnpm --filter @llm-sim/api prisma generate --schema prisma/schema.prisma",
-    "db:migrate": "corepack pnpm --filter @llm-sim/api prisma migrate dev --schema prisma/schema.prisma",
+    "db:generate": "corepack pnpm --filter @llm-sim/api exec prisma generate --schema prisma/schema.prisma",
+    "db:migrate": "corepack pnpm --filter @llm-sim/api exec prisma migrate dev --schema prisma/schema.prisma",
     "prepare": "husky"
   },
   "devDependencies": {
