@@ -19,6 +19,7 @@ Quality status:
 - replay-oriented read models and API endpoints now exist over stored round and ledger history
 - backend-only agent communication now exists with persisted public/private messages
 - backend-only round orchestration now exists across multiple turns with persisted agent action records
+- accepted transfer proposals now resolve into real transfer mutations through the existing game flow
 - OpenAI is now wired behind an `AgentGatewayPort`, with mock runtime selection available for deterministic tests
 
 Readiness assessment:
@@ -60,14 +61,16 @@ Completed this session:
 - added durable agent-message persistence and replay exposure for stored public/private messages
 - added unit and Postgres-backed HTTP integration coverage for the agent communication slice
 - added `POST /api/agents/sessions/:id/rounds/orchestrate` for multi-turn backend orchestration
-- added durable agent action persistence for message sends, transfer proposals, and finalize-turn decisions
+- added durable agent action persistence for message sends, transfer proposals, proposal accept/reject decisions, and finalize-turn decisions
 - extended replay reads so stored agent actions are visible alongside ledger and message history
 - added unit and Postgres-backed HTTP integration coverage for multi-turn orchestration
+- resolved accepted direct-transfer proposals through the existing validated transfer use case
+- added replay and HTTP integration coverage proving proposal -> acceptance -> persisted transfer state changes
 
 Immediate next steps:
 
-- resolve persisted transfer proposals into validated state mutations or explicit rejection records
-- add richer action vocabulary beyond transfer proposals, such as accept or decline semantics
+- extend the negotiation vocabulary beyond direct transfer proposals into richer primitives
+- add explicit lifecycle semantics for resolved proposals beyond the current accept/reject pair where needed
 - add agent-to-agent integration tests that prove multi-turn communication and resulting persisted state transitions
 - decide whether proposal resolution should live inside the agent orchestrator or in a dedicated negotiation/settlement application service
 - keep frontend integration deferred until backend communication and replay become richer
@@ -98,7 +101,7 @@ Needs improvement next:
 - no idempotency handling yet
 - no multi-turn agent-to-agent state-mutation integration tests yet
 - Docker runtime exists, but it still uses dev-mode web serving and no container-level automated smoke test
-- no prompt factory, proposal-resolution layer, or negotiation engine yet
+- no prompt factory, generalized negotiation engine, or settlement layer beyond direct transfer proposal resolution yet
 
 What counts as “real working and testable” next
 
@@ -107,21 +110,22 @@ What counts as “real working and testable” next
 - a backend-only orchestrated agent turn with persisted messages/actions and integration coverage
 - at least one multi-turn agent communication integration test that proves stateful interaction, not just a single exchange
 - a path that resolves at least one persisted agent proposal into an actual validated state transition
+- at least one reusable negotiation pattern beyond direct transfer requests
 
 Recommended next slice
 
-- keep the current `propose_direct_transfer` action as the first resolvable negotiation primitive
-- add `accept_transfer_proposal` and `reject_transfer_proposal` actions
-- persist proposal lifecycle records so replay can show proposal, response, and settlement
-- execute accepted proposals through the existing validated transfer use case rather than duplicating ledger logic
-- prove the full proposal -> acceptance -> transfer path with Postgres-backed HTTP integration tests
+- keep `propose_direct_transfer` as the reference negotiation primitive now that it resolves end to end
+- add a second negotiable primitive, or broaden proposal metadata so different deal structures can be expressed
+- decide whether proposal settlement should stay inside the current orchestrator or move into a dedicated settlement service
+- add agent-to-agent integration tests that cover both accepted and rejected proposals across multiple turns
+- retain replay fidelity so proposal, response, and settlement stay auditable
 
 What is still later-stage work
 
 - MCP agent servers
 - standalone MCP transport boundaries
 - richer orchestrated multi-agent turns
-- proposal acceptance and settlement logic
+- generalized proposal acceptance and settlement logic
 - agent-to-agent negotiation through MCP boundaries
 
 Quality additions to include in later phases

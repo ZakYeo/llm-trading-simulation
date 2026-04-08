@@ -32,6 +32,8 @@ enum AgentTurnActionType {
   SEND_PUBLIC_MESSAGE
   SEND_PRIVATE_MESSAGE
   PROPOSE_DIRECT_TRANSFER
+  ACCEPT_DIRECT_TRANSFER_PROPOSAL
+  REJECT_DIRECT_TRANSFER_PROPOSAL
   FINALIZE_TURN
 }
 
@@ -118,6 +120,7 @@ model AgentTurnAction {
   turnNumber       Int
   agentId          String
   recipientAgentId String?
+  relatedProposalActionId String?
   actionType       AgentTurnActionType
   amount           Decimal?           @db.Decimal(18, 4)
   content          String?

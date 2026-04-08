@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 
 import { GAME_SESSION_REPOSITORY } from '../../shared/application/tokens.js';
+import { TransferFundsUseCase } from '../../game/application/use-cases/transfer-funds.use-case.js';
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service.js';
 import type { GameSessionRepositoryPort } from '../../game/application/ports/game-session-repository.port.js';
 import { OrchestrateAgentRoundUseCase } from '../application/use-cases/orchestrate-agent-round.use-case.js';
@@ -70,9 +71,20 @@ export function createAgentsProviders() {
     {
       provide: OrchestrateAgentRoundUseCase,
       useFactory: (
+        agentActionRepository: PrismaAgentActionRepository,
         runAgentCommunicationTurnUseCase: RunAgentCommunicationTurnUseCase,
-      ) => new OrchestrateAgentRoundUseCase(runAgentCommunicationTurnUseCase),
-      inject: [RunAgentCommunicationTurnUseCase],
+        transferFundsUseCase: TransferFundsUseCase,
+      ) =>
+        new OrchestrateAgentRoundUseCase(
+          agentActionRepository,
+          runAgentCommunicationTurnUseCase,
+          transferFundsUseCase,
+        ),
+      inject: [
+        AGENT_ACTION_REPOSITORY,
+        RunAgentCommunicationTurnUseCase,
+        TransferFundsUseCase,
+      ],
     },
   ];
 }

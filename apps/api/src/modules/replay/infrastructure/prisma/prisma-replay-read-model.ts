@@ -5,6 +5,62 @@ import type {
 } from '../../application/ports/replay-read-model.port.js';
 import type { PrismaClient } from '@prisma/client';
 
+interface ReplaySessionRecord {
+  id: string;
+  name: string;
+  status: { toLowerCase(): string };
+  currentRound: number;
+  rounds: Array<{ id: string; roundNumber: number; createdAt: Date }>;
+  transfers: Array<{
+    id: string;
+    createdAt: Date;
+    amount: { toString(): string };
+    sourceAgentId: string;
+    sourceAgent: { name: string };
+    destinationAgentId: string;
+    destinationAgent: { name: string };
+  }>;
+  deposits: Array<{
+    id: string;
+    createdAt: Date;
+    amount: { toString(): string };
+    agentId: string;
+    agent: { name: string };
+  }>;
+  withdrawals: Array<{
+    id: string;
+    createdAt: Date;
+    amount: { toString(): string };
+    agentId: string;
+    agent: { name: string };
+  }>;
+  agentMessages: Array<{
+    id: string;
+    createdAt: Date;
+    roundNumber: number;
+    turnNumber: number;
+    senderAgentId: string;
+    senderAgent: { name: string };
+    recipientAgentId: string | null;
+    recipientAgent?: { name: string } | null;
+    visibility: string;
+    content: string;
+  }>;
+  agentTurnActions: Array<{
+    id: string;
+    createdAt: Date;
+    roundNumber: number;
+    turnNumber: number;
+    agentId: string;
+    agent: { name: string };
+    recipientAgentId: string | null;
+    relatedProposalActionId: string | null;
+    amount: { toString(): string } | null;
+    content: string | null;
+    actionType: string;
+  }>;
+}
+
 function toAmountString(value: { toString(): string }): string {
   return value.toString();
 }
@@ -15,7 +71,16 @@ export class PrismaReplayReadModel implements ReplayReadModelPort {
   async findByGameSessionId(
     gameSessionId: string,
   ): Promise<GameReplayRecord | null> {
-    const session = await this.prisma.gameSession.findUnique({
+    const delegate = (
+      this.prisma as unknown as {
+        gameSession: {
+          findUnique(
+            args: Record<string, unknown>,
+          ): Promise<ReplaySessionRecord | null>;
+        };
+      }
+    ).gameSession;
+    const session = await delegate.findUnique({
       where: { id: gameSessionId },
       include: {
         rounds: {
@@ -130,6 +195,12 @@ export class PrismaReplayReadModel implements ReplayReadModelPort {
           case 'PROPOSE_DIRECT_TRANSFER':
             actionType = 'propose_direct_transfer';
             break;
+          case 'ACCEPT_DIRECT_TRANSFER_PROPOSAL':
+            actionType = 'accept_direct_transfer_proposal';
+            break;
+          case 'REJECT_DIRECT_TRANSFER_PROPOSAL':
+            actionType = 'reject_direct_transfer_proposal';
+            break;
           case 'FINALIZE_TURN':
             actionType = 'finalize_turn';
             break;
@@ -144,6 +215,7 @@ export class PrismaReplayReadModel implements ReplayReadModelPort {
           agentId: action.agentId,
           agentName: action.agent.name,
           recipientAgentId: action.recipientAgentId,
+          relatedProposalActionId: action.relatedProposalActionId ?? undefined,
           amount: action.amount ? toAmountString(action.amount) : undefined,
           content: action.content ?? undefined,
           actionType,

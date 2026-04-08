@@ -114,7 +114,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          turnCount: 2,
+          turnCount: 3,
         }),
       },
     );
@@ -130,6 +130,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
         amount?: string;
         visibility?: string;
         actionType?: string;
+        relatedProposalActionId?: string;
         content?: string;
       }>;
     };
@@ -142,16 +143,18 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
     const ledgerEvents = replay.events.filter((event) =>
       ['transfer', 'deposit', 'withdrawal'].includes(event.type),
     );
-    expect(ledgerEvents).toHaveLength(3);
+    expect(ledgerEvents).toHaveLength(4);
     expect(ledgerEvents.map((event) => event.type)).toEqual([
       'transfer',
       'deposit',
       'withdrawal',
+      'transfer',
     ]);
     expect(ledgerEvents.map((event) => event.amount)).toEqual([
       '15',
       '20',
       '5',
+      '12.5',
     ]);
     expect(replay.events.some((event) => event.type === 'message')).toBe(true);
     expect(
@@ -160,6 +163,13 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
           event.type === 'action' &&
           event.actionType === 'propose_direct_transfer' &&
           event.amount === '12.5',
+      ),
+    ).toBe(true);
+    expect(
+      replay.events.some(
+        (event) =>
+          event.type === 'action' &&
+          event.actionType === 'accept_direct_transfer_proposal',
       ),
     ).toBe(true);
     expect(

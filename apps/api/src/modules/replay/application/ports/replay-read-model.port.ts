@@ -27,7 +27,10 @@ export interface ReplayEventRecord {
     | 'send_public_message'
     | 'send_private_message'
     | 'propose_direct_transfer'
+    | 'accept_direct_transfer_proposal'
+    | 'reject_direct_transfer_proposal'
     | 'finalize_turn';
+  relatedProposalActionId?: string;
 }
 
 export interface GameReplayRecord {

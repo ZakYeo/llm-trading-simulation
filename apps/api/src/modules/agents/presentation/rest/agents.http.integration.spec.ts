@@ -105,7 +105,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          turnCount: 2,
+          turnCount: 3,
         }),
       },
     );
@@ -116,11 +116,22 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
         actionRecords: Array<{ actionType: string; amount?: string }>;
       }>;
     };
+    const sessionResponse = await fetch(
+      `${baseUrl}/api/game/sessions/${createdSession.id}`,
+    );
+    const session = (await sessionResponse.json()) as {
+      agents: Array<{
+        role: string;
+        availableBalance: string;
+      }>;
+    };
+    const banker = session.agents.find((agent) => agent.role === 'banker');
+    const trader = session.agents.find((agent) => agent.role === 'trader');
 
     expect(response.status).toBe(201);
     expect(body.gameSessionId).toBe(createdSession.id);
-    expect(body.turns).toHaveLength(2);
-    expect(body.turns.map((turn) => turn.turnNumber)).toEqual([1, 2]);
+    expect(body.turns).toHaveLength(3);
+    expect(body.turns.map((turn) => turn.turnNumber)).toEqual([1, 2, 3]);
     expect(
       body.turns.some((turn) =>
         turn.actionRecords.some(
@@ -130,5 +141,14 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
         ),
       ),
     ).toBe(true);
+    expect(
+      body.turns.some((turn) =>
+        turn.actionRecords.some(
+          (action) => action.actionType === 'accept_direct_transfer_proposal',
+        ),
+      ),
+    ).toBe(true);
+    expect(banker?.availableBalance).toBe('87.5000');
+    expect(trader?.availableBalance).toBe('112.5000');
   });
 });

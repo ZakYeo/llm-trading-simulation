@@ -68,6 +68,17 @@ describe('GetGameReplayUseCase', () => {
           content: 'I need short-term capital to press a momentum setup.',
           actionType: 'propose_direct_transfer',
         },
+        {
+          id: 'action-2',
+          type: 'action',
+          createdAt: '2026-04-08T10:04:00.000Z',
+          roundNumber: 1,
+          turnNumber: 3,
+          agentId: 'agent-2',
+          agentName: 'Banker Bot',
+          relatedProposalActionId: 'action-1',
+          actionType: 'accept_direct_transfer_proposal',
+        },
       ],
     };
 

@@ -5,6 +5,9 @@ import { OrchestrateAgentRoundUseCase } from './orchestrate-agent-round.use-case
 
 describe('OrchestrateAgentRoundUseCase', () => {
   it('executes the requested number of communication turns in sequence', async () => {
+    const agentActionRepository = {
+      findRecentByGameSessionId: vi.fn().mockResolvedValue([]),
+    };
     const runAgentCommunicationTurnUseCase = {
       execute: vi
         .fn()
@@ -25,9 +28,14 @@ describe('OrchestrateAgentRoundUseCase', () => {
           messages: [],
         }),
     };
+    const transferFundsUseCase = {
+      execute: vi.fn(),
+    };
 
     const useCase = new OrchestrateAgentRoundUseCase(
+      agentActionRepository as never,
       runAgentCommunicationTurnUseCase as never,
+      transferFundsUseCase as never,
     );
 
     await expect(
@@ -75,9 +83,17 @@ describe('OrchestrateAgentRoundUseCase', () => {
   });
 
   it('rejects non-positive turn counts', async () => {
-    const useCase = new OrchestrateAgentRoundUseCase({
-      execute: vi.fn(),
-    } as never);
+    const useCase = new OrchestrateAgentRoundUseCase(
+      {
+        findRecentByGameSessionId: vi.fn(),
+      } as never,
+      {
+        execute: vi.fn(),
+      } as never,
+      {
+        execute: vi.fn(),
+      } as never,
+    );
 
     await expect(
       useCase.execute({
@@ -85,5 +101,93 @@ describe('OrchestrateAgentRoundUseCase', () => {
         turnCount: 0,
       }),
     ).rejects.toThrow(DomainInvariantError);
+  });
+
+  it('resolves accepted transfer proposals through the transfer use case', async () => {
+    const agentActionRepository = {
+      findRecentByGameSessionId: vi.fn().mockResolvedValue([
+        {
+          id: 'proposal-1',
+          gameSessionId: 'game-1',
+          roundNumber: 1,
+          turnNumber: 2,
+          agentId: 'trader-1',
+          recipientAgentId: 'banker-1',
+          actionType: 'propose_direct_transfer',
+          amount: '12.5000',
+          content: 'I need short-term capital to press a momentum setup.',
+        },
+        {
+          id: 'accept-1',
+          gameSessionId: 'game-1',
+          roundNumber: 1,
+          turnNumber: 3,
+          agentId: 'banker-1',
+          recipientAgentId: null,
+          relatedProposalActionId: 'proposal-1',
+          actionType: 'accept_direct_transfer_proposal',
+        },
+      ]),
+    };
+    const runAgentCommunicationTurnUseCase = {
+      execute: vi
+        .fn()
+        .mockResolvedValueOnce({
+          gameSessionId: 'game-1',
+          roundNumber: 1,
+          turnNumber: 1,
+          actions: [],
+          actionRecords: [],
+          messages: [],
+        })
+        .mockResolvedValueOnce({
+          gameSessionId: 'game-1',
+          roundNumber: 1,
+          turnNumber: 2,
+          actions: [],
+          actionRecords: [],
+          messages: [],
+        })
+        .mockResolvedValueOnce({
+          gameSessionId: 'game-1',
+          roundNumber: 1,
+          turnNumber: 3,
+          actions: [],
+          actionRecords: [
+            {
+              id: 'accept-1',
+              gameSessionId: 'game-1',
+              roundNumber: 1,
+              turnNumber: 3,
+              agentId: 'banker-1',
+              recipientAgentId: null,
+              relatedProposalActionId: 'proposal-1',
+              actionType: 'accept_direct_transfer_proposal',
+            },
+          ],
+          messages: [],
+        }),
+    };
+    const transferFundsUseCase = {
+      execute: vi.fn(),
+    };
+
+    const useCase = new OrchestrateAgentRoundUseCase(
+      agentActionRepository as never,
+      runAgentCommunicationTurnUseCase as never,
+      transferFundsUseCase as never,
+    );
+
+    await useCase.execute({
+      gameSessionId: 'game-1',
+      turnCount: 3,
+    });
+
+    expect(transferFundsUseCase.execute).toHaveBeenCalledWith({
+      gameSessionId: 'game-1',
+      sourceAgentId: 'banker-1',
+      destinationAgentId: 'trader-1',
+      amount: '12.5000',
+    });
   });
 });

@@ -9,7 +9,10 @@ export interface AgentActionRecord {
     | 'send_public_message'
     | 'send_private_message'
     | 'propose_direct_transfer'
+    | 'accept_direct_transfer_proposal'
+    | 'reject_direct_transfer_proposal'
     | 'finalize_turn';
+  relatedProposalActionId?: string;
   amount?: string;
   content?: string;
   createdAt?: string;
@@ -17,4 +20,8 @@ export interface AgentActionRecord {
 
 export interface AgentActionRepositoryPort {
   save(action: AgentActionRecord): Promise<AgentActionRecord>;
+  findRecentByGameSessionId(
+    gameSessionId: string,
+    limit: number,
+  ): Promise<AgentActionRecord[]>;
 }

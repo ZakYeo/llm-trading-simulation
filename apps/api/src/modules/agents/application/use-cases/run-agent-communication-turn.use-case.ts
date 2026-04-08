@@ -1,5 +1,6 @@
 import type {
   AgentAction,
+  RecentAgentAction,
   AgentTurnContext,
   RecentAgentMessage,
 } from '@llm-sim/mcp-contracts';
@@ -48,6 +49,24 @@ function toRecentMessage(
   };
 }
 
+function toRecentAction(
+  action: AgentActionRecord,
+  agentName: string,
+): RecentAgentAction {
+  return {
+    actionId: action.id ?? 'pending-action',
+    agentId: action.agentId,
+    agentName,
+    recipientAgentId: action.recipientAgentId,
+    type: action.actionType,
+    amount: action.amount,
+    content: action.content,
+    relatedProposalActionId: action.relatedProposalActionId,
+    roundNumber: action.roundNumber,
+    turnNumber: action.turnNumber,
+  };
+}
+
 export class RunAgentCommunicationTurnUseCase {
   constructor(
     private readonly gameSessionRepository: GameSessionRepositoryPort,
@@ -68,6 +87,11 @@ export class RunAgentCommunicationTurnUseCase {
     }
 
     const turnNumber = input.turnNumber ?? 1;
+    const recentActions =
+      await this.agentActionRepository.findRecentByGameSessionId(
+        session.id,
+        50,
+      );
     const recentMessages =
       await this.agentMessageRepository.findRecentByGameSessionId(
         session.id,
@@ -105,6 +129,13 @@ export class RunAgentCommunicationTurnUseCase {
 
           return toRecentMessage(message, senderName);
         }),
+        recentActions: recentActions.map((action) => {
+          const agentName =
+            session.agents.find((candidate) => candidate.id === action.agentId)
+              ?.name ?? 'Unknown Agent';
+
+          return toRecentAction(action, agentName);
+        }),
       };
 
       const action = await this.agentGateway.decideNextAction(context);
@@ -112,7 +143,10 @@ export class RunAgentCommunicationTurnUseCase {
         action.type === 'send_private_message' ||
         action.type === 'propose_direct_transfer'
           ? action.recipientAgentId
-          : null;
+          : action.type === 'accept_direct_transfer_proposal' ||
+              action.type === 'reject_direct_transfer_proposal'
+            ? null
+            : null;
 
       if (recipientAgentId) {
         const recipientAgent = session.agents.find(
@@ -130,27 +164,69 @@ export class RunAgentCommunicationTurnUseCase {
         Money.fromDecimal(action.amount);
       }
 
-      savedActions.push(
-        await this.agentActionRepository.save({
-          gameSessionId: session.id,
-          roundNumber: session.currentRound,
-          turnNumber,
-          agentId: agent.id,
-          recipientAgentId,
-          actionType: action.type,
-          amount:
-            action.type === 'propose_direct_transfer'
-              ? action.amount
-              : undefined,
-          content:
-            action.type === 'send_public_message' ||
-            action.type === 'send_private_message'
-              ? action.content
-              : action.type === 'propose_direct_transfer'
+      let relatedProposalActionId: string | undefined;
+
+      if (
+        action.type === 'accept_direct_transfer_proposal' ||
+        action.type === 'reject_direct_transfer_proposal'
+      ) {
+        const proposal = recentActions.find(
+          (candidate) =>
+            candidate.id === action.proposalActionId &&
+            candidate.actionType === 'propose_direct_transfer',
+        );
+
+        if (!proposal) {
+          throw new DomainInvariantError(
+            'Proposal response must reference an existing transfer proposal.',
+          );
+        }
+
+        if (proposal.recipientAgentId !== agent.id) {
+          throw new DomainInvariantError(
+            'Only the proposal recipient may accept or reject a transfer proposal.',
+          );
+        }
+
+        const existingResponse = recentActions.find(
+          (candidate) =>
+            candidate.relatedProposalActionId === proposal.id &&
+            (candidate.actionType === 'accept_direct_transfer_proposal' ||
+              candidate.actionType === 'reject_direct_transfer_proposal'),
+        );
+
+        if (existingResponse) {
+          throw new DomainInvariantError(
+            'Transfer proposal has already been resolved.',
+          );
+        }
+
+        relatedProposalActionId = proposal.id;
+      }
+
+      const savedAction = await this.agentActionRepository.save({
+        gameSessionId: session.id,
+        roundNumber: session.currentRound,
+        turnNumber,
+        agentId: agent.id,
+        recipientAgentId,
+        relatedProposalActionId,
+        actionType: action.type,
+        amount:
+          action.type === 'propose_direct_transfer' ? action.amount : undefined,
+        content:
+          action.type === 'send_public_message' ||
+          action.type === 'send_private_message'
+            ? action.content
+            : action.type === 'propose_direct_transfer'
+              ? action.rationale
+              : action.type === 'reject_direct_transfer_proposal'
                 ? action.rationale
                 : undefined,
-        }),
-      );
+      });
+
+      recentActions.push(savedAction);
+      savedActions.push(savedAction);
 
       if (action.type === 'send_private_message') {
         const savedMessage = await this.agentMessageRepository.save({

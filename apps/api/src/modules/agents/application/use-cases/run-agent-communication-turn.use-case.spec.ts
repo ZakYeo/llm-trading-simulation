@@ -70,6 +70,10 @@ class InMemoryAgentActionRepository implements AgentActionRepositoryPort {
     this.saved.push(saved);
     return saved;
   }
+
+  async findRecentByGameSessionId(): Promise<AgentActionRecord[]> {
+    return [...this.saved];
+  }
 }
 
 class ScriptedAgentGateway implements AgentGatewayPort {
