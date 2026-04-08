@@ -16,6 +16,7 @@ Quality status:
 - round advancement with interest accrual is now implemented and covered through unit, Postgres-backed integration, and HTTP integration tests
 - session updates now preserve the `GameSession` row and durable `GameRound` history in Postgres
 - transfer, deposit, and withdrawal actions now persist durable ledger history rows in Postgres
+- replay-oriented read models and API endpoints now exist over stored round and ledger history
 
 Readiness assessment:
 
@@ -48,12 +49,14 @@ Completed this session:
 - added round advancement and interest-accrual application behavior plus validated API coverage
 - rewrote the Prisma session repository update path so it preserves session identity and persists round history instead of deleting and recreating the parent row
 - added explicit ledger-history persistence for transfer, deposit, and withdrawal flows through the repository port and Prisma adapter
+- added replay read-model plumbing plus a replay HTTP endpoint over durable stored history
 
 Immediate next steps:
 
 - add one end-to-end backend happy path that includes round progression, interest accrual, and persisted replayable history
 - add migration/bootstrap documentation and make integration test setup friction-free for future contributors
-- add replay-oriented read models and API endpoints over the durable round and ledger history
+- add frontend integration for live session and replay reads
+- expand replay responses if the UI needs richer timeline projections than the current endpoint provides
 
 Execution guidance for code quality
 
@@ -76,7 +79,7 @@ Working well:
 Needs improvement next:
 
 - no domain events, replay records, or round engine yet
-- durable history now exists, but there is still no replay/event-stream read model exposed by the API
+- durable history now exists and replay reads are exposed, but there is still no richer event-stream projection layer or UI wired to consume it
 - no idempotency handling yet
 - no agent-to-agent integration tests yet
 - Docker runtime exists, but it still uses dev-mode web serving and no container-level automated smoke test

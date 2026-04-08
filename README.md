@@ -25,6 +25,7 @@ Implemented today:
 - round advancement with interest accrual on deposited principal
 - durable round-history persistence for advanced sessions
 - durable transfer, deposit, and withdrawal history persistence
+- replay-oriented read model and HTTP endpoint over stored round and ledger history
 - shared Nest app bootstrap and HTTP exception mapping for validation and domain errors
 - Prisma mapper/repository adapter tests for session persistence boundaries
 - real repository integration coverage against Postgres for game-session persistence
@@ -41,6 +42,7 @@ Current backend quality notes:
 - round advancement and interest accrual are covered through unit, use-case integration, and HTTP integration tests
 - round advancement now leaves durable `GameRound` history in Postgres
 - transfer, deposit, and withdrawal flows now leave durable ledger history rows in Postgres
+- replay data can now be read through `GET /api/replay/sessions/:id`
 - there is no round engine, replay/event stream, MCP runtime, or OpenAI-backed agent behavior yet
 
 ## Workspace
@@ -102,8 +104,8 @@ Run these before committing:
 
 ## Immediate next work
 
-1. Add a minimal frontend path that reads live session state from the backend.
-2. Add replay/event-stream reads on top of the now-durable round and ledger history.
+1. Add a minimal frontend path that reads live session and replay data from the backend.
+2. Expand replay reads into a richer event-stream and timeline view if the UI needs more than the current snapshot-plus-history response.
 3. Add agent-to-agent integration tests once orchestration boundaries exist.
 4. Add container-level automated smoke tests for the Docker stack.
 5. Only after the backend MVP is proven, start wiring LLM and agent runtime layers.
