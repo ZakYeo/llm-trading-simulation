@@ -59,7 +59,7 @@ const liveOpenAiApiKey =
 const liveOpenAiModel =
   process.env.OPENAI_MODEL ??
   readEnvValueFromFile('OPENAI_MODEL') ??
-  'gpt-5-mini';
+  'gpt-4.1-mini';
 const runLiveOpenAiTests =
   process.env.ENABLE_OPENAI_LIVE_TESTS === '1' &&
   Boolean(testDatabaseUrl) &&
@@ -75,8 +75,8 @@ describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
     process.env.OPENAI_API_KEY = liveOpenAiApiKey;
     process.env.OPENAI_MODEL = liveOpenAiModel;
     process.env.OPENAI_AGENT_SYSTEM_PROMPT =
-      'You are a simulated trading-game agent. Choose exactly one next action. In turns 1 and 2, prefer sending one concise public/private message or making a transfer proposal rather than finalizing immediately. Only send private messages or proposals to valid peer ids. Use positive fake-money amounts only. If a valid proposal is pending for you, prefer responding to it with acceptance or rejection instead of finalizing.';
-    delete process.env.AGENT_RUNTIME_PROVIDER;
+      'You are participating in a live backend integration test. Your goal is to maximize your own expected fake-money outcome over the session. Communication and negotiation are optional tools, but if they improve expected value you should use them instead of passively finalizing. Across four turns, the table should not end with every action as finalize_turn. Include a short reasoning field explaining the economic logic behind your action.';
+    process.env.AGENT_RUNTIME_PROVIDER = 'openai';
 
     const app = await createApp();
     await app.listen(0, '127.0.0.1');
@@ -96,9 +96,10 @@ describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
     await prismaService.gameSession.deleteMany();
     await closeApp?.();
     delete process.env.OPENAI_AGENT_SYSTEM_PROMPT;
+    delete process.env.AGENT_RUNTIME_PROVIDER;
   });
 
-  it('runs a real OpenAI-backed multi-turn agent round with meaningful interaction through the HTTP boundary', async () => {
+  it('does not allow all agents to finalize across all four turns on the live provider path', async () => {
     const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
       method: 'POST',
       headers: {
@@ -127,7 +128,7 @@ describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          turnCount: 2,
+          turnCount: 4,
         }),
       },
     );
@@ -148,12 +149,21 @@ describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
     const replay = (await replayResponse.json()) as {
       events: Array<{ type: string; actionType?: string }>;
     };
+    const flattenedActionTypes = body.turns.flatMap((turn) =>
+      turn.actionRecords.map((record) => record.actionType),
+    );
+    const nonFinalizeActionTypes = flattenedActionTypes.filter(
+      (actionType) => actionType !== 'finalize_turn',
+    );
 
     expect(body.gameSessionId).toBe(createdSession.id);
-    expect(body.turns).toHaveLength(2);
+    expect(body.turns).toHaveLength(4);
     expect(body.turns.every((turn) => turn.actions.length === 5)).toBe(true);
     expect(body.turns.every((turn) => turn.actionRecords.length === 5)).toBe(
       true,
+    );
+    expect(nonFinalizeActionTypes.length, JSON.stringify(body)).toBeGreaterThan(
+      0,
     );
     expect(replay.events.some((event) => event.type === 'action')).toBe(true);
   }, 120_000);

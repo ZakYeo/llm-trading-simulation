@@ -62,17 +62,20 @@ export const agentActionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('send_public_message'),
     content: z.string().min(1),
+    reasoning: z.string().min(1).optional(),
   }),
   z.object({
     type: z.literal('send_private_message'),
     recipientAgentId: z.string().min(1),
     content: z.string().min(1),
+    reasoning: z.string().min(1).optional(),
   }),
   z.object({
     type: z.literal('propose_direct_transfer'),
     recipientAgentId: z.string().min(1),
     amount: z.string().min(1),
     rationale: z.string().min(1),
+    reasoning: z.string().min(1).optional(),
   }),
   z.object({
     type: z.literal('counter_direct_transfer_proposal'),
@@ -80,18 +83,22 @@ export const agentActionSchema = z.discriminatedUnion('type', [
     recipientAgentId: z.string().min(1),
     amount: z.string().min(1),
     rationale: z.string().min(1),
+    reasoning: z.string().min(1).optional(),
   }),
   z.object({
     type: z.literal('accept_direct_transfer_proposal'),
     proposalActionId: z.string().min(1),
+    reasoning: z.string().min(1).optional(),
   }),
   z.object({
     type: z.literal('reject_direct_transfer_proposal'),
     proposalActionId: z.string().min(1),
     rationale: z.string().min(1),
+    reasoning: z.string().min(1).optional(),
   }),
   z.object({
     type: z.literal('finalize_turn'),
+    reasoning: z.string().min(1).optional(),
   }),
 ]);
 

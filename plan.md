@@ -10,6 +10,7 @@ Quality status:
 - green workspace on `lint`, `test`, `typecheck`, and `build`
 - unit tests cover money, ledger, session creation, bank mutations, transfers, and Prisma mapping/repository adapters
 - Docker-isolated local runtime is working for API, web, and Postgres
+- Docker Compose now passes OpenAI agent runtime env vars into the API container so manual containerized runs can use the real provider
 - Prisma migration and test database bootstrap flow now exist
 - the API integration runner now executes the integration files sequentially so a shared Postgres test database stays stable
 - real Postgres-backed integration coverage now exists for repository persistence and the main create-session -> transfer -> deposit -> withdraw -> read-state backend flow
@@ -24,7 +25,8 @@ Quality status:
 - counter-proposals now exist as a first negotiation-deepening primitive, with accepted counters resolving through the same validated transfer path
 - rejected transfer proposals are covered and remain replay-visible without mutating balances
 - OpenAI is now wired behind an `AgentGatewayPort`, with mock runtime selection available for deterministic tests
-- a gated live OpenAI integration test now exists for the agents orchestration HTTP path, with stronger prompts and detection for meaningful interaction while still operating as a smoke path
+- a gated live OpenAI integration test now exists for the agents orchestration HTTP path, now running against `gpt-4.1-mini` with incentive-based prompting and per-agent reasoning logs
+- live-provider runs now demonstrate real non-passive interaction, but still favor message-level negotiation more often than structured proposal/settlement actions
 
 Readiness assessment:
 
@@ -74,14 +76,16 @@ Completed this session:
 - added rejected-proposal coverage plus duplicate-resolution safeguards in unit and HTTP integration tests
 - added a gated real-OpenAI integration test that exercises the live agents orchestration path against the HTTP app boundary
 - added counter-proposals as a richer negotiation primitive with unit, replay, and Postgres-backed HTTP integration coverage
-- strengthened the gated live OpenAI test prompting and assertions so it detects proposal/response cycles when they occur without turning the real-provider smoke path into a flaky hard gate
+- strengthened the gated live OpenAI test prompting and assertions so it detects non-passive interaction without forcing a specific move
+- shifted live-provider prompting toward incentive-based behavior so agents optimize for expected fake-money outcome rather than following overly prescriptive action prompts
+- added logging of each live-provider agent decision and short reasoning for debugging and evaluation
 
 Immediate next steps:
 
-- add another negotiation primitive beyond direct transfer and counter-offer flows
-- add explicit lifecycle semantics for resolved proposals beyond the current accept/reject pair where needed
-- decide whether proposal resolution should live inside the agent orchestrator or in a dedicated negotiation/settlement application service
-- keep the gated live OpenAI test healthy as the real-provider smoke path while deterministic mock tests remain the main regression suite
+- improve action semantics so structured economic actions are easier for the live provider to distinguish from generic messages
+- improve context richness so agents see clearer incentives, leverage, and the difference between talking about a deal and actually executing one
+- strengthen the gated live OpenAI test so it detects economically substantive interaction without forcing a particular action type
+- keep deterministic mock tests as the main regression suite while the live-provider path remains a targeted confidence check
 - keep frontend integration deferred until backend communication and replay become richer
 - only after that, split the current in-process contract into true MCP-facing agent boundaries
 
@@ -111,6 +115,7 @@ Needs improvement next:
 - multi-turn state-mutation integration exists for direct transfer proposals and counter-offers, but not yet for broader negotiation patterns
 - Docker runtime exists, but it still uses dev-mode web serving and no container-level automated smoke test
 - no prompt factory, generalized negotiation engine, or settlement layer beyond direct transfer proposal resolution yet
+- live-provider context is still too weak about when a structured action is economically better than another round of messaging
 
 What counts as “real working and testable” now
 
@@ -123,12 +128,11 @@ What counts as “real working and testable” now
 
 Recommended next slice
 
-- keep `propose_direct_transfer` as the reference negotiation primitive now that it resolves end to end
-- add a third negotiable primitive, or broaden proposal metadata so different deal structures can be expressed
-- decide whether proposal settlement should stay inside the current orchestrator or move into a dedicated settlement service
-- strengthen live-provider assertions around proposal, response, and settlement while keeping deterministic mock coverage as the main regression suite
-- keep agent-to-agent integration coverage for both accepted and rejected proposals as the baseline for future negotiation primitives
-- retain replay fidelity so proposal, response, and settlement stay auditable
+- clarify action semantics in the live-provider prompt/context so `send_private_message` is treated as conversation and proposal actions are treated as executable economic moves
+- enrich the agent turn context with compact economic cues, such as why capital deployment or accepted proposals change expected outcome
+- raise the live-provider test bar from "not all finalize" toward "economically substantive interaction happened" without requiring one exact action type
+- keep agent-to-agent integration coverage for both accepted and rejected proposals as the deterministic baseline for future negotiation primitives
+- retain replay fidelity so proposal, response, settlement, and model reasoning remain auditable
 
 What is still later-stage work
 
