@@ -277,6 +277,25 @@ describe('RunAgentCommunicationTurnUseCase', () => {
 
   it('provides the gateway with economic context and action semantics', async () => {
     const actionRepository = new InMemoryAgentActionRepository();
+    const messageRepository = new InMemoryAgentMessageRepository();
+    await messageRepository.save({
+      gameSessionId: 'game-1',
+      roundNumber: 1,
+      turnNumber: 1,
+      senderAgentId: 'agent-1',
+      recipientAgentId: 'agent-2',
+      visibility: 'private',
+      content: 'I can offer funding if your setup is strong enough.',
+    });
+    await messageRepository.save({
+      gameSessionId: 'game-1',
+      roundNumber: 1,
+      turnNumber: 2,
+      senderAgentId: 'agent-2',
+      recipientAgentId: 'agent-1',
+      visibility: 'private',
+      content: 'I would take capital if the terms are competitive.',
+    });
     await actionRepository.save({
       gameSessionId: 'game-1',
       roundNumber: 1,
@@ -291,7 +310,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
     const gateway = new RecordingAgentGateway();
     const useCase = new RunAgentCommunicationTurnUseCase(
       new InMemoryGameSessionRepository(createSession()),
-      new InMemoryAgentMessageRepository(),
+      messageRepository,
       actionRepository,
       gateway,
     );
@@ -330,5 +349,70 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       unresolvedOutgoingProposalCount: 1,
     });
     expect(gateway.contexts[1].actionableProposalsForSelf).toHaveLength(0);
+    expect(gateway.contexts[0].negotiationState).toMatchObject({
+      primaryCounterpartyAgentId: 'agent-2',
+      primaryCounterpartyName: 'Trader Bot',
+      privateMessageExchangeCountWithPrimaryCounterparty: 2,
+      unresolvedProposalExistsWithPrimaryCounterparty: true,
+      conversationLikelyReadyForProposal: false,
+    });
+    expect(gateway.contexts[1].negotiationState).toMatchObject({
+      primaryCounterpartyAgentId: 'agent-1',
+      primaryCounterpartyName: 'Banker Bot',
+      privateMessageExchangeCountWithPrimaryCounterparty: 2,
+      unresolvedProposalExistsWithPrimaryCounterparty: true,
+      conversationLikelyReadyForProposal: false,
+    });
+  });
+
+  it('marks banker-trader conversation as proposal-ready when private exchange exists without an unresolved proposal', async () => {
+    const messageRepository = new InMemoryAgentMessageRepository();
+    await messageRepository.save({
+      gameSessionId: 'game-1',
+      roundNumber: 1,
+      turnNumber: 1,
+      senderAgentId: 'agent-1',
+      recipientAgentId: 'agent-2',
+      visibility: 'private',
+      content: 'I can fund a strong setup.',
+    });
+    await messageRepository.save({
+      gameSessionId: 'game-1',
+      roundNumber: 1,
+      turnNumber: 2,
+      senderAgentId: 'agent-2',
+      recipientAgentId: 'agent-1',
+      visibility: 'private',
+      content: 'I can work with that if the pricing is right.',
+    });
+
+    const gateway = new RecordingAgentGateway();
+    const useCase = new RunAgentCommunicationTurnUseCase(
+      new InMemoryGameSessionRepository(createSession()),
+      messageRepository,
+      new InMemoryAgentActionRepository(),
+      gateway,
+    );
+
+    await useCase.execute({
+      gameSessionId: 'game-1',
+      turnNumber: 3,
+    });
+
+    expect(gateway.contexts[0].negotiationState).toMatchObject({
+      primaryCounterpartyAgentId: 'agent-2',
+      privateMessageExchangeCountWithPrimaryCounterparty: 2,
+      unresolvedProposalExistsWithPrimaryCounterparty: false,
+      conversationLikelyReadyForProposal: true,
+    });
+    expect(gateway.contexts[0].negotiationState.guidance).toContain(
+      'executable transfer proposal may now be higher value',
+    );
+    expect(gateway.contexts[1].negotiationState).toMatchObject({
+      primaryCounterpartyAgentId: 'agent-1',
+      privateMessageExchangeCountWithPrimaryCounterparty: 2,
+      unresolvedProposalExistsWithPrimaryCounterparty: false,
+      conversationLikelyReadyForProposal: true,
+    });
   });
 });

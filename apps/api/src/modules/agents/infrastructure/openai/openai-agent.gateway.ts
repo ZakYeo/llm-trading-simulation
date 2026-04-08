@@ -285,6 +285,10 @@ function buildPeerSummary(context: AgentTurnContext): string {
     )}. Never target yourself. If you choose a targeted action, recipientAgentId must exactly equal one of the listed peer ids.`;
 }
 
+function buildNegotiationStateSummary(context: AgentTurnContext): string {
+  return `Negotiation state: primary counterparty id = ${context.negotiationState.primaryCounterpartyAgentId ?? 'none'} primary counterparty name = ${context.negotiationState.primaryCounterpartyName ?? 'none'} private exchange count with primary counterparty = ${context.negotiationState.privateMessageExchangeCountWithPrimaryCounterparty} unresolved proposal exists with primary counterparty = ${String(context.negotiationState.unresolvedProposalExistsWithPrimaryCounterparty)} conversation likely ready for proposal = ${String(context.negotiationState.conversationLikelyReadyForProposal)} guidance = ${context.negotiationState.guidance}`;
+}
+
 export class OpenAiAgentGateway implements AgentGatewayPort {
   constructor(
     private readonly client: OpenAI,
@@ -300,6 +304,7 @@ export class OpenAiAgentGateway implements AgentGatewayPort {
       buildEconomicContextSummary(context),
       buildActionSemanticsSummary(context),
       buildActionableProposalSummary(context),
+      buildNegotiationStateSummary(context),
       buildRoleDirective(context),
       buildTurnSignal(context),
     ].join(' ');

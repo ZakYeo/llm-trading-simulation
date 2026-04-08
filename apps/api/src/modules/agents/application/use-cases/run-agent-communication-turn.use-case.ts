@@ -131,6 +131,117 @@ function findActionableProposalsForAgent(
     }));
 }
 
+function findPrimaryCounterparty(
+  session: Awaited<ReturnType<GameSessionRepositoryPort['findById']>>,
+  agentId: string,
+  role: AgentTurnContext['self']['role'],
+) {
+  if (role === 'banker') {
+    return (
+      session?.agents.find((candidate) => candidate.role === 'trader') ?? null
+    );
+  }
+
+  if (role === 'trader') {
+    return (
+      session?.agents.find((candidate) => candidate.role === 'banker') ?? null
+    );
+  }
+
+  return null;
+}
+
+function countPrivateMessagesBetweenAgents(
+  recentMessages: AgentMessageRecord[],
+  firstAgentId: string,
+  secondAgentId: string,
+): number {
+  return recentMessages.filter(
+    (message) =>
+      message.visibility === 'private' &&
+      ((message.senderAgentId === firstAgentId &&
+        message.recipientAgentId === secondAgentId) ||
+        (message.senderAgentId === secondAgentId &&
+          message.recipientAgentId === firstAgentId)),
+  ).length;
+}
+
+function hasUnresolvedProposalBetweenAgents(
+  recentActions: AgentActionRecord[],
+  firstAgentId: string,
+  secondAgentId: string,
+): boolean {
+  return recentActions.some(
+    (action) =>
+      isTransferProposalActionType(action.actionType) &&
+      Boolean(action.id) &&
+      ((action.agentId === firstAgentId &&
+        action.recipientAgentId === secondAgentId) ||
+        (action.agentId === secondAgentId &&
+          action.recipientAgentId === firstAgentId)) &&
+      !recentActions.some(
+        (candidate) =>
+          candidate.relatedProposalActionId === action.id &&
+          isTransferProposalResolutionType(candidate.actionType),
+      ),
+  );
+}
+
+function buildNegotiationState(
+  session: Awaited<ReturnType<GameSessionRepositoryPort['findById']>>,
+  agent: AgentTurnContext['self'],
+  recentMessages: AgentMessageRecord[],
+  recentActions: AgentActionRecord[],
+) {
+  const primaryCounterparty = findPrimaryCounterparty(
+    session,
+    agent.agentId,
+    agent.role,
+  );
+
+  if (!primaryCounterparty) {
+    return {
+      primaryCounterpartyAgentId: null,
+      primaryCounterpartyName: null,
+      privateMessageExchangeCountWithPrimaryCounterparty: 0,
+      unresolvedProposalExistsWithPrimaryCounterparty: false,
+      conversationLikelyReadyForProposal: false,
+      guidance:
+        'No primary capital counterparty is defined for your role, so focus on information advantage unless a concrete opportunity emerges.',
+    };
+  }
+
+  const privateMessageExchangeCountWithPrimaryCounterparty =
+    countPrivateMessagesBetweenAgents(
+      recentMessages,
+      agent.agentId,
+      primaryCounterparty.id,
+    );
+  const unresolvedProposalExistsWithPrimaryCounterparty =
+    hasUnresolvedProposalBetweenAgents(
+      recentActions,
+      agent.agentId,
+      primaryCounterparty.id,
+    );
+  const conversationLikelyReadyForProposal =
+    (agent.role === 'banker' || agent.role === 'trader') &&
+    privateMessageExchangeCountWithPrimaryCounterparty >= 2 &&
+    !unresolvedProposalExistsWithPrimaryCounterparty;
+
+  return {
+    primaryCounterpartyAgentId: primaryCounterparty.id,
+    primaryCounterpartyName: primaryCounterparty.name,
+    privateMessageExchangeCountWithPrimaryCounterparty,
+    unresolvedProposalExistsWithPrimaryCounterparty,
+    conversationLikelyReadyForProposal,
+    guidance: conversationLikelyReadyForProposal
+      ? 'You have an active bilateral negotiation with your primary capital counterparty and no unresolved proposal is open. If terms are aligned, an executable transfer proposal may now be higher value than another exploratory message.'
+      : unresolvedProposalExistsWithPrimaryCounterparty
+        ? 'A proposal already exists with your primary capital counterparty, so response or follow-through is usually higher value than starting a fresh negotiation loop.'
+        : 'You are still in information-gathering or term-discovery mode with your primary capital counterparty.',
+  };
+}
+
 export class RunAgentCommunicationTurnUseCase {
   constructor(
     private readonly gameSessionRepository: GameSessionRepositoryPort,
@@ -203,6 +314,18 @@ export class RunAgentCommunicationTurnUseCase {
         actionableProposalsForSelf: findActionableProposalsForAgent(
           agent.id,
           session,
+          recentActions,
+        ),
+        negotiationState: buildNegotiationState(
+          session,
+          {
+            agentId: agent.id,
+            name: agent.name,
+            role: agent.role,
+            availableBalance: agent.balance.available.toDecimal(),
+            depositPrincipal: agent.depositAccount.principal.toDecimal(),
+          },
+          recentMessages,
           recentActions,
         ),
         economicContext: {

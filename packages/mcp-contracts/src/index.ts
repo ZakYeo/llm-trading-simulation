@@ -65,6 +65,17 @@ export const agentTurnContextSchema = z.object({
       rationale: z.string().min(1),
     }),
   ),
+  negotiationState: z.object({
+    primaryCounterpartyAgentId: z.string().min(1).nullable(),
+    primaryCounterpartyName: z.string().min(1).nullable(),
+    privateMessageExchangeCountWithPrimaryCounterparty: z
+      .number()
+      .int()
+      .nonnegative(),
+    unresolvedProposalExistsWithPrimaryCounterparty: z.boolean(),
+    conversationLikelyReadyForProposal: z.boolean(),
+    guidance: z.string().min(1),
+  }),
   economicContext: z.object({
     objective: z.string().min(1),
     messagesDoNotMoveMoney: z.boolean(),
