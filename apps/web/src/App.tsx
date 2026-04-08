@@ -70,6 +70,33 @@ function getEventLabel(event: GameReplayRecord['events'][number]) {
   return event.agentName ?? event.type;
 }
 
+function getEventDetail(event: GameReplayRecord['events'][number]) {
+  if (event.type === 'message') {
+    return event.content ?? 'No content';
+  }
+
+  if (event.type === 'action') {
+    if (
+      event.actionType === 'send_private_message' ||
+      event.actionType === 'send_public_message'
+    ) {
+      return null;
+    }
+
+    if (event.amount) {
+      return `Amount ${formatCurrency(event.amount)}`;
+    }
+
+    return 'Action recorded';
+  }
+
+  if (event.amount) {
+    return `Amount ${formatCurrency(event.amount)}`;
+  }
+
+  return 'No content';
+}
+
 export function App() {
   const queryClient = useQueryClient();
   const [selectedSessionId, setSelectedSessionId] = useState<string>('');
@@ -530,30 +557,31 @@ export function App() {
         {replayQuery.isFetching ? <p>Loading replay...</p> : null}
         {replay ? (
           <div className="timeline">
-            {replay.events.map((event) => (
-              <article key={event.id} className="timeline-event">
-                <div className={`event-badge event-${event.type}`}>
-                  {event.type}
-                </div>
-                <div className="event-content">
-                  <div className="event-topline">
-                    <strong>{getEventLabel(event)}</strong>
-                    <span>{formatTimestamp(event.createdAt)}</span>
+            {replay.events.map((event) => {
+              const eventDetail = getEventDetail(event);
+
+              return (
+                <article key={event.id} className="timeline-event">
+                  <div className={`event-badge event-${event.type}`}>
+                    {event.type}
                   </div>
-                  <p className="event-detail">
-                    {event.content ??
-                      (event.amount
-                        ? `Amount ${formatCurrency(event.amount)}`
-                        : 'No content')}
-                  </p>
-                  <p className="event-meta">
-                    Round{' '}
-                    {event.roundNumber ?? selectedSession?.currentRound ?? 0}
-                    {event.turnNumber ? ` / Turn ${event.turnNumber}` : ''}
-                  </p>
-                </div>
-              </article>
-            ))}
+                  <div className="event-content">
+                    <div className="event-topline">
+                      <strong>{getEventLabel(event)}</strong>
+                      <span>{formatTimestamp(event.createdAt)}</span>
+                    </div>
+                    {eventDetail ? (
+                      <p className="event-detail">{eventDetail}</p>
+                    ) : null}
+                    <p className="event-meta">
+                      Round{' '}
+                      {event.roundNumber ?? selectedSession?.currentRound ?? 0}
+                      {event.turnNumber ? ` / Turn ${event.turnNumber}` : ''}
+                    </p>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         ) : (
           <p className="empty-copy">
