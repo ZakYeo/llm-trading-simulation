@@ -15,6 +15,17 @@ export class AccountBalance {
     return new AccountBalance(initialAvailable, Money.zero());
   }
 
+  static restore(
+    available: Money,
+    reserved: Money = Money.zero(),
+  ): AccountBalance {
+    if (available.isNegative() || reserved.isNegative()) {
+      throw new DomainInvariantError('Balances cannot be negative.');
+    }
+
+    return new AccountBalance(available, reserved);
+  }
+
   get available(): Money {
     return this.availableValue;
   }

@@ -11,6 +11,17 @@ export class DepositAccount {
     return new DepositAccount(Money.zero(), Money.zero());
   }
 
+  static restore(
+    principal: Money,
+    accruedInterest: Money = Money.zero(),
+  ): DepositAccount {
+    if (principal.isNegative() || accruedInterest.isNegative()) {
+      throw new DomainInvariantError('Deposit balances cannot be negative.');
+    }
+
+    return new DepositAccount(principal, accruedInterest);
+  }
+
   get principal(): Money {
     return this.principalValue;
   }
