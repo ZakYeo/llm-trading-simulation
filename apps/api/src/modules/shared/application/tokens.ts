@@ -1,0 +1,2 @@
+export const GAME_SESSION_REPOSITORY = Symbol('GAME_SESSION_REPOSITORY');
+export const ID_GENERATOR = Symbol('ID_GENERATOR');

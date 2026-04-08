@@ -1,42 +1,7 @@
 import type { GameSessionRepositoryPort } from '../../application/ports/game-session-repository.port.js';
 import type { GameSession } from '../../domain/entities/game-session.js';
-import {
-  GameSessionPrismaMapper,
-  type PersistedGameSessionRecord,
-} from './game-session-prisma.mapper.js';
-
-export interface PrismaGameSessionDelegate {
-  upsert(args: {
-    where: { id: string };
-    create: ReturnType<typeof GameSessionPrismaMapper.toCreateInput>;
-    update: {
-      name: string;
-      status: 'SETUP' | 'ACTIVE' | 'SETTLEMENT' | 'COMPLETED' | 'FAILED';
-      currentRound: number;
-      agents: {
-        deleteMany: Record<string, never>;
-        create: ReturnType<
-          typeof GameSessionPrismaMapper.toCreateInput
-        >['agents']['create'];
-      };
-    };
-  }): Promise<void>;
-  findUnique(args: {
-    where: { id: string };
-    include: {
-      agents: {
-        include: {
-          balance: true;
-          depositAccount: true;
-        };
-      };
-    };
-  }): Promise<PersistedGameSessionRecord | null>;
-}
-
-export interface PrismaClientLike {
-  gameSession: PrismaGameSessionDelegate;
-}
+import { GameSessionPrismaMapper } from './game-session-prisma.mapper.js';
+import type { PrismaClientLike } from './game-session-prisma.contracts.js';
 
 export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
   constructor(private readonly prisma: PrismaClientLike) {}
