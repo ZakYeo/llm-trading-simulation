@@ -53,10 +53,11 @@ Completed this session:
 
 Immediate next steps:
 
-- add one end-to-end backend happy path that includes round progression, interest accrual, and persisted replayable history
-- add migration/bootstrap documentation and make integration test setup friction-free for future contributors
-- add frontend integration for live session and replay reads
-- expand replay responses if the UI needs richer timeline projections than the current endpoint provides
+- add a backend-only agent communication slice with mock/local agent runtimes before building more UI
+- introduce `AgentGatewayPort` and minimal MCP-style agent action/message contracts
+- add one orchestrated multi-agent turn that exchanges messages and commits a validated outcome
+- add agent-to-agent integration tests over the backend orchestration path
+- keep frontend integration deferred until backend agent communication is real and testable
 
 Execution guidance for code quality
 
@@ -79,7 +80,7 @@ Working well:
 Needs improvement next:
 
 - no domain events, replay records, or round engine yet
-- durable history now exists and replay reads are exposed, but there is still no richer event-stream projection layer or UI wired to consume it
+- durable history now exists and replay reads are exposed, but there is still no agent runtime, MCP boundary implementation, or orchestrated multi-agent turn flow
 - no idempotency handling yet
 - no agent-to-agent integration tests yet
 - Docker runtime exists, but it still uses dev-mode web serving and no container-level automated smoke test
@@ -89,7 +90,7 @@ What counts as “real working and testable” next
 
 - a backend flow that can create a session, mutate balances through transfer/deposit/withdraw, and read the resulting persisted state back through HTTP
 - real Postgres-backed integration tests that prove those flows end to end through the Nest HTTP boundary
-- a minimal frontend that can display live persisted backend state
+- a backend-only orchestrated agent turn with persisted messages/actions and integration coverage
 
 What is still later-stage work
 

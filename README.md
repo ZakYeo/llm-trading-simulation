@@ -104,8 +104,8 @@ Run these before committing:
 
 ## Immediate next work
 
-1. Add a minimal frontend path that reads live session and replay data from the backend.
-2. Expand replay reads into a richer event-stream and timeline view if the UI needs more than the current snapshot-plus-history response.
-3. Add agent-to-agent integration tests once orchestration boundaries exist.
-4. Add container-level automated smoke tests for the Docker stack.
-5. Only after the backend MVP is proven, start wiring LLM and agent runtime layers.
+1. Add a backend-only agent communication slice with mock/local agent runtimes.
+2. Introduce minimal MCP-style agent message and action contracts plus an `AgentGatewayPort`.
+3. Add one orchestrated multi-agent backend turn and integration tests around it.
+4. Keep frontend integration deferred until backend agent communication is real and testable.
+5. After that, wire real LLM/runtime layers behind the same backend abstractions.
