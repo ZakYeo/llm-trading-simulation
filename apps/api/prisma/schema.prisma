@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum GameStatus {
+  SETUP
+  ACTIVE
+  SETTLEMENT
+  COMPLETED
+  FAILED
+}
+
+enum AgentRole {
+  BANKER
+  ANALYST
+  LAWYER
+  INFLUENCER
+  TRADER
+}
+
+model GameSession {
+  id           String    @id @default(uuid())
+  name         String
+  status       GameStatus @default(SETUP)
+  currentRound Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  agents       Agent[]
+  rounds       GameRound[]
+}
+
+model Agent {
+  id            String           @id @default(uuid())
+  gameSessionId String
+  name          String
+  role          AgentRole
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  gameSession    GameSession      @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  balance       AgentBalance?
+  depositAccount AgentDepositAccount?
+}
+
+model AgentBalance {
+  id        String   @id @default(uuid())
+  agentId    String   @unique
+  available  Decimal  @db.Decimal(18, 4)
+  reserved   Decimal  @db.Decimal(18, 4) @default(0)
+  updatedAt  DateTime @updatedAt
+  agent      Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+}
+
+model AgentDepositAccount {
+  id        String   @id @default(uuid())
+  agentId    String   @unique
+  principal  Decimal  @db.Decimal(18, 4)
+  accrued    Decimal  @db.Decimal(18, 4) @default(0)
+  updatedAt  DateTime @updatedAt
+  agent      Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+}
+
+model GameRound {
+  id            String      @id @default(uuid())
+  gameSessionId String
+  roundNumber   Int
+  createdAt     DateTime    @default(now())
+  gameSession   GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+}
+

@@ -1,0 +1,37 @@
+{
+  "name": "llm-trading-simulation",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.12.3",
+  "scripts": {
+    "build": "corepack pnpm -r build",
+    "dev": "corepack pnpm --parallel --filter @llm-sim/api --filter @llm-sim/web dev",
+    "lint": "corepack pnpm -r lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "corepack pnpm -r test",
+    "typecheck": "corepack pnpm -r typecheck",
+    "db:generate": "corepack pnpm --filter @llm-sim/api prisma generate",
+    "db:migrate": "corepack pnpm --filter @llm-sim/api prisma migrate dev",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "eslint": "^9.35.0",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.6",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.43.0",
+    "vitest": "^3.2.4"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,md,css}": [
+      "prettier --write"
+    ],
+    "{apps,packages}/**/*.{ts,tsx,js,jsx}": [
+      "eslint --fix"
+    ]
+  }
+}

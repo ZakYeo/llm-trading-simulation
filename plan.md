@@ -1,0 +1,533 @@
+a multi-agent negotiation and treasury simulator where each agent is exposed as its own MCP server, communicates through MCP-compatible tools/resources, and operates on fake balances first, with a clean migration path toward x402-based testnet payments later. MCP is an open standard for connecting AI applications to tools, data, and workflows, which makes it a good fit for agent-to-agent interaction boundaries. x402 is designed around HTTP 402 Payment Required challenge/response flows, which makes it a sensible later-stage payment layer for monetized agent actions or paid resource access.
+
+Execution tracker
+
+Current phase: Phase 1 — Domain model and core ledger
+Status: in progress
+
+Completed this session:
+
+- created pnpm workspace root, shared tsconfig, eslint, prettier, and husky scaffolding
+- scaffolded `apps/api` for a NestJS orchestrator structure
+- scaffolded `apps/web` for a React + Vite frontend structure
+- added shared packages for MCP contracts and common types
+- added initial Prisma schema and Docker Compose Postgres setup
+- installed workspace dependencies and fixed the local `pnpm` execution path via `corepack`
+- implemented initial money, balance, deposit-account, and ledger domain primitives with tests
+
+Immediate next steps:
+
+- expand Phase 1 from domain primitives into repository ports and Prisma-backed persistence
+- model transfers, deposits, withdrawals, and round records in Prisma
+- add application services for creating games and mutating balances through the ledger
+
+Project concept
+
+Build a system with:
+
+5 agent services, each running as an MCP server
+1 bank MCP server, where agents can deposit funds and earn interest, but cannot trade directly from deposits
+1 game/orchestrator backend in NestJS that runs rounds, stores state, enforces rules, and records outcomes
+1 React frontend for setup, live monitoring, replay, balances, and agent conversations
+Postgres + Prisma for persistence
+Fake money in the MVP
+A payment abstraction layer so some actions can later be gated with x402 on testnet
+
+The core gameplay loop is:
+
+Each agent receives the latest game state.
+Each agent thinks and decides on actions.
+Agents communicate with one another through MCP-exposed capabilities.
+Agents may transfer money, make offers, negotiate, or deposit into the bank.
+The bank accrues interest over time.
+The orchestrator validates and commits all state transitions.
+The frontend renders the round and replay timeline.
+Recommended tech stack
+Backend
+TypeScript
+NestJS
+Prisma ORM
+PostgreSQL
+Zod for runtime schema validation of agent responses and MCP payloads
+SSE first, with WebSockets optional later
+OpenAI or another LLM provider behind an abstraction
+Docker Compose for local orchestration
+
+NestJS is a strong fit here because its module/provider model maps well to a layered backend with injectable services, factories, and adapters. Prisma gives you type-safe data access for Postgres and a straightforward migration workflow.
+
+Frontend
+React
+Vite
+TypeScript
+TanStack Query
+Zustand or simple local state initially
+shadcn/ui or a light component layer
+Infrastructure / tooling
+Docker Compose
+pnpm
+ESLint
+Prettier
+Husky + lint-staged
+Vitest or Jest
+Playwright later for end-to-end flows
+Agent protocol / interoperability
+MCP for the agent boundary
+Prefer HTTP-based transport for your project architecture so agents can run as independently deployable services and later align more naturally with x402’s HTTP payment flow. MCP’s docs and roadmap emphasize the protocol and ongoing transport evolution, so keeping your transport isolated behind an adapter is the safe architectural move.
+System architecture
+
+Use hexagonal architecture for the backend.
+
+At a high level:
+
+Domain layer
+pure business logic
+game rules
+round resolution
+bank interest logic
+reputation / trust logic
+payment policy abstractions
+Application layer
+use cases
+orchestration services
+command handlers
+transaction coordination
+event publication
+Ports
+AgentGatewayPort
+BankPort
+PaymentPort
+GameRepositoryPort
+LedgerRepositoryPort
+EventBusPort
+ClockPort
+LlmPort
+Adapters
+Prisma repositories
+MCP client/server adapters
+LLM provider adapters
+x402 payment adapter later
+REST/SSE controllers
+frontend DTO mappers
+
+This gives you a clean separation between:
+
+simulation logic
+agent communication
+persistence
+LLM provider
+future real payment integration
+Design patterns to use
+
+1. Hexagonal architecture / ports and adapters
+
+Use this as the main structural pattern.
+
+Why:
+
+agent communication may change
+payment method will definitely change
+you want fake money now and x402 later
+you may swap LLM providers or run mock agents in tests 2. Strategy pattern
+
+Use this for:
+
+agent advantage behavior
+round resolution policy
+trust scoring
+interest calculation
+negotiation heuristics
+payment mode
+
+Examples:
+
+AgentAdvantageStrategy
+InterestStrategy
+PaymentStrategy
+RoundResolutionStrategy 3. Factory pattern
+
+Use factories for:
+
+creating agent runtime clients by agent type
+creating MCP clients/adapters
+creating payment providers based on environment
+building prompts / context bundles
+
+Examples:
+
+AgentRuntimeFactory
+PaymentProviderFactory
+PromptContextFactory
+
+NestJS providers and custom providers make factory-driven composition natural.
+
+4. State pattern
+
+Useful for game lifecycle:
+
+setup
+active round
+settlement
+completed
+failed / paused
+
+Potential GameStateHandler implementations:
+
+LobbyStateHandler
+RoundExecutionStateHandler
+SettlementStateHandler
+CompletedStateHandler 5. Command pattern
+
+Use commands for game actions:
+
+SendMessageCommand
+TransferFundsCommand
+DepositFundsCommand
+WithdrawFundsCommand
+AcceptOfferCommand
+
+This makes validation and audit logging cleaner.
+
+6. Domain events
+
+Emit events such as:
+
+RoundStarted
+AgentMessageSent
+TransferCompleted
+FundsDeposited
+InterestAccrued
+ContractCreated
+PaymentChallengeIssued
+
+This will help replay, analytics, and frontend streaming.
+
+7. Repository pattern
+
+Keep Prisma behind repository interfaces, not directly in domain/application logic.
+
+MCP design for the agents
+
+Treat each agent as a small service with:
+
+its own identity
+its own policy / advantage
+its own memory summary
+its own wallet / treasury view
+MCP-exposed tools and resources
+
+A clean split is:
+
+Agent MCP servers
+
+Each agent runs as an MCP server exposing capabilities like:
+
+read_public_game_state
+read_private_inbox
+send_public_message
+send_private_message
+propose_transfer
+propose_contract
+deposit_to_bank
+withdraw_from_bank
+query_bank_rates
+query_reputation
+finalize_turn
+
+These should be logical capabilities, but the actual state mutation should still go through the central game backend so you keep consistency and auditability.
+
+So in practice:
+
+agents expose MCP interfaces
+orchestrator or peer agents call MCP tools
+MCP tool handlers delegate to the central game API / domain service
+the game backend remains source of truth
+
+That avoids distributed consistency nightmares.
+
+Bank MCP server
+
+The bank should also be an MCP server, but with very constrained responsibilities:
+
+accept deposit requests
+accept withdrawal requests
+expose current interest rates
+expose deposit account balances
+expose deposit maturity / restrictions if you add them later
+accrue or report interest
+
+Important rule:
+
+bank balances are non-transferable
+money in the bank is not spendable directly in negotiations
+agents must withdraw before they can use funds in the game again
+
+This makes the bank a strategic tradeoff:
+
+security + passive gain
+reduced liquidity
+MCP interaction model
+
+I recommend:
+
+the orchestrator triggers turns
+agents communicate through MCP calls during their turn window
+all committed actions are validated centrally
+
+So the system is not “free-running autonomous chaos.” It is a turn-based, rule-enforced simulation with MCP boundaries.
+
+Agent advantage ideas
+
+Use distinct mechanical advantages, not just different prompts.
+
+Recommended five:
+
+1. Banker agent
+   better forecast of bank interest trends
+   lower withdrawal penalty or faster withdrawal window
+   stronger treasury optimization
+2. Analyst agent
+   receives richer summarized game state each round
+   sees trust/reputation patterns more clearly
+   stronger inference edge
+3. Lawyer agent
+   can create one enforceable structured contract per round
+   backend can automatically settle it if conditions are met
+4. Influencer agent
+   one boosted public message per round
+   public message is surfaced more prominently in the UI and state summary
+5. Trader agent
+   lower transfer friction / transaction fee
+   can make more offers per round
+
+Keep advantages enforced in code, not only in prompts.
+
+Data model direction
+
+Use Prisma + Postgres with roughly these aggregates:
+
+GameSession
+GameRound
+Agent
+AgentBalance
+AgentDepositAccount
+PublicMessage
+PrivateMessage
+Offer
+Contract
+Transfer
+Deposit
+Withdrawal
+InterestAccrual
+TurnDecision
+TurnExecution
+LlmInvocation
+DomainEvent
+PaymentAttempt
+PaymentChallenge
+
+Prisma is well suited to this because you’ll have a strongly relational model with clear audit history.
+
+Recommended folder structure
+
+For the NestJS backend:
+
+apps/
+api/
+src/
+main.ts
+app.module.ts
+
+      modules/
+        game/
+          application/
+          domain/
+          infrastructure/
+          presentation/
+
+        agents/
+          application/
+          domain/
+          infrastructure/
+          presentation/
+
+        bank/
+          application/
+          domain/
+          infrastructure/
+          presentation/
+
+        payments/
+          application/
+          domain/
+          infrastructure/
+          presentation/
+
+        replay/
+          application/
+          domain/
+          infrastructure/
+          presentation/
+
+        shared/
+          domain/
+          application/
+          infrastructure/
+          presentation/
+
+      prisma/
+        schema.prisma
+        migrations/
+
+packages/
+mcp-contracts/
+shared-types/
+eslint-config/
+tsconfig/
+
+And within each module:
+
+application/
+use-cases/
+services/
+commands/
+queries/
+dto/
+
+domain/
+entities/
+value-objects/
+services/
+events/
+policies/
+repositories/
+errors/
+
+infrastructure/
+prisma/
+mcp/
+llm/
+http/
+config/
+mappers/
+
+presentation/
+rest/
+sse/
+controllers/
+
+This structure scales well for solo development because it stays consistent.
+
+Good coding practices
+Core principles
+keep domain logic framework-light
+prefer pure domain services where possible
+validate all external input at runtime
+never trust LLM output without schema validation
+enforce invariants in one place
+make money movement auditable and idempotent
+avoid leaking Prisma types across domain boundaries
+write code so fake-money and x402-money share the same port
+Practical rules
+one use case = one primary responsibility
+keep DTOs separate from domain models
+keep controller methods thin
+no business logic in React components
+no raw SQL unless you really need it
+no direct LLM calls from controllers
+no direct bank mutation outside bank use cases
+use transactions for settlement-critical flows
+prefer deterministic IDs for replayable tests where useful
+Validation
+use Zod for:
+LLM outputs
+MCP request/response contracts
+API payloads at boundaries
+Logging
+
+Log:
+
+game id
+round id
+agent id
+action type
+balance deltas
+validation failures
+LLM latency / token usage
+payment challenge / verification results later
+Testing
+
+Write:
+
+unit tests for domain services
+integration tests for application services with test DB
+contract tests for MCP adapters
+replay tests for deterministic sessions
+simulation smoke tests for multi-round games
+Git structure and workflow
+Branching
+
+For solo work, keep it simple:
+
+main
+short-lived feature branches:
+feat/mcp-agent-runtime
+feat/bank-server
+feat/game-round-engine
+feat/react-dashboard
+Commit style
+
+Use conventional commits.
+
+Good examples:
+
+feat(game): add round settlement service
+feat(bank): implement deposit and interest accrual use cases
+feat(agents): add MCP server adapter for agent runtime
+feat(payments): introduce PaymentPort and fake payment adapter
+refactor(shared): move money logic into value objects
+test(game): add replay tests for deterministic rounds
+fix(bank): prevent transfers from deposit balances
+docs(architecture): add MCP and x402 migration plan
+chore(repo): add pnpm workspace and shared tsconfig
+Commit discipline
+
+Each commit should ideally:
+
+build
+pass tests
+move one concern forward
+avoid mixing refactor + feature + formatting unless tiny
+MVP definition
+
+The MVP should be intentionally narrow.
+
+MVP goal
+
+A playable, replayable simulation where:
+
+5 agents each run as MCP servers
+1 bank MCP server exists
+the NestJS orchestrator runs 5–10 rounds
+agents can send messages, propose transfers, deposit/withdraw, and make decisions
+all money is fake
+frontend shows balances, messages, and round history
+MVP features
+create game session
+initialize 5 agents with equal starting balances
+initialize bank interest rate
+execute turn-by-turn game rounds
+public messages
+private messages
+direct transfers
+bank deposits and withdrawals
+interest accrual once per round
+winner calculation
+replay UI
+persisted audit log
+Excluded from MVP
+x402 real or testnet payment execution
+dynamic contract enforcement beyond very simple deals
+autonomous free-running agents outside turns
+complex alliance graphs
+sophisticated memory systems
+multiple chain/network support
