@@ -27,11 +27,28 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/llm_trading_simulation?schema=public
       PORT: 3000
+      CHOKIDAR_USEPOLLING: 'true'
+      CHOKIDAR_INTERVAL: 1000
       AGENT_RUNTIME_PROVIDER: ${AGENT_RUNTIME_PROVIDER:-openai}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.2}
       OPENAI_AGENT_SYSTEM_PROMPT: ${OPENAI_AGENT_SYSTEM_PROMPT:-}
       OPENAI_AGENT_STRICT_MODE: ${OPENAI_AGENT_STRICT_MODE:-0}
+    working_dir: /workspace
+    command:
+      [
+        'sh',
+        '-c',
+        'corepack pnpm --filter @llm-sim/api exec prisma generate && corepack pnpm --filter @llm-sim/api exec prisma db push && corepack pnpm --filter @llm-sim/api dev',
+      ]
+    volumes:
+      - ./package.json:/workspace/package.json:ro
+      - ./pnpm-lock.yaml:/workspace/pnpm-lock.yaml:ro
+      - ./pnpm-workspace.yaml:/workspace/pnpm-workspace.yaml:ro
+      - ./tsconfig.base.json:/workspace/tsconfig.base.json:ro
+      - ./tsconfig.eslint.json:/workspace/tsconfig.eslint.json:ro
+      - ./packages:/workspace/packages
+      - ./apps/api:/workspace/apps/api
     ports:
       - '3000:3000'
 
@@ -43,7 +60,20 @@ services:
     depends_on:
       - api
     environment:
-      VITE_API_URL: http://api:3000
+      CHOKIDAR_USEPOLLING: 'true'
+      CHOKIDAR_INTERVAL: 1000
+      VITE_API_BASE_URL: http://localhost:3000/api
+    working_dir: /workspace
+    command:
+      ['corepack', 'pnpm', '--filter', '@llm-sim/web', 'dev', '--', '--host', '0.0.0.0']
+    volumes:
+      - ./package.json:/workspace/package.json:ro
+      - ./pnpm-lock.yaml:/workspace/pnpm-lock.yaml:ro
+      - ./pnpm-workspace.yaml:/workspace/pnpm-workspace.yaml:ro
+      - ./tsconfig.base.json:/workspace/tsconfig.base.json:ro
+      - ./tsconfig.eslint.json:/workspace/tsconfig.eslint.json:ro
+      - ./packages:/workspace/packages
+      - ./apps/web:/workspace/apps/web
     ports:
       - '5173:5173'
 

@@ -193,6 +193,20 @@ Docker services:
 - Postgres: `localhost:5432`
 
 The API container reads OpenAI and runtime settings from `.env`.
+The Docker API and frontend services now run in watch mode with bind-mounted source directories, so local code edits refresh the live containers without a full rebuild.
+
+Typical Docker dev loop:
+
+1. Start the stack with `corepack pnpm docker:up`
+2. Edit files under `apps/` or `packages/`
+3. Let the running containers hot reload automatically
+
+If you change dependency manifests or Dockerfiles, restart the stack:
+
+```bash
+corepack pnpm docker:down
+corepack pnpm docker:up
+```
 
 ## Database Workflow
 
