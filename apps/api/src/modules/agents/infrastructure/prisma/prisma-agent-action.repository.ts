@@ -20,6 +20,10 @@ function toPrismaActionType(
       return 'ACCEPT_DIRECT_TRANSFER_PROPOSAL';
     case 'reject_direct_transfer_proposal':
       return 'REJECT_DIRECT_TRANSFER_PROPOSAL';
+    case 'place_funds_with_banker':
+      return 'PLACE_FUNDS_WITH_BANKER';
+    case 'redeem_funds_from_banker':
+      return 'REDEEM_FUNDS_FROM_BANKER';
     case 'finalize_turn':
       return 'FINALIZE_TURN';
   }
@@ -43,6 +47,10 @@ function fromPrismaActionType(
       return 'accept_direct_transfer_proposal';
     case 'REJECT_DIRECT_TRANSFER_PROPOSAL':
       return 'reject_direct_transfer_proposal';
+    case 'PLACE_FUNDS_WITH_BANKER':
+      return 'place_funds_with_banker';
+    case 'REDEEM_FUNDS_FROM_BANKER':
+      return 'redeem_funds_from_banker';
     case 'FINALIZE_TURN':
       return 'finalize_turn';
   }

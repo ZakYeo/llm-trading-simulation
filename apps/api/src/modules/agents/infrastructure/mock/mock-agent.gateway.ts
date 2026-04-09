@@ -7,6 +7,7 @@ export class MockAgentGateway implements AgentGatewayPort {
     const scenario = process.env.AGENT_MOCK_SCENARIO;
     const banker = context.peers.find((peer) => peer.role === 'banker');
     const trader = context.peers.find((peer) => peer.role === 'trader');
+    const ownCustodyPosition = context.treasuryContext.selfCustodyPosition;
     const pendingProposal = context.recentActions.find((action) => {
       if (
         (action.type !== 'propose_direct_transfer' &&
@@ -36,6 +37,39 @@ export class MockAgentGateway implements AgentGatewayPort {
         type: 'send_private_message',
         recipientAgentId: trader.agentId,
         content: 'Share your strongest signal and I can review terms.',
+      };
+    }
+
+    if (
+      scenario === 'custody_cycle' &&
+      context.self.role === 'trader' &&
+      banker &&
+      context.turnNumber === 2 &&
+      receivedPrivateFundingPrompt &&
+      !ownCustodyPosition
+    ) {
+      return {
+        type: 'place_funds_with_banker',
+        recipientAgentId: banker.agentId,
+        amount: '10.0000',
+      };
+    }
+
+    if (
+      scenario === 'custody_cycle' &&
+      context.self.role === 'trader' &&
+      banker &&
+      context.turnNumber >= 3 &&
+      ownCustodyPosition &&
+      ownCustodyPosition.totalBalance !== '0.0000'
+    ) {
+      return {
+        type: 'redeem_funds_from_banker',
+        recipientAgentId: banker.agentId,
+        amount:
+          ownCustodyPosition.accruedInterest !== '0.0000'
+            ? ownCustodyPosition.accruedInterest
+            : '2.5000',
       };
     }
 

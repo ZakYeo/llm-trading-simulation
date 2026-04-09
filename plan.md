@@ -122,8 +122,10 @@ Target end state:
 - non-banker agents can place funds with the banker
 - only banker-held custodial funds accrue interest
 - the backend tracks beneficial ownership per agent
-- banker return or redemption actions are validated against that ownership ledger
+- owner redemption actions are validated against that ownership ledger
 - the banker sees treasury state in its turn context, but cannot invent it
+- the first custody product is simple and owner-controlled
+- later custody products can add negotiated higher yields and lockups
 
 Step-by-step implementation plan
 
@@ -157,13 +159,18 @@ Step 3 — add banker custody actions
 
 - add explicit backend operations for placing funds with the banker and redeeming them
 - do not overload plain peer-to-peer transfer semantics forever if custody and redemption become first-class gameplay
-- keep validation strict: the banker can only redeem up to the owner’s tracked balance
+- keep validation strict: the owner can only redeem up to the owner’s tracked balance
 
 Implementation notes:
 
-- first version can still be orchestrated through existing proposal/transfer flows if needed, but the state transition should resolve into treasury ledger mutations, not ordinary free-form balances alone
+- first version should be owner-controlled and simple:
+  - an owner can place funds with the banker directly
+  - an owner can redeem funds from the banker directly
+  - the banker does not need to approve basic placement or redemption
+- this keeps the base treasury mechanic usable while preserving backend-enforced ownership
 - add domain invariants so over-redemption is impossible
 - preserve replay visibility for both custody placement and redemption
+- do not require negotiated agreement for the first custody product
 
 Step 4 — expose treasury state to agents
 
@@ -176,6 +183,8 @@ Implementation notes:
 - keep the banker as the only agent with the full obligations view
 - give trader and other agents enough information to reason about their own placed capital and accrued return
 - do not leak unnecessary private balances between peers
+- for the first version, treasury state should support direct owner decisions about placement and redemption
+- communication remains useful, but not mechanically required for the base custody product
 
 Step 5 — align prompts and mock behavior
 
@@ -186,8 +195,9 @@ Step 5 — align prompts and mock behavior
 Implementation notes:
 
 - banker prompt should reason about deployment, custody obligations, and safe redemption limits
-- trader prompt should reason about whether to leave funds idle, place them with the banker, or redeem them
+- trader prompt should reason about whether to leave funds idle, place them with the banker, or redeem them directly
 - keep structured validation in the backend; prompts should describe options, not enforce them
+- do not yet require proposal approval for basic custody actions
 
 Step 6 — replay and frontend visibility
 
@@ -206,16 +216,33 @@ Step 7 — optional later improvements
 - lock-up periods or delayed redemption
 - bank solvency constraints
 - treasury-specific negotiation primitives
+- negotiated custody products with higher yield tiers
+- negotiated agreements that can impose lockups in exchange for higher returns
 - richer prompts for analyst/lawyer/influencer if those roles return to the frontend product surface
+
+Step 8 — negotiated treasury products
+
+- introduce optional negotiated treasury agreements on top of the base custody product
+- keep the simple owner-controlled custody path as the default baseline
+- allow banker/trader communication to create differentiated products instead of gating all custody behavior
+
+Implementation notes:
+
+- negotiated products can offer higher yield, lockup, fees, or priority terms
+- these agreements must be backend-owned and explicitly persisted
+- placement into a negotiated product should require a valid accepted agreement
+- redemption from a locked product should follow the agreement terms, not generic instant redemption
+- basic custody remains available so the game does not become mechanically brittle
 
 Recommended delivery order
 
 1. remove universal accrual and add banker-only accrual rules
 2. add explicit banker custody persistence and invariants
-3. add treasury-aware replay
+3. add direct owner-controlled custody placement and redemption
 4. add treasury-aware agent context and prompt updates
-5. add frontend treasury visibility
-6. only then consider richer banker economics like spreads or solvency
+5. add treasury-aware replay and frontend visibility
+6. only then consider negotiated treasury products such as higher yields and lockups
+7. after negotiated products exist, consider richer banker economics like spreads or solvency
 
 What “good” looks like after the first better version
 

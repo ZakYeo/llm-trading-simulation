@@ -26,6 +26,8 @@ export const recentAgentActionSchema = z.object({
     'counter_direct_transfer_proposal',
     'accept_direct_transfer_proposal',
     'reject_direct_transfer_proposal',
+    'place_funds_with_banker',
+    'redeem_funds_from_banker',
     'finalize_turn',
   ]),
   amount: z.string().min(1).optional(),
@@ -76,6 +78,30 @@ export const agentTurnContextSchema = z.object({
     conversationLikelyReadyForProposal: z.boolean(),
     guidance: z.string().min(1),
   }),
+  treasuryContext: z.object({
+    bankerAgentId: z.string().min(1).nullable(),
+    bankerName: z.string().min(1).nullable(),
+    totalCustodiedPrincipal: z.string(),
+    totalCustodiedAccruedInterest: z.string(),
+    totalCustodiedBalance: z.string(),
+    selfCustodyPosition: z
+      .object({
+        bankerAgentId: z.string().min(1),
+        principal: z.string(),
+        accruedInterest: z.string(),
+        totalBalance: z.string(),
+      })
+      .nullable(),
+    obligationsForBanker: z.array(
+      z.object({
+        ownerAgentId: z.string().min(1),
+        ownerName: z.string().min(1),
+        principal: z.string(),
+        accruedInterest: z.string(),
+        totalBalance: z.string(),
+      }),
+    ),
+  }),
   economicContext: z.object({
     objective: z.string().min(1),
     messagesDoNotMoveMoney: z.boolean(),
@@ -92,6 +118,8 @@ export const agentTurnContextSchema = z.object({
     counterDirectTransferProposal: z.string().min(1),
     acceptDirectTransferProposal: z.string().min(1),
     rejectDirectTransferProposal: z.string().min(1),
+    placeFundsWithBanker: z.string().min(1),
+    redeemFundsFromBanker: z.string().min(1),
     finalizeTurn: z.string().min(1),
   }),
 });
@@ -132,6 +160,18 @@ export const agentActionSchema = z.discriminatedUnion('type', [
     type: z.literal('reject_direct_transfer_proposal'),
     proposalActionId: z.string().min(1),
     rationale: z.string().min(1),
+    reasoning: z.string().min(1).optional(),
+  }),
+  z.object({
+    type: z.literal('place_funds_with_banker'),
+    recipientAgentId: z.string().min(1),
+    amount: z.string().min(1),
+    reasoning: z.string().min(1).optional(),
+  }),
+  z.object({
+    type: z.literal('redeem_funds_from_banker'),
+    recipientAgentId: z.string().min(1),
+    amount: z.string().min(1),
     reasoning: z.string().min(1).optional(),
   }),
   z.object({

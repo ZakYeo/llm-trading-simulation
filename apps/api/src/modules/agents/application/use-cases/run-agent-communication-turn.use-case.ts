@@ -7,6 +7,8 @@ import type {
 
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import type { GameSessionRepositoryPort } from '../../../game/application/ports/game-session-repository.port.js';
+import type { PlaceFundsWithBankerUseCase } from '../../../game/application/use-cases/place-funds-with-banker.use-case.js';
+import type { RedeemFundsFromBankerUseCase } from '../../../game/application/use-cases/redeem-funds-from-banker.use-case.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import type { AgentGatewayPort } from '../ports/agent-gateway.port.js';
 import type {
@@ -243,6 +245,63 @@ function buildNegotiationState(
   };
 }
 
+function buildTreasuryContext(
+  session: NonNullable<
+    Awaited<ReturnType<GameSessionRepositoryPort['findById']>>
+  >,
+  agentId: string,
+) {
+  const banker = session.agents.find(
+    (candidate) => candidate.role === 'banker',
+  );
+  const totalCustodiedPrincipal = session.bankerCustodyPositions.reduce(
+    (total, position) => total.add(position.principal),
+    Money.zero(),
+  );
+  const totalCustodiedAccruedInterest = session.bankerCustodyPositions.reduce(
+    (total, position) => total.add(position.accruedInterest),
+    Money.zero(),
+  );
+  const selfCustodyPosition = banker
+    ? (session.bankerCustodyPositions.find(
+        (position) =>
+          position.bankerAgentId === banker.id &&
+          position.ownerAgentId === agentId,
+      ) ?? null)
+    : null;
+
+  return {
+    bankerAgentId: banker?.id ?? null,
+    bankerName: banker?.name ?? null,
+    totalCustodiedPrincipal: totalCustodiedPrincipal.toDecimal(),
+    totalCustodiedAccruedInterest: totalCustodiedAccruedInterest.toDecimal(),
+    totalCustodiedBalance: totalCustodiedPrincipal
+      .add(totalCustodiedAccruedInterest)
+      .toDecimal(),
+    selfCustodyPosition: selfCustodyPosition
+      ? {
+          bankerAgentId: selfCustodyPosition.bankerAgentId,
+          principal: selfCustodyPosition.principal.toDecimal(),
+          accruedInterest: selfCustodyPosition.accruedInterest.toDecimal(),
+          totalBalance: selfCustodyPosition.totalBalance().toDecimal(),
+        }
+      : null,
+    obligationsForBanker:
+      banker?.id === agentId
+        ? session.bankerCustodyPositions.map((position) => ({
+            ownerAgentId: position.ownerAgentId,
+            ownerName:
+              session.agents.find(
+                (candidate) => candidate.id === position.ownerAgentId,
+              )?.name ?? 'Unknown Agent',
+            principal: position.principal.toDecimal(),
+            accruedInterest: position.accruedInterest.toDecimal(),
+            totalBalance: position.totalBalance().toDecimal(),
+          }))
+        : [],
+  };
+}
+
 export class RunAgentCommunicationTurnUseCase {
   constructor(
     private readonly gameSessionRepository: GameSessionRepositoryPort,
@@ -250,6 +309,8 @@ export class RunAgentCommunicationTurnUseCase {
     private readonly agentActionRepository: AgentActionRepositoryPort,
     private readonly agentGateway: AgentGatewayPort,
     private readonly agentSessionEventStreamService: AgentSessionEventStreamService,
+    private readonly placeFundsWithBankerUseCase: PlaceFundsWithBankerUseCase,
+    private readonly redeemFundsFromBankerUseCase: RedeemFundsFromBankerUseCase,
   ) {}
 
   async execute(
@@ -278,11 +339,13 @@ export class RunAgentCommunicationTurnUseCase {
     const savedActions: AgentActionRecord[] = [];
     const savedMessages: AgentMessageRecord[] = [];
 
-    for (const agent of session.agents) {
+    let currentSession = session;
+
+    for (const agent of currentSession.agents) {
       const context: AgentTurnContext = {
-        gameId: session.id,
-        sessionName: session.name,
-        round: session.currentRound,
+        gameId: currentSession.id,
+        sessionName: currentSession.name,
+        round: currentSession.currentRound,
         turnNumber,
         self: {
           agentId: agent.id,
@@ -291,7 +354,7 @@ export class RunAgentCommunicationTurnUseCase {
           availableBalance: agent.balance.available.toDecimal(),
           depositPrincipal: agent.depositAccount.principal.toDecimal(),
         },
-        peers: session.agents
+        peers: currentSession.agents
           .filter((peer) => peer.id !== agent.id)
           .map((peer) => ({
             agentId: peer.id,
@@ -300,7 +363,7 @@ export class RunAgentCommunicationTurnUseCase {
           })),
         recentMessages: recentMessages.map((message) => {
           const senderName =
-            session.agents.find(
+            currentSession.agents.find(
               (candidate) => candidate.id === message.senderAgentId,
             )?.name ?? 'Unknown Agent';
 
@@ -308,18 +371,19 @@ export class RunAgentCommunicationTurnUseCase {
         }),
         recentActions: recentActions.map((action) => {
           const agentName =
-            session.agents.find((candidate) => candidate.id === action.agentId)
-              ?.name ?? 'Unknown Agent';
+            currentSession.agents.find(
+              (candidate) => candidate.id === action.agentId,
+            )?.name ?? 'Unknown Agent';
 
           return toRecentAction(action, agentName);
         }),
         actionableProposalsForSelf: findActionableProposalsForAgent(
           agent.id,
-          session,
+          currentSession,
           recentActions,
         ),
         negotiationState: buildNegotiationState(
-          session,
+          currentSession,
           {
             agentId: agent.id,
             name: agent.name,
@@ -330,6 +394,7 @@ export class RunAgentCommunicationTurnUseCase {
           recentMessages,
           recentActions,
         ),
+        treasuryContext: buildTreasuryContext(currentSession, agent.id),
         economicContext: {
           objective:
             'Maximize your own expected fake-money outcome. Use communication, proposals, and responses when they improve your expected position.',
@@ -365,6 +430,10 @@ export class RunAgentCommunicationTurnUseCase {
             'Accepts a pending transfer proposal so it can execute and change balances.',
           rejectDirectTransferProposal:
             'Closes a pending transfer proposal without changing balances.',
+          placeFundsWithBanker:
+            'Moves your own available balance into banker custody with the targeted banker agent. Use recipientAgentId as the banker id.',
+          redeemFundsFromBanker:
+            'Redeems your own custodial balance back from the targeted banker agent. Use recipientAgentId as the banker id.',
           finalizeTurn:
             'Take no further action this turn. This does not move money or improve information by itself.',
         },
@@ -374,7 +443,9 @@ export class RunAgentCommunicationTurnUseCase {
       const recipientAgentId =
         action.type === 'send_private_message' ||
         action.type === 'propose_direct_transfer' ||
-        action.type === 'counter_direct_transfer_proposal'
+        action.type === 'counter_direct_transfer_proposal' ||
+        action.type === 'place_funds_with_banker' ||
+        action.type === 'redeem_funds_from_banker'
           ? action.recipientAgentId
           : action.type === 'accept_direct_transfer_proposal' ||
               action.type === 'reject_direct_transfer_proposal'
@@ -382,7 +453,7 @@ export class RunAgentCommunicationTurnUseCase {
             : null;
 
       if (recipientAgentId) {
-        const recipientAgent = session.agents.find(
+        const recipientAgent = currentSession.agents.find(
           (candidate) => candidate.id === recipientAgentId,
         );
 
@@ -395,9 +466,26 @@ export class RunAgentCommunicationTurnUseCase {
 
       if (
         action.type === 'propose_direct_transfer' ||
-        action.type === 'counter_direct_transfer_proposal'
+        action.type === 'counter_direct_transfer_proposal' ||
+        action.type === 'place_funds_with_banker' ||
+        action.type === 'redeem_funds_from_banker'
       ) {
         Money.fromDecimal(action.amount);
+      }
+
+      if (
+        action.type === 'place_funds_with_banker' ||
+        action.type === 'redeem_funds_from_banker'
+      ) {
+        const bankerAgent = currentSession.agents.find(
+          (candidate) => candidate.id === recipientAgentId,
+        );
+
+        if (!bankerAgent || bankerAgent.role !== 'banker') {
+          throw new DomainInvariantError(
+            'Custody actions must target a banker in the same game session.',
+          );
+        }
       }
 
       let relatedProposalActionId: string | undefined;
@@ -450,8 +538,8 @@ export class RunAgentCommunicationTurnUseCase {
       }
 
       const savedAction = await this.agentActionRepository.save({
-        gameSessionId: session.id,
-        roundNumber: session.currentRound,
+        gameSessionId: currentSession.id,
+        roundNumber: currentSession.currentRound,
         turnNumber,
         agentId: agent.id,
         recipientAgentId,
@@ -459,7 +547,9 @@ export class RunAgentCommunicationTurnUseCase {
         actionType: action.type,
         amount:
           action.type === 'propose_direct_transfer' ||
-          action.type === 'counter_direct_transfer_proposal'
+          action.type === 'counter_direct_transfer_proposal' ||
+          action.type === 'place_funds_with_banker' ||
+          action.type === 'redeem_funds_from_banker'
             ? action.amount
             : undefined,
         content:
@@ -478,10 +568,28 @@ export class RunAgentCommunicationTurnUseCase {
       savedActions.push(savedAction);
       let savedMessage: AgentMessageRecord | undefined;
 
+      if (action.type === 'place_funds_with_banker') {
+        currentSession = await this.placeFundsWithBankerUseCase.execute({
+          gameSessionId: currentSession.id,
+          ownerAgentId: agent.id,
+          bankerAgentId: recipientAgentId!,
+          amount: action.amount,
+        });
+      }
+
+      if (action.type === 'redeem_funds_from_banker') {
+        currentSession = await this.redeemFundsFromBankerUseCase.execute({
+          gameSessionId: currentSession.id,
+          ownerAgentId: agent.id,
+          bankerAgentId: recipientAgentId!,
+          amount: action.amount,
+        });
+      }
+
       if (action.type === 'send_private_message') {
         savedMessage = await this.agentMessageRepository.save({
-          gameSessionId: session.id,
-          roundNumber: session.currentRound,
+          gameSessionId: currentSession.id,
+          roundNumber: currentSession.currentRound,
           turnNumber,
           senderAgentId: agent.id,
           recipientAgentId,
@@ -495,8 +603,8 @@ export class RunAgentCommunicationTurnUseCase {
 
       if (action.type === 'send_public_message') {
         savedMessage = await this.agentMessageRepository.save({
-          gameSessionId: session.id,
-          roundNumber: session.currentRound,
+          gameSessionId: currentSession.id,
+          roundNumber: currentSession.currentRound,
           turnNumber,
           senderAgentId: agent.id,
           recipientAgentId: null,
@@ -511,8 +619,8 @@ export class RunAgentCommunicationTurnUseCase {
       if (action.type !== 'finalize_turn') {
         this.agentSessionEventStreamService.publish({
           type: 'action_progressed',
-          gameSessionId: session.id,
-          roundNumber: session.currentRound,
+          gameSessionId: currentSession.id,
+          roundNumber: currentSession.currentRound,
           turnNumber,
           agentId: agent.id,
           agentName: agent.name,
@@ -531,8 +639,8 @@ export class RunAgentCommunicationTurnUseCase {
     }
 
     return {
-      gameSessionId: session.id,
-      roundNumber: session.currentRound,
+      gameSessionId: currentSession.id,
+      roundNumber: currentSession.currentRound,
       turnNumber,
       actions,
       actionRecords: savedActions,

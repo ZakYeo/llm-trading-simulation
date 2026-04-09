@@ -1,6 +1,8 @@
 import OpenAI from 'openai';
 
 import { GAME_SESSION_REPOSITORY } from '../../shared/application/tokens.js';
+import { PlaceFundsWithBankerUseCase } from '../../game/application/use-cases/place-funds-with-banker.use-case.js';
+import { RedeemFundsFromBankerUseCase } from '../../game/application/use-cases/redeem-funds-from-banker.use-case.js';
 import { TransferFundsUseCase } from '../../game/application/use-cases/transfer-funds.use-case.js';
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service.js';
 import type { GameSessionRepositoryPort } from '../../game/application/ports/game-session-repository.port.js';
@@ -58,6 +60,8 @@ export function createAgentsProviders() {
         agentMessageRepository: PrismaAgentMessageRepository,
         agentGateway: MockAgentGateway | OpenAiAgentGateway,
         agentSessionEventStreamService: AgentSessionEventStreamService,
+        placeFundsWithBankerUseCase: PlaceFundsWithBankerUseCase,
+        redeemFundsFromBankerUseCase: RedeemFundsFromBankerUseCase,
       ) =>
         new RunAgentCommunicationTurnUseCase(
           gameSessionRepository,
@@ -65,6 +69,8 @@ export function createAgentsProviders() {
           agentActionRepository,
           agentGateway,
           agentSessionEventStreamService,
+          placeFundsWithBankerUseCase,
+          redeemFundsFromBankerUseCase,
         ),
       inject: [
         GAME_SESSION_REPOSITORY,
@@ -72,6 +78,8 @@ export function createAgentsProviders() {
         AGENT_MESSAGE_REPOSITORY,
         AGENT_GATEWAY,
         AgentSessionEventStreamService,
+        PlaceFundsWithBankerUseCase,
+        RedeemFundsFromBankerUseCase,
       ],
     },
     {

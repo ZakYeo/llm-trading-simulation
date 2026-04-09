@@ -15,7 +15,9 @@ export type AgentSessionEvent =
         | 'propose_direct_transfer'
         | 'counter_direct_transfer_proposal'
         | 'accept_direct_transfer_proposal'
-        | 'reject_direct_transfer_proposal';
+        | 'reject_direct_transfer_proposal'
+        | 'place_funds_with_banker'
+        | 'redeem_funds_from_banker';
       messageId?: string;
       messageVisibility?: 'public' | 'private';
       occurredAt: string;

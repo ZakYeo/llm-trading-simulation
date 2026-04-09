@@ -30,6 +30,8 @@ export interface ReplayEventRecord {
     | 'counter_direct_transfer_proposal'
     | 'accept_direct_transfer_proposal'
     | 'reject_direct_transfer_proposal'
+    | 'place_funds_with_banker'
+    | 'redeem_funds_from_banker'
     | 'finalize_turn';
   relatedProposalActionId?: string;
 }

@@ -204,6 +204,12 @@ export class PrismaReplayReadModel implements ReplayReadModelPort {
           case 'REJECT_DIRECT_TRANSFER_PROPOSAL':
             actionType = 'reject_direct_transfer_proposal';
             break;
+          case 'PLACE_FUNDS_WITH_BANKER':
+            actionType = 'place_funds_with_banker';
+            break;
+          case 'REDEEM_FUNDS_FROM_BANKER':
+            actionType = 'redeem_funds_from_banker';
+            break;
           case 'FINALIZE_TURN':
             actionType = 'finalize_turn';
             break;

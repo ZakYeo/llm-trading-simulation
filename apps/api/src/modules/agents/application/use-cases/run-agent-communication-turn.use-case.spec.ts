@@ -5,6 +5,7 @@ import type { AgentAction, AgentTurnContext } from '@llm-sim/mcp-contracts';
 import { DepositAccount } from '../../../bank/domain/entities/deposit-account.js';
 import type { GameSessionRepositoryPort } from '../../../game/application/ports/game-session-repository.port.js';
 import { AccountBalance } from '../../../game/domain/entities/account-balance.js';
+import { BankerCustodyPosition } from '../../../game/domain/entities/banker-custody-position.js';
 import { GameAgent } from '../../../game/domain/entities/game-agent.js';
 import { GameSession } from '../../../game/domain/entities/game-session.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
@@ -25,6 +26,44 @@ class RecordingAgentSessionEventStreamService {
 
   publish(event: unknown): void {
     this.published.push(event);
+  }
+}
+
+class RecordingPlaceFundsWithBankerUseCase {
+  calls: Array<{
+    gameSessionId: string;
+    ownerAgentId: string;
+    bankerAgentId: string;
+    amount: string;
+  }> = [];
+
+  async execute(input: {
+    gameSessionId: string;
+    ownerAgentId: string;
+    bankerAgentId: string;
+    amount: string;
+  }) {
+    this.calls.push(input);
+    return createSession();
+  }
+}
+
+class RecordingRedeemFundsFromBankerUseCase {
+  calls: Array<{
+    gameSessionId: string;
+    ownerAgentId: string;
+    bankerAgentId: string;
+    amount: string;
+  }> = [];
+
+  async execute(input: {
+    gameSessionId: string;
+    ownerAgentId: string;
+    bankerAgentId: string;
+    amount: string;
+  }) {
+    this.calls.push(input);
+    return createSession();
   }
 }
 
@@ -135,6 +174,14 @@ function createSession() {
         depositAccount: DepositAccount.open(),
       }),
     ],
+    bankerCustodyPositions: [
+      new BankerCustodyPosition({
+        bankerAgentId: 'agent-1',
+        ownerAgentId: 'agent-2',
+        principal: Money.fromDecimal('12.5000'),
+        accruedInterest: Money.fromDecimal('0.5000'),
+      }),
+    ],
   });
 }
 
@@ -159,6 +206,8 @@ describe('RunAgentCommunicationTurnUseCase', () => {
         },
       ]),
       eventStreamService as never,
+      new RecordingPlaceFundsWithBankerUseCase() as never,
+      new RecordingRedeemFundsFromBankerUseCase() as never,
     );
 
     const result = await useCase.execute({
@@ -255,6 +304,8 @@ describe('RunAgentCommunicationTurnUseCase', () => {
         },
       ]),
       new RecordingAgentSessionEventStreamService() as never,
+      new RecordingPlaceFundsWithBankerUseCase() as never,
+      new RecordingRedeemFundsFromBankerUseCase() as never,
     );
 
     await expect(
@@ -295,6 +346,8 @@ describe('RunAgentCommunicationTurnUseCase', () => {
         },
       ]),
       new RecordingAgentSessionEventStreamService() as never,
+      new RecordingPlaceFundsWithBankerUseCase() as never,
+      new RecordingRedeemFundsFromBankerUseCase() as never,
     );
 
     const result = await useCase.execute({
@@ -352,6 +405,8 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       actionRepository,
       gateway,
       new RecordingAgentSessionEventStreamService() as never,
+      new RecordingPlaceFundsWithBankerUseCase() as never,
+      new RecordingRedeemFundsFromBankerUseCase() as never,
     );
 
     await useCase.execute({
@@ -388,6 +443,37 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       unresolvedOutgoingProposalCount: 1,
     });
     expect(gateway.contexts[1].actionableProposalsForSelf).toHaveLength(0);
+    expect(gateway.contexts[0].treasuryContext).toMatchObject({
+      bankerAgentId: 'agent-1',
+      bankerName: 'Banker Bot',
+      totalCustodiedPrincipal: '12.5000',
+      totalCustodiedAccruedInterest: '0.5000',
+      totalCustodiedBalance: '13.0000',
+      selfCustodyPosition: null,
+      obligationsForBanker: [
+        {
+          ownerAgentId: 'agent-2',
+          ownerName: 'Trader Bot',
+          principal: '12.5000',
+          accruedInterest: '0.5000',
+          totalBalance: '13.0000',
+        },
+      ],
+    });
+    expect(gateway.contexts[1].treasuryContext).toMatchObject({
+      bankerAgentId: 'agent-1',
+      bankerName: 'Banker Bot',
+      totalCustodiedPrincipal: '12.5000',
+      totalCustodiedAccruedInterest: '0.5000',
+      totalCustodiedBalance: '13.0000',
+      selfCustodyPosition: {
+        bankerAgentId: 'agent-1',
+        principal: '12.5000',
+        accruedInterest: '0.5000',
+        totalBalance: '13.0000',
+      },
+      obligationsForBanker: [],
+    });
     expect(gateway.contexts[0].negotiationState).toMatchObject({
       primaryCounterpartyAgentId: 'agent-2',
       primaryCounterpartyName: 'Trader Bot',
@@ -432,6 +518,8 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       new InMemoryAgentActionRepository(),
       gateway,
       new RecordingAgentSessionEventStreamService() as never,
+      new RecordingPlaceFundsWithBankerUseCase() as never,
+      new RecordingRedeemFundsFromBankerUseCase() as never,
     );
 
     await useCase.execute({
@@ -453,6 +541,92 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       privateMessageExchangeCountWithPrimaryCounterparty: 2,
       unresolvedProposalExistsWithPrimaryCounterparty: false,
       conversationLikelyReadyForProposal: true,
+    });
+  });
+
+  it('only exposes full banker obligations to the banker', async () => {
+    const gateway = new RecordingAgentGateway();
+    const useCase = new RunAgentCommunicationTurnUseCase(
+      new InMemoryGameSessionRepository(createSession()),
+      new InMemoryAgentMessageRepository(),
+      new InMemoryAgentActionRepository(),
+      gateway,
+      new RecordingAgentSessionEventStreamService() as never,
+      new RecordingPlaceFundsWithBankerUseCase() as never,
+      new RecordingRedeemFundsFromBankerUseCase() as never,
+    );
+
+    await useCase.execute({
+      gameSessionId: 'game-1',
+      turnNumber: 1,
+    });
+
+    expect(gateway.contexts[0]?.self.role).toBe('banker');
+    expect(
+      gateway.contexts[0]?.treasuryContext.obligationsForBanker,
+    ).toHaveLength(1);
+    expect(gateway.contexts[1]?.self.role).toBe('trader');
+    expect(
+      gateway.contexts[1]?.treasuryContext.obligationsForBanker,
+    ).toHaveLength(0);
+  });
+
+  it('executes owner-controlled custody redemption actions through the custody use case', async () => {
+    const eventStreamService = new RecordingAgentSessionEventStreamService();
+    const placeFundsWithBankerUseCase =
+      new RecordingPlaceFundsWithBankerUseCase();
+    const redeemFundsFromBankerUseCase =
+      new RecordingRedeemFundsFromBankerUseCase();
+    const useCase = new RunAgentCommunicationTurnUseCase(
+      new InMemoryGameSessionRepository(createSession()),
+      new InMemoryAgentMessageRepository(),
+      new InMemoryAgentActionRepository(),
+      new ScriptedAgentGateway([
+        {
+          type: 'finalize_turn',
+        },
+        {
+          type: 'redeem_funds_from_banker',
+          recipientAgentId: 'agent-1',
+          amount: '0.5000',
+        },
+      ]),
+      eventStreamService as never,
+      placeFundsWithBankerUseCase as never,
+      redeemFundsFromBankerUseCase as never,
+    );
+
+    const result = await useCase.execute({
+      gameSessionId: 'game-1',
+      turnNumber: 2,
+    });
+
+    expect(placeFundsWithBankerUseCase.calls).toHaveLength(0);
+    expect(redeemFundsFromBankerUseCase.calls).toEqual([
+      {
+        gameSessionId: 'game-1',
+        ownerAgentId: 'agent-2',
+        bankerAgentId: 'agent-1',
+        amount: '0.5000',
+      },
+    ]);
+    expect(result.actionRecords[1]).toMatchObject({
+      agentId: 'agent-2',
+      recipientAgentId: 'agent-1',
+      actionType: 'redeem_funds_from_banker',
+      amount: '0.5000',
+    });
+    expect(eventStreamService.published).toContainEqual({
+      type: 'action_progressed',
+      gameSessionId: 'game-1',
+      roundNumber: 1,
+      turnNumber: 2,
+      agentId: 'agent-2',
+      agentName: 'Trader Bot',
+      actionType: 'redeem_funds_from_banker',
+      messageId: undefined,
+      messageVisibility: undefined,
+      occurredAt: expect.any(String),
     });
   });
 });

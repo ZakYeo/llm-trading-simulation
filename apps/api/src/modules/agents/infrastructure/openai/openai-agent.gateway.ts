@@ -6,7 +6,7 @@ import { DomainInvariantError } from '../../../shared/domain/errors/domain-invar
 import type { AgentGatewayPort } from '../../application/ports/agent-gateway.port.js';
 
 const defaultSystemPrompt =
-  'You are a simulated trading-game agent. Your objective is to maximize your own expected fake-money outcome over the session. Choose exactly one next action. Prefer short, concrete messages. Only send private messages or transfer proposals to agent ids listed in peers. Use propose_direct_transfer and counter_direct_transfer_proposal only for positive fake-money amounts. Accept, reject, or counter transfer proposals only when a valid recent proposal action is available. If you counter a proposal, send it back to the original proposer. Include a short reasoning field describing why you chose the action. Return null for fields that do not apply to the chosen action. Treat communication, negotiation, and information sharing as tools you may use when they improve expected value. Finalize the turn only when no available action is likely to improve your position or information advantage.';
+  'You are a simulated trading-game agent. Your objective is to maximize your own expected fake-money outcome over the session. Choose exactly one next action. Prefer short, concrete messages. Only send targeted actions to agent ids listed in peers. Use propose_direct_transfer, counter_direct_transfer_proposal, place_funds_with_banker, and redeem_funds_from_banker only for positive fake-money amounts. Accept, reject, or counter transfer proposals only when a valid recent proposal action is available. If you counter a proposal, send it back to the original proposer. Include a short reasoning field describing why you chose the action. Return null for fields that do not apply to the chosen action. Treat communication, negotiation, and information sharing as tools you may use when they improve expected value. Finalize the turn only when no available action is likely to improve your position or information advantage.';
 const agentDecisionJsonSchema = {
   name: 'agent_decision',
   strict: true,
@@ -32,6 +32,8 @@ const agentDecisionJsonSchema = {
           'counter_direct_transfer_proposal',
           'accept_direct_transfer_proposal',
           'reject_direct_transfer_proposal',
+          'place_funds_with_banker',
+          'redeem_funds_from_banker',
           'finalize_turn',
         ],
       },
@@ -157,6 +159,32 @@ function normalizeAgentDecision(rawDecision: RawAgentDecision): AgentAction {
         rationale: rawDecision.rationale,
         reasoning: rawDecision.reasoning ?? undefined,
       };
+    case 'place_funds_with_banker':
+      if (!rawDecision.recipientAgentId || !rawDecision.amount) {
+        throw new DomainInvariantError(
+          'place_funds_with_banker requires recipientAgentId and amount from the model.',
+        );
+      }
+
+      return {
+        type: rawDecision.type,
+        recipientAgentId: rawDecision.recipientAgentId,
+        amount: rawDecision.amount,
+        reasoning: rawDecision.reasoning ?? undefined,
+      };
+    case 'redeem_funds_from_banker':
+      if (!rawDecision.recipientAgentId || !rawDecision.amount) {
+        throw new DomainInvariantError(
+          'redeem_funds_from_banker requires recipientAgentId and amount from the model.',
+        );
+      }
+
+      return {
+        type: rawDecision.type,
+        recipientAgentId: rawDecision.recipientAgentId,
+        amount: rawDecision.amount,
+        reasoning: rawDecision.reasoning ?? undefined,
+      };
     case 'finalize_turn':
       return {
         type: rawDecision.type,
@@ -257,11 +285,28 @@ function buildTurnSignal(context: AgentTurnContext): string {
 }
 
 function buildActionSemanticsSummary(context: AgentTurnContext): string {
-  return `Action semantics: send_public_message = ${context.actionSemantics.sendPublicMessage} send_private_message = ${context.actionSemantics.sendPrivateMessage} propose_direct_transfer = ${context.actionSemantics.proposeDirectTransfer} counter_direct_transfer_proposal = ${context.actionSemantics.counterDirectTransferProposal} accept_direct_transfer_proposal = ${context.actionSemantics.acceptDirectTransferProposal} reject_direct_transfer_proposal = ${context.actionSemantics.rejectDirectTransferProposal} finalize_turn = ${context.actionSemantics.finalizeTurn}`;
+  return `Action semantics: send_public_message = ${context.actionSemantics.sendPublicMessage} send_private_message = ${context.actionSemantics.sendPrivateMessage} propose_direct_transfer = ${context.actionSemantics.proposeDirectTransfer} counter_direct_transfer_proposal = ${context.actionSemantics.counterDirectTransferProposal} accept_direct_transfer_proposal = ${context.actionSemantics.acceptDirectTransferProposal} reject_direct_transfer_proposal = ${context.actionSemantics.rejectDirectTransferProposal} place_funds_with_banker = ${context.actionSemantics.placeFundsWithBanker} redeem_funds_from_banker = ${context.actionSemantics.redeemFundsFromBanker} finalize_turn = ${context.actionSemantics.finalizeTurn}`;
 }
 
 function buildEconomicContextSummary(context: AgentTurnContext): string {
   return `Economic context: objective = ${context.economicContext.objective} self available balance = ${context.self.availableBalance} self deposited principal = ${context.self.depositPrincipal} unresolved incoming proposals = ${context.economicContext.unresolvedIncomingProposalCount} unresolved outgoing proposals = ${context.economicContext.unresolvedOutgoingProposalCount} messages do not move money = ${String(context.economicContext.messagesDoNotMoveMoney)} proposals can move money = ${String(context.economicContext.proposalsCanMoveMoney)} accepted proposal changes balances = ${String(context.economicContext.acceptedProposalChangesBalances)} finalize does not change state = ${String(context.economicContext.finalizeDoesNotChangeState)}.`;
+}
+
+function buildTreasuryContextSummary(context: AgentTurnContext): string {
+  const selfPosition = context.treasuryContext.selfCustodyPosition
+    ? `self custody with banker ${context.treasuryContext.selfCustodyPosition.bankerAgentId}: principal = ${context.treasuryContext.selfCustodyPosition.principal} accrued interest = ${context.treasuryContext.selfCustodyPosition.accruedInterest} total balance = ${context.treasuryContext.selfCustodyPosition.totalBalance}.`
+    : 'self custody position: none.';
+  const bankerObligations =
+    context.treasuryContext.obligationsForBanker.length === 0
+      ? 'banker obligations visible to you: none.'
+      : `banker obligations visible to you: ${context.treasuryContext.obligationsForBanker
+          .map(
+            (position) =>
+              `[owner=${position.ownerName} ownerId=${position.ownerAgentId} principal=${position.principal} accrued=${position.accruedInterest} total=${position.totalBalance}]`,
+          )
+          .join(' ')}`;
+
+  return `Treasury context: banker id = ${context.treasuryContext.bankerAgentId ?? 'none'} banker name = ${context.treasuryContext.bankerName ?? 'none'} total custodied principal = ${context.treasuryContext.totalCustodiedPrincipal} total custodied accrued interest = ${context.treasuryContext.totalCustodiedAccruedInterest} total custodied balance = ${context.treasuryContext.totalCustodiedBalance}. ${selfPosition} ${bankerObligations}`;
 }
 
 function buildActionableProposalSummary(context: AgentTurnContext): string {
@@ -302,6 +347,7 @@ export class OpenAiAgentGateway implements AgentGatewayPort {
       this.systemPrompt,
       buildPeerSummary(context),
       buildEconomicContextSummary(context),
+      buildTreasuryContextSummary(context),
       buildActionSemanticsSummary(context),
       buildActionableProposalSummary(context),
       buildNegotiationStateSummary(context),
