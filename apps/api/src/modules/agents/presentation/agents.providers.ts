@@ -7,6 +7,7 @@ import { TransferFundsUseCase } from '../../game/application/use-cases/transfer-
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service.js';
 import type { GameSessionRepositoryPort } from '../../game/application/ports/game-session-repository.port.js';
 import { AgentSessionEventStreamService } from '../application/services/agent-session-event-stream.service.js';
+import { AgentActionValidator } from '../application/services/agent-action-validator.js';
 import { AgentTurnContextFactory } from '../application/services/agent-turn-context.factory.js';
 import { OrchestrateAgentRoundUseCase } from '../application/use-cases/orchestrate-agent-round.use-case.js';
 import { MockAgentGateway } from '../infrastructure/mock/mock-agent.gateway.js';
@@ -58,6 +59,10 @@ export function createAgentsProviders() {
       useFactory: () => new AgentTurnContextFactory(),
     },
     {
+      provide: AgentActionValidator,
+      useFactory: () => new AgentActionValidator(),
+    },
+    {
       provide: RunAgentCommunicationTurnUseCase,
       useFactory: (
         gameSessionRepository: GameSessionRepositoryPort,
@@ -68,6 +73,7 @@ export function createAgentsProviders() {
         placeFundsWithBankerUseCase: PlaceFundsWithBankerUseCase,
         redeemFundsFromBankerUseCase: RedeemFundsFromBankerUseCase,
         agentTurnContextFactory: AgentTurnContextFactory,
+        agentActionValidator: AgentActionValidator,
       ) =>
         new RunAgentCommunicationTurnUseCase(
           gameSessionRepository,
@@ -78,6 +84,7 @@ export function createAgentsProviders() {
           placeFundsWithBankerUseCase,
           redeemFundsFromBankerUseCase,
           agentTurnContextFactory,
+          agentActionValidator,
         ),
       inject: [
         GAME_SESSION_REPOSITORY,
@@ -88,6 +95,7 @@ export function createAgentsProviders() {
         PlaceFundsWithBankerUseCase,
         RedeemFundsFromBankerUseCase,
         AgentTurnContextFactory,
+        AgentActionValidator,
       ],
     },
     {

@@ -4,7 +4,6 @@ import { DomainInvariantError } from '../../../shared/domain/errors/domain-invar
 import type { GameSessionRepositoryPort } from '../../../game/application/ports/game-session-repository.port.js';
 import type { PlaceFundsWithBankerUseCase } from '../../../game/application/use-cases/place-funds-with-banker.use-case.js';
 import type { RedeemFundsFromBankerUseCase } from '../../../game/application/use-cases/redeem-funds-from-banker.use-case.js';
-import { Money } from '../../../shared/domain/value-objects/money.js';
 import type { AgentGatewayPort } from '../ports/agent-gateway.port.js';
 import type {
   AgentActionRecord,
@@ -15,31 +14,8 @@ import type {
   AgentMessageRepositoryPort,
 } from '../ports/agent-message-repository.port.js';
 import type { AgentSessionEventStreamService } from '../services/agent-session-event-stream.service.js';
+import { AgentActionValidator } from '../services/agent-action-validator.js';
 import { AgentTurnContextFactory } from '../services/agent-turn-context.factory.js';
-
-function isTransferProposalActionType(
-  actionType: AgentActionRecord['actionType'],
-): actionType is
-  | 'propose_direct_transfer'
-  | 'counter_direct_transfer_proposal' {
-  return (
-    actionType === 'propose_direct_transfer' ||
-    actionType === 'counter_direct_transfer_proposal'
-  );
-}
-
-function isTransferProposalResolutionType(
-  actionType: AgentActionRecord['actionType'],
-): actionType is
-  | 'counter_direct_transfer_proposal'
-  | 'accept_direct_transfer_proposal'
-  | 'reject_direct_transfer_proposal' {
-  return (
-    actionType === 'counter_direct_transfer_proposal' ||
-    actionType === 'accept_direct_transfer_proposal' ||
-    actionType === 'reject_direct_transfer_proposal'
-  );
-}
 
 export interface RunAgentCommunicationTurnInput {
   gameSessionId: string;
@@ -59,21 +35,6 @@ export interface RunAgentCommunicationTurnResult {
   messages: AgentMessageRecord[];
 }
 
-function wouldSettleAsBankerFundingTrader(
-  session: NonNullable<
-    Awaited<ReturnType<GameSessionRepositoryPort['findById']>>
-  >,
-  proposerAgentId: string,
-  recipientAgentId: string,
-): boolean {
-  const proposer = session.agents.find((agent) => agent.id === proposerAgentId);
-  const recipient = session.agents.find(
-    (agent) => agent.id === recipientAgentId,
-  );
-
-  return proposer?.role === 'trader' && recipient?.role === 'banker';
-}
-
 export class RunAgentCommunicationTurnUseCase {
   constructor(
     private readonly gameSessionRepository: GameSessionRepositoryPort,
@@ -84,6 +45,7 @@ export class RunAgentCommunicationTurnUseCase {
     private readonly placeFundsWithBankerUseCase: PlaceFundsWithBankerUseCase,
     private readonly redeemFundsFromBankerUseCase: RedeemFundsFromBankerUseCase,
     private readonly agentTurnContextFactory = new AgentTurnContextFactory(),
+    private readonly agentActionValidator = new AgentActionValidator(),
   ) {}
 
   async execute(
@@ -124,117 +86,13 @@ export class RunAgentCommunicationTurnUseCase {
       );
 
       const action = await this.agentGateway.decideNextAction(context);
-      const recipientAgentId =
-        action.type === 'send_private_message' ||
-        action.type === 'propose_direct_transfer' ||
-        action.type === 'counter_direct_transfer_proposal' ||
-        action.type === 'place_funds_with_banker' ||
-        action.type === 'redeem_funds_from_banker'
-          ? action.recipientAgentId
-          : action.type === 'accept_direct_transfer_proposal' ||
-              action.type === 'reject_direct_transfer_proposal'
-            ? null
-            : null;
-
-      if (recipientAgentId) {
-        const recipientAgent = currentSession.agents.find(
-          (candidate) => candidate.id === recipientAgentId,
-        );
-
-        if (!recipientAgent || recipientAgent.id === agent.id) {
-          throw new DomainInvariantError(
-            'Agent communication target must be another agent in the same game session.',
-          );
-        }
-      }
-
-      if (
-        action.type === 'propose_direct_transfer' ||
-        action.type === 'counter_direct_transfer_proposal' ||
-        action.type === 'place_funds_with_banker' ||
-        action.type === 'redeem_funds_from_banker'
-      ) {
-        Money.fromDecimal(action.amount);
-      }
-
-      if (
-        (action.type === 'propose_direct_transfer' ||
-          action.type === 'counter_direct_transfer_proposal') &&
-        recipientAgentId &&
-        wouldSettleAsBankerFundingTrader(
+      const { recipientAgentId, relatedProposalActionId } =
+        this.agentActionValidator.validate(
           currentSession,
           agent.id,
-          recipientAgentId,
-        )
-      ) {
-        throw new DomainInvariantError(
-          'Banker-to-trader funding proposals are not supported yet. Use custody actions for banker/trader treasury flows.',
+          action,
+          recentActions,
         );
-      }
-
-      if (
-        action.type === 'place_funds_with_banker' ||
-        action.type === 'redeem_funds_from_banker'
-      ) {
-        const bankerAgent = currentSession.agents.find(
-          (candidate) => candidate.id === recipientAgentId,
-        );
-
-        if (!bankerAgent || bankerAgent.role !== 'banker') {
-          throw new DomainInvariantError(
-            'Custody actions must target a banker in the same game session.',
-          );
-        }
-      }
-
-      let relatedProposalActionId: string | undefined;
-
-      if (
-        action.type === 'counter_direct_transfer_proposal' ||
-        action.type === 'accept_direct_transfer_proposal' ||
-        action.type === 'reject_direct_transfer_proposal'
-      ) {
-        const proposal = recentActions.find(
-          (candidate) =>
-            candidate.id === action.proposalActionId &&
-            isTransferProposalActionType(candidate.actionType),
-        );
-
-        if (!proposal) {
-          throw new DomainInvariantError(
-            'Proposal response must reference an existing transfer proposal.',
-          );
-        }
-
-        if (proposal.recipientAgentId !== agent.id) {
-          throw new DomainInvariantError(
-            'Only the proposal recipient may accept or reject a transfer proposal.',
-          );
-        }
-
-        const existingResponse = recentActions.find(
-          (candidate) =>
-            candidate.relatedProposalActionId === proposal.id &&
-            isTransferProposalResolutionType(candidate.actionType),
-        );
-
-        if (existingResponse) {
-          throw new DomainInvariantError(
-            'Transfer proposal has already been resolved.',
-          );
-        }
-
-        if (
-          action.type === 'counter_direct_transfer_proposal' &&
-          action.recipientAgentId !== proposal.agentId
-        ) {
-          throw new DomainInvariantError(
-            'Counter-proposal recipient must match the original proposal sender.',
-          );
-        }
-
-        relatedProposalActionId = proposal.id;
-      }
 
       const savedAction = await this.agentActionRepository.save({
         gameSessionId: currentSession.id,
