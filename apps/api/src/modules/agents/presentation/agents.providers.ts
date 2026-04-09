@@ -7,6 +7,7 @@ import { TransferFundsUseCase } from '../../game/application/use-cases/transfer-
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service.js';
 import type { GameSessionRepositoryPort } from '../../game/application/ports/game-session-repository.port.js';
 import { AgentSessionEventStreamService } from '../application/services/agent-session-event-stream.service.js';
+import { AgentActionExecutor } from '../application/services/agent-action-executor.js';
 import { AgentActionValidator } from '../application/services/agent-action-validator.js';
 import { AgentTurnContextFactory } from '../application/services/agent-turn-context.factory.js';
 import { OrchestrateAgentRoundUseCase } from '../application/use-cases/orchestrate-agent-round.use-case.js';
@@ -63,6 +64,27 @@ export function createAgentsProviders() {
       useFactory: () => new AgentActionValidator(),
     },
     {
+      provide: AgentActionExecutor,
+      useFactory: (
+        agentMessageRepository: PrismaAgentMessageRepository,
+        agentActionRepository: PrismaAgentActionRepository,
+        placeFundsWithBankerUseCase: PlaceFundsWithBankerUseCase,
+        redeemFundsFromBankerUseCase: RedeemFundsFromBankerUseCase,
+      ) =>
+        new AgentActionExecutor(
+          agentMessageRepository,
+          agentActionRepository,
+          placeFundsWithBankerUseCase,
+          redeemFundsFromBankerUseCase,
+        ),
+      inject: [
+        AGENT_MESSAGE_REPOSITORY,
+        AGENT_ACTION_REPOSITORY,
+        PlaceFundsWithBankerUseCase,
+        RedeemFundsFromBankerUseCase,
+      ],
+    },
+    {
       provide: RunAgentCommunicationTurnUseCase,
       useFactory: (
         gameSessionRepository: GameSessionRepositoryPort,
@@ -74,6 +96,7 @@ export function createAgentsProviders() {
         redeemFundsFromBankerUseCase: RedeemFundsFromBankerUseCase,
         agentTurnContextFactory: AgentTurnContextFactory,
         agentActionValidator: AgentActionValidator,
+        agentActionExecutor: AgentActionExecutor,
       ) =>
         new RunAgentCommunicationTurnUseCase(
           gameSessionRepository,
@@ -85,6 +108,7 @@ export function createAgentsProviders() {
           redeemFundsFromBankerUseCase,
           agentTurnContextFactory,
           agentActionValidator,
+          agentActionExecutor,
         ),
       inject: [
         GAME_SESSION_REPOSITORY,
@@ -96,6 +120,7 @@ export function createAgentsProviders() {
         RedeemFundsFromBankerUseCase,
         AgentTurnContextFactory,
         AgentActionValidator,
+        AgentActionExecutor,
       ],
     },
     {

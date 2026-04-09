@@ -14,6 +14,7 @@ import type {
   AgentMessageRepositoryPort,
 } from '../ports/agent-message-repository.port.js';
 import type { AgentSessionEventStreamService } from '../services/agent-session-event-stream.service.js';
+import { AgentActionExecutor } from '../services/agent-action-executor.js';
 import { AgentActionValidator } from '../services/agent-action-validator.js';
 import { AgentTurnContextFactory } from '../services/agent-turn-context.factory.js';
 
@@ -46,6 +47,12 @@ export class RunAgentCommunicationTurnUseCase {
     private readonly redeemFundsFromBankerUseCase: RedeemFundsFromBankerUseCase,
     private readonly agentTurnContextFactory = new AgentTurnContextFactory(),
     private readonly agentActionValidator = new AgentActionValidator(),
+    private readonly agentActionExecutor = new AgentActionExecutor(
+      agentMessageRepository,
+      agentActionRepository,
+      placeFundsWithBankerUseCase,
+      redeemFundsFromBankerUseCase,
+    ),
   ) {}
 
   async execute(
@@ -93,84 +100,22 @@ export class RunAgentCommunicationTurnUseCase {
           action,
           recentActions,
         );
-
-      const savedAction = await this.agentActionRepository.save({
-        gameSessionId: currentSession.id,
-        roundNumber: currentSession.currentRound,
-        turnNumber,
+      const execution = await this.agentActionExecutor.execute({
+        session: currentSession,
         agentId: agent.id,
+        turnNumber,
+        action,
         recipientAgentId,
         relatedProposalActionId,
-        actionType: action.type,
-        amount:
-          action.type === 'propose_direct_transfer' ||
-          action.type === 'counter_direct_transfer_proposal' ||
-          action.type === 'place_funds_with_banker' ||
-          action.type === 'redeem_funds_from_banker'
-            ? action.amount
-            : undefined,
-        content:
-          action.type === 'send_public_message' ||
-          action.type === 'send_private_message'
-            ? action.content
-            : action.type === 'propose_direct_transfer' ||
-                action.type === 'counter_direct_transfer_proposal'
-              ? action.rationale
-              : action.type === 'reject_direct_transfer_proposal'
-                ? action.rationale
-                : undefined,
       });
 
-      recentActions.push(savedAction);
-      savedActions.push(savedAction);
-      let savedMessage: AgentMessageRecord | undefined;
+      currentSession = execution.updatedSession;
+      recentActions.push(execution.savedAction);
+      savedActions.push(execution.savedAction);
 
-      if (action.type === 'place_funds_with_banker') {
-        currentSession = await this.placeFundsWithBankerUseCase.execute({
-          gameSessionId: currentSession.id,
-          ownerAgentId: agent.id,
-          bankerAgentId: recipientAgentId!,
-          amount: action.amount,
-        });
-      }
-
-      if (action.type === 'redeem_funds_from_banker') {
-        currentSession = await this.redeemFundsFromBankerUseCase.execute({
-          gameSessionId: currentSession.id,
-          ownerAgentId: agent.id,
-          bankerAgentId: recipientAgentId!,
-          amount: action.amount,
-        });
-      }
-
-      if (action.type === 'send_private_message') {
-        savedMessage = await this.agentMessageRepository.save({
-          gameSessionId: currentSession.id,
-          roundNumber: currentSession.currentRound,
-          turnNumber,
-          senderAgentId: agent.id,
-          recipientAgentId,
-          visibility: 'private',
-          content: action.content,
-        });
-
-        recentMessages.push(savedMessage);
-        savedMessages.push(savedMessage);
-      }
-
-      if (action.type === 'send_public_message') {
-        savedMessage = await this.agentMessageRepository.save({
-          gameSessionId: currentSession.id,
-          roundNumber: currentSession.currentRound,
-          turnNumber,
-          senderAgentId: agent.id,
-          recipientAgentId: null,
-          visibility: 'public',
-          content: action.content,
-        });
-
-        recentMessages.push(savedMessage);
-        savedMessages.push(savedMessage);
+      if (execution.savedMessage) {
+        recentMessages.push(execution.savedMessage);
+        savedMessages.push(execution.savedMessage);
       }
 
       if (action.type !== 'finalize_turn') {
@@ -182,8 +127,8 @@ export class RunAgentCommunicationTurnUseCase {
           agentId: agent.id,
           agentName: agent.name,
           actionType: action.type,
-          messageId: savedMessage?.id,
-          messageVisibility: savedMessage?.visibility,
+          messageId: execution.savedMessage?.id,
+          messageVisibility: execution.savedMessage?.visibility,
           occurredAt: new Date().toISOString(),
         });
       }
