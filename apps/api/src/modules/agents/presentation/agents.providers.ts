@@ -11,6 +11,9 @@ import { AgentActionExecutor } from '../application/services/agent-action-execut
 import { AgentActionValidator } from '../application/services/agent-action-validator.js';
 import { AgentTurnContextFactory } from '../application/services/agent-turn-context.factory.js';
 import { OrchestrateAgentRoundUseCase } from '../application/use-cases/orchestrate-agent-round.use-case.js';
+import type { AgentActionRepositoryPort } from '../application/ports/agent-action-repository.port.js';
+import type { AgentGatewayPort } from '../application/ports/agent-gateway.port.js';
+import type { AgentMessageRepositoryPort } from '../application/ports/agent-message-repository.port.js';
 import { MockAgentGateway } from '../infrastructure/mock/mock-agent.gateway.js';
 import { OpenAiAgentGateway } from '../infrastructure/openai/openai-agent.gateway.js';
 import { PrismaAgentActionRepository } from '../infrastructure/prisma/prisma-agent-action.repository.js';
@@ -66,8 +69,8 @@ export function createAgentsProviders() {
     {
       provide: AgentActionExecutor,
       useFactory: (
-        agentMessageRepository: PrismaAgentMessageRepository,
-        agentActionRepository: PrismaAgentActionRepository,
+        agentMessageRepository: AgentMessageRepositoryPort,
+        agentActionRepository: AgentActionRepositoryPort,
         placeFundsWithBankerUseCase: PlaceFundsWithBankerUseCase,
         redeemFundsFromBankerUseCase: RedeemFundsFromBankerUseCase,
       ) =>
@@ -88,9 +91,9 @@ export function createAgentsProviders() {
       provide: RunAgentCommunicationTurnUseCase,
       useFactory: (
         gameSessionRepository: GameSessionRepositoryPort,
-        agentActionRepository: PrismaAgentActionRepository,
-        agentMessageRepository: PrismaAgentMessageRepository,
-        agentGateway: MockAgentGateway | OpenAiAgentGateway,
+        agentActionRepository: AgentActionRepositoryPort,
+        agentMessageRepository: AgentMessageRepositoryPort,
+        agentGateway: AgentGatewayPort,
         agentSessionEventStreamService: AgentSessionEventStreamService,
         placeFundsWithBankerUseCase: PlaceFundsWithBankerUseCase,
         redeemFundsFromBankerUseCase: RedeemFundsFromBankerUseCase,
@@ -126,7 +129,7 @@ export function createAgentsProviders() {
     {
       provide: OrchestrateAgentRoundUseCase,
       useFactory: (
-        agentActionRepository: PrismaAgentActionRepository,
+        agentActionRepository: AgentActionRepositoryPort,
         runAgentCommunicationTurnUseCase: RunAgentCommunicationTurnUseCase,
         transferFundsUseCase: TransferFundsUseCase,
         agentSessionEventStreamService: AgentSessionEventStreamService,
