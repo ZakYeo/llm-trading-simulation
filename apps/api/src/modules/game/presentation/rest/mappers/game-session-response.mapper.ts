@@ -17,6 +17,15 @@ export class GameSessionResponseMapper {
         depositAccruedInterest:
           agent.depositAccount.accruedInterest.toDecimal(),
       })),
+      bankerCustodyPositions: session.bankerCustodyPositions.map(
+        (position) => ({
+          bankerAgentId: position.bankerAgentId,
+          ownerAgentId: position.ownerAgentId,
+          principal: position.principal.toDecimal(),
+          accruedInterest: position.accruedInterest.toDecimal(),
+          totalBalance: position.totalBalance().toDecimal(),
+        }),
+      ),
     };
   }
 }

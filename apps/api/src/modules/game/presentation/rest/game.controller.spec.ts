@@ -4,6 +4,7 @@ import { ZodError } from 'zod';
 import { DepositAccount } from '../../../bank/domain/entities/deposit-account.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import { AccountBalance } from '../../domain/entities/account-balance.js';
+import { BankerCustodyPosition } from '../../domain/entities/banker-custody-position.js';
 import { GameAgent } from '../../domain/entities/game-agent.js';
 import { GameSession } from '../../domain/entities/game-session.js';
 import { GameController } from './game.controller.js';
@@ -33,6 +34,14 @@ function createSessionFixture() {
         depositAccount: DepositAccount.open(),
       }),
     ],
+    bankerCustodyPositions: [
+      new BankerCustodyPosition({
+        bankerAgentId: 'agent-1',
+        ownerAgentId: 'agent-2',
+        principal: Money.fromDecimal('10.0000'),
+        accruedInterest: Money.fromDecimal('1.0000'),
+      }),
+    ],
   });
 }
 
@@ -45,6 +54,8 @@ describe('GameController', () => {
     const depositToBankUseCase = { execute: vi.fn() };
     const withdrawFromBankUseCase = { execute: vi.fn() };
     const transferFundsUseCase = { execute: vi.fn() };
+    const placeFundsWithBankerUseCase = { execute: vi.fn() };
+    const redeemFundsFromBankerUseCase = { execute: vi.fn() };
 
     const controller = new GameController(
       createGameSessionUseCase as never,
@@ -53,6 +64,8 @@ describe('GameController', () => {
       depositToBankUseCase as never,
       withdrawFromBankUseCase as never,
       transferFundsUseCase as never,
+      placeFundsWithBankerUseCase as never,
+      redeemFundsFromBankerUseCase as never,
     );
 
     const result = await controller.createSession({
@@ -101,6 +114,15 @@ describe('GameController', () => {
           depositAccruedInterest: '0.0000',
         },
       ],
+      bankerCustodyPositions: [
+        {
+          bankerAgentId: 'agent-1',
+          ownerAgentId: 'agent-2',
+          principal: '10.0000',
+          accruedInterest: '1.0000',
+          totalBalance: '11.0000',
+        },
+      ],
     });
   });
 
@@ -110,6 +132,8 @@ describe('GameController', () => {
     };
     const controller = new GameController(
       createGameSessionUseCase as never,
+      { execute: vi.fn() } as never,
+      { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
@@ -138,6 +162,8 @@ describe('GameController', () => {
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
+      { execute: vi.fn() } as never,
+      { execute: vi.fn() } as never,
     );
 
     const result = await controller.getSession('game-1');
@@ -157,6 +183,8 @@ describe('GameController', () => {
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       advanceGameRoundUseCase as never,
+      { execute: vi.fn() } as never,
+      { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
@@ -182,6 +210,12 @@ describe('GameController', () => {
     const transferFundsUseCase = {
       execute: vi.fn().mockResolvedValue(createSessionFixture()),
     };
+    const placeFundsWithBankerUseCase = {
+      execute: vi.fn().mockResolvedValue(createSessionFixture()),
+    };
+    const redeemFundsFromBankerUseCase = {
+      execute: vi.fn().mockResolvedValue(createSessionFixture()),
+    };
     const controller = new GameController(
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
@@ -189,6 +223,8 @@ describe('GameController', () => {
       depositToBankUseCase as never,
       withdrawFromBankUseCase as never,
       transferFundsUseCase as never,
+      placeFundsWithBankerUseCase as never,
+      redeemFundsFromBankerUseCase as never,
     );
 
     await controller.depositToBank('game-1', {
@@ -203,6 +239,16 @@ describe('GameController', () => {
       sourceAgentId: 'agent-2',
       destinationAgentId: 'agent-1',
       amount: '15.0000',
+    });
+    await controller.placeFundsWithBanker('game-1', {
+      ownerAgentId: 'agent-2',
+      bankerAgentId: 'agent-1',
+      amount: '10.0000',
+    });
+    await controller.redeemFundsFromBanker('game-1', {
+      ownerAgentId: 'agent-2',
+      bankerAgentId: 'agent-1',
+      amount: '2.0000',
     });
 
     expect(depositToBankUseCase.execute).toHaveBeenCalledWith({
@@ -221,6 +267,18 @@ describe('GameController', () => {
       destinationAgentId: 'agent-1',
       amount: '15.0000',
     });
+    expect(placeFundsWithBankerUseCase.execute).toHaveBeenCalledWith({
+      gameSessionId: 'game-1',
+      ownerAgentId: 'agent-2',
+      bankerAgentId: 'agent-1',
+      amount: '10.0000',
+    });
+    expect(redeemFundsFromBankerUseCase.execute).toHaveBeenCalledWith({
+      gameSessionId: 'game-1',
+      ownerAgentId: 'agent-2',
+      bankerAgentId: 'agent-1',
+      amount: '2.0000',
+    });
   });
 
   it('rejects invalid deposit, withdraw, and transfer payloads before calling use cases', async () => {
@@ -228,6 +286,8 @@ describe('GameController', () => {
     const depositToBankUseCase = { execute: vi.fn() };
     const withdrawFromBankUseCase = { execute: vi.fn() };
     const transferFundsUseCase = { execute: vi.fn() };
+    const placeFundsWithBankerUseCase = { execute: vi.fn() };
+    const redeemFundsFromBankerUseCase = { execute: vi.fn() };
     const controller = new GameController(
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
@@ -235,6 +295,8 @@ describe('GameController', () => {
       depositToBankUseCase as never,
       withdrawFromBankUseCase as never,
       transferFundsUseCase as never,
+      placeFundsWithBankerUseCase as never,
+      redeemFundsFromBankerUseCase as never,
     );
 
     await expect(
@@ -261,10 +323,26 @@ describe('GameController', () => {
         amount: '15.00000',
       }),
     ).rejects.toBeInstanceOf(ZodError);
+    await expect(
+      controller.placeFundsWithBanker('game-1', {
+        ownerAgentId: '',
+        bankerAgentId: '',
+        amount: '10.00000',
+      }),
+    ).rejects.toBeInstanceOf(ZodError);
+    await expect(
+      controller.redeemFundsFromBanker('game-1', {
+        ownerAgentId: '',
+        bankerAgentId: '',
+        amount: '2.00000',
+      }),
+    ).rejects.toBeInstanceOf(ZodError);
 
     expect(advanceGameRoundUseCase.execute).not.toHaveBeenCalled();
     expect(depositToBankUseCase.execute).not.toHaveBeenCalled();
     expect(withdrawFromBankUseCase.execute).not.toHaveBeenCalled();
     expect(transferFundsUseCase.execute).not.toHaveBeenCalled();
+    expect(placeFundsWithBankerUseCase.execute).not.toHaveBeenCalled();
+    expect(redeemFundsFromBankerUseCase.execute).not.toHaveBeenCalled();
   });
 });

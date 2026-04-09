@@ -9,6 +9,8 @@ import { DepositToBankUseCase } from '../application/use-cases/deposit-to-bank.u
 import { GetGameSessionUseCase } from '../application/use-cases/get-game-session.use-case.js';
 import { WithdrawFromBankUseCase } from '../application/use-cases/withdraw-from-bank.use-case.js';
 import { TransferFundsUseCase } from '../application/use-cases/transfer-funds.use-case.js';
+import { PlaceFundsWithBankerUseCase } from '../application/use-cases/place-funds-with-banker.use-case.js';
+import { RedeemFundsFromBankerUseCase } from '../application/use-cases/redeem-funds-from-banker.use-case.js';
 import {
   GAME_SESSION_REPOSITORY,
   ID_GENERATOR,
@@ -48,11 +50,9 @@ export function createGameProviders() {
     },
     {
       provide: AdvanceGameRoundUseCase,
-      useFactory: (
-        repository: GameSessionRepositoryPort,
-        ledgerService: LedgerService,
-      ) => new AdvanceGameRoundUseCase(repository, ledgerService),
-      inject: [GAME_SESSION_REPOSITORY, LedgerService],
+      useFactory: (repository: GameSessionRepositoryPort) =>
+        new AdvanceGameRoundUseCase(repository),
+      inject: [GAME_SESSION_REPOSITORY],
     },
     {
       provide: DepositToBankUseCase,
@@ -76,6 +76,22 @@ export function createGameProviders() {
         repository: GameSessionRepositoryPort,
         ledgerService: LedgerService,
       ) => new TransferFundsUseCase(repository, ledgerService),
+      inject: [GAME_SESSION_REPOSITORY, LedgerService],
+    },
+    {
+      provide: PlaceFundsWithBankerUseCase,
+      useFactory: (
+        repository: GameSessionRepositoryPort,
+        ledgerService: LedgerService,
+      ) => new PlaceFundsWithBankerUseCase(repository, ledgerService),
+      inject: [GAME_SESSION_REPOSITORY, LedgerService],
+    },
+    {
+      provide: RedeemFundsFromBankerUseCase,
+      useFactory: (
+        repository: GameSessionRepositoryPort,
+        ledgerService: LedgerService,
+      ) => new RedeemFundsFromBankerUseCase(repository, ledgerService),
       inject: [GAME_SESSION_REPOSITORY, LedgerService],
     },
   ];

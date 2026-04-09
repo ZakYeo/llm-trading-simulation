@@ -197,7 +197,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
     );
   });
 
-  it('advances a round and accrues interest only for banker deposits through the HTTP boundary', async () => {
+  it('places funds with the banker, accrues custody interest, and redeems through the HTTP boundary', async () => {
     const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
       method: 'POST',
       headers: {
@@ -222,8 +222,16 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
       agents: Array<{
         id: string;
         role: string;
+        availableBalance: string;
         depositPrincipal: string;
         depositAccruedInterest: string;
+      }>;
+      bankerCustodyPositions: Array<{
+        bankerAgentId: string;
+        ownerAgentId: string;
+        principal: string;
+        accruedInterest: string;
+        totalBalance: string;
       }>;
     };
 
@@ -238,35 +246,22 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
     expect(banker).toBeDefined();
     expect(trader).toBeDefined();
 
-    const bankerDepositResponse = await fetch(
-      `${baseUrl}/api/game/sessions/${createdSession.id}/deposit`,
+    const custodyPlacementResponse = await fetch(
+      `${baseUrl}/api/game/sessions/${createdSession.id}/custody/place`,
       {
         method: 'PATCH',
         headers: {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          agentId: banker!.id,
+          ownerAgentId: trader!.id,
+          bankerAgentId: banker!.id,
           amount: '40.0000',
         }),
       },
     );
-    const traderDepositResponse = await fetch(
-      `${baseUrl}/api/game/sessions/${createdSession.id}/deposit`,
-      {
-        method: 'PATCH',
-        headers: {
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          agentId: trader!.id,
-          amount: '30.0000',
-        }),
-      },
-    );
 
-    expect(bankerDepositResponse.status).toBe(200);
-    expect(traderDepositResponse.status).toBe(200);
+    expect(custodyPlacementResponse.status).toBe(200);
 
     const advanceResponse = await fetch(
       `${baseUrl}/api/game/sessions/${createdSession.id}/rounds/advance`,
@@ -280,8 +275,26 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
         }),
       },
     );
+
+    expect(advanceResponse.status).toBe(200);
+
+    const redeemResponse = await fetch(
+      `${baseUrl}/api/game/sessions/${createdSession.id}/custody/redeem`,
+      {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          ownerAgentId: trader!.id,
+          bankerAgentId: banker!.id,
+          amount: '5.0000',
+        }),
+      },
+    );
+
     const advancedSession =
-      (await advanceResponse.json()) as typeof createdSession;
+      (await redeemResponse.json()) as typeof createdSession;
     const advancedBanker = advancedSession.agents.find(
       (agent) => agent.id === banker!.id,
     );
@@ -289,13 +302,21 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
       (agent) => agent.id === trader!.id,
     );
 
-    expect(advanceResponse.status).toBe(200);
+    expect(redeemResponse.status).toBe(200);
     expect(advancedSession.status).toBe('active');
     expect(advancedSession.currentRound).toBe(1);
-    expect(advancedBanker?.depositPrincipal).toBe('40.0000');
-    expect(advancedBanker?.depositAccruedInterest).toBe('1.0000');
-    expect(advancedTrader?.depositPrincipal).toBe('30.0000');
-    expect(advancedTrader?.depositAccruedInterest).toBe('0.0000');
+    expect(advancedBanker?.availableBalance).toBe('136.0000');
+    expect(advancedBanker?.depositAccruedInterest).toBe('0.0000');
+    expect(advancedTrader?.availableBalance).toBe('65.0000');
+    expect(advancedSession.bankerCustodyPositions).toEqual([
+      {
+        bankerAgentId: banker!.id,
+        ownerAgentId: trader!.id,
+        principal: '36.0000',
+        accruedInterest: '0.0000',
+        totalBalance: '36.0000',
+      },
+    ]);
   });
 
   it('returns 400 for invalid request payloads', async () => {

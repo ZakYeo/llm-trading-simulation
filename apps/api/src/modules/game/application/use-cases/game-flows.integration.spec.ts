@@ -3,6 +3,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AdvanceGameRoundUseCase } from './advance-game-round.use-case.js';
 import { DepositToBankUseCase } from './deposit-to-bank.use-case.js';
 import { GetGameSessionUseCase } from './get-game-session.use-case.js';
+import { PlaceFundsWithBankerUseCase } from './place-funds-with-banker.use-case.js';
+import { RedeemFundsFromBankerUseCase } from './redeem-funds-from-banker.use-case.js';
 import { TransferFundsUseCase } from './transfer-funds.use-case.js';
 import { WithdrawFromBankUseCase } from './withdraw-from-bank.use-case.js';
 import { RandomIdGenerator } from '../../../shared/infrastructure/id/random-id-generator.js';
@@ -10,10 +12,10 @@ import {
   type PrismaClient,
   createPrismaClient,
 } from '../../../shared/infrastructure/prisma/prisma-client.js';
-import { LedgerService } from '../../domain/services/ledger.service.js';
 import type { PrismaClientLike } from '../../infrastructure/prisma/game-session-prisma.contracts.js';
 import { PrismaGameSessionRepository } from '../../infrastructure/prisma/prisma-game-session.repository.js';
 import { CreateGameSessionUseCase } from './create-game-session.use-case.js';
+import { LedgerService } from '../../domain/services/ledger.service.js';
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 
@@ -25,6 +27,8 @@ describe.runIf(Boolean(testDatabaseUrl))('Game money flows integration', () => {
   let depositToBankUseCase: DepositToBankUseCase;
   let withdrawFromBankUseCase: WithdrawFromBankUseCase;
   let transferFundsUseCase: TransferFundsUseCase;
+  let placeFundsWithBankerUseCase: PlaceFundsWithBankerUseCase;
+  let redeemFundsFromBankerUseCase: RedeemFundsFromBankerUseCase;
 
   beforeAll(async () => {
     prisma = createPrismaClient(testDatabaseUrl);
@@ -39,16 +43,21 @@ describe.runIf(Boolean(testDatabaseUrl))('Game money flows integration', () => {
       new RandomIdGenerator(),
     );
     getGameSessionUseCase = new GetGameSessionUseCase(repository);
-    advanceGameRoundUseCase = new AdvanceGameRoundUseCase(
-      repository,
-      ledgerService,
-    );
+    advanceGameRoundUseCase = new AdvanceGameRoundUseCase(repository);
     depositToBankUseCase = new DepositToBankUseCase(repository, ledgerService);
     withdrawFromBankUseCase = new WithdrawFromBankUseCase(
       repository,
       ledgerService,
     );
     transferFundsUseCase = new TransferFundsUseCase(repository, ledgerService);
+    placeFundsWithBankerUseCase = new PlaceFundsWithBankerUseCase(
+      repository,
+      ledgerService,
+    );
+    redeemFundsFromBankerUseCase = new RedeemFundsFromBankerUseCase(
+      repository,
+      ledgerService,
+    );
 
     await prisma.$connect();
   });
@@ -141,7 +150,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Game money flows integration', () => {
     expect(withdrawals[0]?.amount.toString()).toBe('5');
   });
 
-  it('persists round advancement with banker-only accrued interest against postgres', async () => {
+  it('persists banker custody placement, accrual, and redemption against postgres', async () => {
     const createdSession = await createGameSessionUseCase.execute({
       name: 'Round Flow Table',
       initialBalance: '100.0000',
@@ -164,20 +173,23 @@ describe.runIf(Boolean(testDatabaseUrl))('Game money flows integration', () => {
     expect(banker).toBeDefined();
     expect(trader).toBeDefined();
 
-    await depositToBankUseCase.execute({
+    await placeFundsWithBankerUseCase.execute({
       gameSessionId: createdSession.id,
-      agentId: banker!.id,
+      ownerAgentId: trader!.id,
+      bankerAgentId: banker!.id,
       amount: '40.0000',
-    });
-    await depositToBankUseCase.execute({
-      gameSessionId: createdSession.id,
-      agentId: trader!.id,
-      amount: '30.0000',
     });
 
     await advanceGameRoundUseCase.execute({
       gameSessionId: createdSession.id,
       interestRateBps: 250,
+    });
+
+    await redeemFundsFromBankerUseCase.execute({
+      gameSessionId: createdSession.id,
+      ownerAgentId: trader!.id,
+      bankerAgentId: banker!.id,
+      amount: '5.0000',
     });
 
     const persistedSession = await getGameSessionUseCase.execute({
@@ -192,17 +204,17 @@ describe.runIf(Boolean(testDatabaseUrl))('Game money flows integration', () => {
 
     expect(persistedSession.status).toBe('active');
     expect(persistedSession.currentRound).toBe(1);
-    expect(persistedBanker?.depositAccount.principal.toDecimal()).toBe(
-      '40.0000',
-    );
+    expect(persistedBanker?.balance.available.toDecimal()).toBe('136.0000');
     expect(persistedBanker?.depositAccount.accruedInterest.toDecimal()).toBe(
-      '1.0000',
-    );
-    expect(persistedTrader?.depositAccount.principal.toDecimal()).toBe(
-      '30.0000',
-    );
-    expect(persistedTrader?.depositAccount.accruedInterest.toDecimal()).toBe(
       '0.0000',
     );
+    expect(persistedTrader?.balance.available.toDecimal()).toBe('65.0000');
+    expect(persistedSession.bankerCustodyPositions).toHaveLength(1);
+    expect(
+      persistedSession.bankerCustodyPositions[0]?.principal.toDecimal(),
+    ).toBe('36.0000');
+    expect(
+      persistedSession.bankerCustodyPositions[0]?.accruedInterest.toDecimal(),
+    ).toBe('0.0000');
   });
 });

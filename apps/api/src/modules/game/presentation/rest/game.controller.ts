@@ -12,12 +12,16 @@ import { AdvanceGameRoundUseCase } from '../../application/use-cases/advance-gam
 import { CreateGameSessionUseCase } from '../../application/use-cases/create-game-session.use-case.js';
 import { DepositToBankUseCase } from '../../application/use-cases/deposit-to-bank.use-case.js';
 import { GetGameSessionUseCase } from '../../application/use-cases/get-game-session.use-case.js';
+import { PlaceFundsWithBankerUseCase } from '../../application/use-cases/place-funds-with-banker.use-case.js';
+import { RedeemFundsFromBankerUseCase } from '../../application/use-cases/redeem-funds-from-banker.use-case.js';
 import { TransferFundsUseCase } from '../../application/use-cases/transfer-funds.use-case.js';
 import { WithdrawFromBankUseCase } from '../../application/use-cases/withdraw-from-bank.use-case.js';
 import { GameSessionResponseMapper } from './mappers/game-session-response.mapper.js';
 import { advanceGameRoundRequestSchema } from './schemas/advance-game-round.request.js';
 import { createGameSessionRequestSchema } from './schemas/create-game-session.request.js';
 import { depositToBankRequestSchema } from './schemas/deposit-to-bank.request.js';
+import { placeFundsWithBankerRequestSchema } from './schemas/place-funds-with-banker.request.js';
+import { redeemFundsFromBankerRequestSchema } from './schemas/redeem-funds-from-banker.request.js';
 import { transferFundsRequestSchema } from './schemas/transfer-funds.request.js';
 import { withdrawFromBankRequestSchema } from './schemas/withdraw-from-bank.request.js';
 
@@ -36,6 +40,10 @@ export class GameController {
     private readonly withdrawFromBankUseCase: WithdrawFromBankUseCase,
     @Inject(TransferFundsUseCase)
     private readonly transferFundsUseCase: TransferFundsUseCase,
+    @Inject(PlaceFundsWithBankerUseCase)
+    private readonly placeFundsWithBankerUseCase: PlaceFundsWithBankerUseCase,
+    @Inject(RedeemFundsFromBankerUseCase)
+    private readonly redeemFundsFromBankerUseCase: RedeemFundsFromBankerUseCase,
   ) {}
 
   @Get('health')
@@ -115,6 +123,38 @@ export class GameController {
       gameSessionId,
       sourceAgentId: request.sourceAgentId,
       destinationAgentId: request.destinationAgentId,
+      amount: request.amount,
+    });
+
+    return GameSessionResponseMapper.toResponse(session);
+  }
+
+  @Patch('sessions/:gameSessionId/custody/place')
+  async placeFundsWithBanker(
+    @Param('gameSessionId') gameSessionId: string,
+    @Body() body: unknown,
+  ) {
+    const request = placeFundsWithBankerRequestSchema.parse(body);
+    const session = await this.placeFundsWithBankerUseCase.execute({
+      gameSessionId,
+      ownerAgentId: request.ownerAgentId,
+      bankerAgentId: request.bankerAgentId,
+      amount: request.amount,
+    });
+
+    return GameSessionResponseMapper.toResponse(session);
+  }
+
+  @Patch('sessions/:gameSessionId/custody/redeem')
+  async redeemFundsFromBanker(
+    @Param('gameSessionId') gameSessionId: string,
+    @Body() body: unknown,
+  ) {
+    const request = redeemFundsFromBankerRequestSchema.parse(body);
+    const session = await this.redeemFundsFromBankerUseCase.execute({
+      gameSessionId,
+      ownerAgentId: request.ownerAgentId,
+      bankerAgentId: request.bankerAgentId,
       amount: request.amount,
     });
 
