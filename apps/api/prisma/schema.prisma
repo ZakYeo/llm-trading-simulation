@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client"
-  output   = "../src/generated/prisma-client"
+  output   = "../src/generated/prisma-client-runtime"
 }
 
 datasource db {
@@ -52,6 +52,7 @@ model GameSession {
   transfers    Transfer[]
   deposits     Deposit[]
   withdrawals  Withdrawal[]
+  bankerCustodyPositions BankerCustodyPosition[]
 }
 
 model Agent {
@@ -71,6 +72,8 @@ model Agent {
   incomingTransfers Transfer[]     @relation("TransferDestinationAgent")
   deposits      Deposit[]
   withdrawals   Withdrawal[]
+  bankerCustodyPositionsAsBanker BankerCustodyPosition[] @relation("BankerCustodyBanker")
+  bankerCustodyPositionsAsOwner BankerCustodyPosition[] @relation("BankerCustodyOwner")
 }
 
 model AgentBalance {
@@ -160,4 +163,20 @@ model Withdrawal {
   createdAt     DateTime    @default(now())
   gameSession   GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
   agent         Agent       @relation(fields: [agentId], references: [id], onDelete: Cascade)
+}
+
+model BankerCustodyPosition {
+  id            String   @id @default(uuid())
+  gameSessionId String
+  bankerAgentId String
+  ownerAgentId  String
+  principal     Decimal  @db.Decimal(18, 4)
+  accrued       Decimal  @db.Decimal(18, 4) @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  gameSession   GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  bankerAgent   Agent @relation("BankerCustodyBanker", fields: [bankerAgentId], references: [id], onDelete: Cascade)
+  ownerAgent    Agent @relation("BankerCustodyOwner", fields: [ownerAgentId], references: [id], onDelete: Cascade)
+
+  @@unique([gameSessionId, bankerAgentId, ownerAgentId])
 }

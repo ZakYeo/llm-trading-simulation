@@ -61,6 +61,7 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
             depositAccount: true,
           },
         },
+        bankerCustodyPositions: true,
       },
     });
 
@@ -114,6 +115,20 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
       await tx.agent.upsert(
         GameSessionPrismaMapper.toAgentUpsertInput(session, agent),
       );
+    }
+
+    await tx.bankerCustodyPosition.deleteMany({
+      where: {
+        gameSessionId: session.id,
+      },
+    });
+    const bankerCustodyPositionData =
+      GameSessionPrismaMapper.toBankerCustodyPositionCreateManyInput(session);
+
+    if (bankerCustodyPositionData.length > 0) {
+      await tx.bankerCustodyPosition.createMany({
+        data: bankerCustodyPositionData,
+      });
     }
 
     if (session.currentRound > existing.currentRound) {

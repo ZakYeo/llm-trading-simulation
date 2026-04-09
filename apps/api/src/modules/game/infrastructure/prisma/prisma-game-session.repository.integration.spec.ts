@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import { BankerCustodyPosition } from '../../domain/entities/banker-custody-position.js';
 import { DepositAccount } from '../../../bank/domain/entities/deposit-account.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import {
@@ -65,6 +66,14 @@ describe.runIf(Boolean(testDatabaseUrl))(
             depositAccount: DepositAccount.open(),
           }),
         ],
+        bankerCustodyPositions: [
+          new BankerCustodyPosition({
+            bankerAgentId: 'agent-int-1',
+            ownerAgentId: 'agent-int-2',
+            principal: Money.fromDecimal('12.0000'),
+            accruedInterest: Money.fromDecimal('0.7500'),
+          }),
+        ],
       });
 
       await repository.save(session);
@@ -85,6 +94,13 @@ describe.runIf(Boolean(testDatabaseUrl))(
       expect(
         persisted?.agents[0]?.depositAccount.accruedInterest.toDecimal(),
       ).toBe('2.0000');
+      expect(persisted?.bankerCustodyPositions).toHaveLength(1);
+      expect(persisted?.bankerCustodyPositions[0]?.principal.toDecimal()).toBe(
+        '12.0000',
+      );
+      expect(
+        persisted?.bankerCustodyPositions[0]?.accruedInterest.toDecimal(),
+      ).toBe('0.7500');
     });
 
     it('preserves durable round history when a session advances and is saved again', async () => {

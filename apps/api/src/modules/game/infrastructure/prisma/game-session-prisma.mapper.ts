@@ -1,3 +1,4 @@
+import { BankerCustodyPosition } from '../../domain/entities/banker-custody-position.js';
 import { DepositAccount } from '../../../bank/domain/entities/deposit-account.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import { AccountBalance } from '../../domain/entities/account-balance.js';
@@ -21,6 +22,12 @@ export interface PersistedGameSessionRecord {
       principal: string | { toString(): string };
       accrued: string | { toString(): string };
     } | null;
+  }>;
+  bankerCustodyPositions?: Array<{
+    bankerAgentId: string;
+    ownerAgentId: string;
+    principal: string | { toString(): string };
+    accrued: string | { toString(): string };
   }>;
 }
 
@@ -73,6 +80,14 @@ export class GameSessionPrismaMapper {
         create: session.agents.map((agent) =>
           GameSessionPrismaMapper.toNestedAgentCreateInput(agent),
         ),
+      },
+      bankerCustodyPositions: {
+        create: session.bankerCustodyPositions.map((position) => ({
+          bankerAgentId: position.bankerAgentId,
+          ownerAgentId: position.ownerAgentId,
+          principal: position.principal.toDecimal(),
+          accrued: position.accruedInterest.toDecimal(),
+        })),
       },
     };
   }
@@ -165,6 +180,16 @@ export class GameSessionPrismaMapper {
     }));
   }
 
+  static toBankerCustodyPositionCreateManyInput(session: GameSession) {
+    return session.bankerCustodyPositions.map((position) => ({
+      gameSessionId: session.id,
+      bankerAgentId: position.bankerAgentId,
+      ownerAgentId: position.ownerAgentId,
+      principal: position.principal.toDecimal(),
+      accrued: position.accruedInterest.toDecimal(),
+    }));
+  }
+
   private static toNestedAgentCreateInput(agent: GameAgent) {
     return {
       id: agent.id,
@@ -209,6 +234,19 @@ export class GameSessionPrismaMapper {
           ),
         });
       }),
+      bankerCustodyPositions: (record.bankerCustodyPositions ?? []).map(
+        (position) =>
+          new BankerCustodyPosition({
+            bankerAgentId: position.bankerAgentId,
+            ownerAgentId: position.ownerAgentId,
+            principal: Money.fromDecimal(
+              decimalLikeToString(position.principal),
+            ),
+            accruedInterest: Money.fromDecimal(
+              decimalLikeToString(position.accrued),
+            ),
+          }),
+      ),
     });
   }
 }

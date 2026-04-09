@@ -34,6 +34,14 @@ describe('PrismaGameSessionRepository', () => {
           receivedArgs.push(args);
         },
       },
+      bankerCustodyPosition: {
+        async createMany(args) {
+          receivedArgs.push(args);
+        },
+        async deleteMany(args) {
+          receivedArgs.push(args);
+        },
+      },
       transfer: {
         async create() {},
       },
@@ -91,6 +99,9 @@ describe('PrismaGameSessionRepository', () => {
               },
             ],
           },
+          bankerCustodyPositions: {
+            create: [],
+          },
         },
       },
     ]);
@@ -123,6 +134,14 @@ describe('PrismaGameSessionRepository', () => {
       },
       gameRound: {
         async createMany(args) {
+          receivedArgs.push(args);
+        },
+      },
+      bankerCustodyPosition: {
+        async createMany(args) {
+          receivedArgs.push(args);
+        },
+        async deleteMany(args) {
           receivedArgs.push(args);
         },
       },
@@ -220,6 +239,11 @@ describe('PrismaGameSessionRepository', () => {
         },
       },
     });
+    expect(receivedArgs[3]).toEqual({
+      where: {
+        gameSessionId: 'game-1',
+      },
+    });
   });
 
   it('creates durable round records when currentRound advances', async () => {
@@ -249,6 +273,14 @@ describe('PrismaGameSessionRepository', () => {
       },
       gameRound: {
         async createMany(args) {
+          receivedArgs.push(args);
+        },
+      },
+      bankerCustodyPosition: {
+        async createMany(args) {
+          receivedArgs.push(args);
+        },
+        async deleteMany(args) {
           receivedArgs.push(args);
         },
       },
@@ -335,6 +367,10 @@ describe('PrismaGameSessionRepository', () => {
       gameRound: {
         async createMany() {},
       },
+      bankerCustodyPosition: {
+        async createMany() {},
+        async deleteMany() {},
+      },
       transfer: {
         async create() {},
       },
@@ -380,6 +416,14 @@ describe('PrismaGameSessionRepository', () => {
       },
       gameRound: {
         async createMany() {},
+      },
+      bankerCustodyPosition: {
+        async createMany(args) {
+          receivedArgs.push(args);
+        },
+        async deleteMany(args) {
+          receivedArgs.push(args);
+        },
       },
       transfer: {
         async create(args) {

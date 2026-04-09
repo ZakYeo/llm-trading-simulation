@@ -25,6 +25,7 @@ export interface PrismaGameSessionDelegate {
           depositAccount: true;
         };
       };
+      bankerCustodyPositions?: true;
     };
     select?: {
       id: true;
@@ -63,6 +64,19 @@ export interface PrismaTransferDelegate {
   create(args: { data: TransferHistoryRecord }): Promise<unknown>;
 }
 
+export interface PrismaBankerCustodyPositionDelegate {
+  deleteMany(args: {
+    where: {
+      gameSessionId: string;
+    };
+  }): Promise<unknown>;
+  createMany(args: {
+    data: ReturnType<
+      typeof GameSessionPrismaMapper.toBankerCustodyPositionCreateManyInput
+    >;
+  }): Promise<unknown>;
+}
+
 export interface PrismaDepositDelegate {
   create(args: { data: DepositHistoryRecord }): Promise<unknown>;
 }
@@ -78,5 +92,6 @@ export interface PrismaClientLike {
   transfer: PrismaTransferDelegate;
   deposit: PrismaDepositDelegate;
   withdrawal: PrismaWithdrawalDelegate;
+  bankerCustodyPosition: PrismaBankerCustodyPositionDelegate;
   $transaction<T>(callback: (tx: PrismaClientLike) => Promise<T>): Promise<T>;
 }

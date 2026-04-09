@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { BankerCustodyPosition } from '../../domain/entities/banker-custody-position.js';
 import { DepositAccount } from '../../../bank/domain/entities/deposit-account.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import { AccountBalance } from '../../domain/entities/account-balance.js';
@@ -30,6 +31,14 @@ describe('GameSessionPrismaMapper', () => {
           ),
         }),
       ],
+      bankerCustodyPositions: [
+        new BankerCustodyPosition({
+          bankerAgentId: 'agent-1',
+          ownerAgentId: 'agent-1',
+          principal: Money.fromDecimal('10.0000'),
+          accruedInterest: Money.fromDecimal('1.5000'),
+        }),
+      ],
     });
 
     expect(GameSessionPrismaMapper.toCreateInput(session)).toEqual({
@@ -58,6 +67,16 @@ describe('GameSessionPrismaMapper', () => {
           },
         ],
       },
+      bankerCustodyPositions: {
+        create: [
+          {
+            bankerAgentId: 'agent-1',
+            ownerAgentId: 'agent-1',
+            principal: '10.0000',
+            accrued: '1.5000',
+          },
+        ],
+      },
     });
   });
 
@@ -82,6 +101,14 @@ describe('GameSessionPrismaMapper', () => {
           },
         },
       ],
+      bankerCustodyPositions: [
+        {
+          bankerAgentId: 'agent-1',
+          ownerAgentId: 'agent-1',
+          principal: '7.0000',
+          accrued: '0.5000',
+        },
+      ],
     };
 
     const session = GameSessionPrismaMapper.toDomain(record);
@@ -96,6 +123,14 @@ describe('GameSessionPrismaMapper', () => {
     );
     expect(session.agents[0]?.depositAccount.accruedInterest.toDecimal()).toBe(
       '1.0000',
+    );
+    expect(session.bankerCustodyPositions[0]?.bankerAgentId).toBe('agent-1');
+    expect(session.bankerCustodyPositions[0]?.ownerAgentId).toBe('agent-1');
+    expect(session.bankerCustodyPositions[0]?.principal.toDecimal()).toBe(
+      '7.0000',
+    );
+    expect(session.bankerCustodyPositions[0]?.accruedInterest.toDecimal()).toBe(
+      '0.5000',
     );
   });
 });

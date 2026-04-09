@@ -3,7 +3,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import {
   Prisma,
   PrismaClient,
-} from '../../../../generated/prisma-client/client.js';
+} from '../../../../generated/prisma-client-runtime/client.js';
 
 export { Prisma, PrismaClient };
 
