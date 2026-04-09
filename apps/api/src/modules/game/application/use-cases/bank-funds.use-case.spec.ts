@@ -7,7 +7,10 @@ import { AccountBalance } from '../../domain/entities/account-balance.js';
 import { GameAgent } from '../../domain/entities/game-agent.js';
 import { GameSession } from '../../domain/entities/game-session.js';
 import { LedgerService } from '../../domain/services/ledger.service.js';
-import type { GameSessionRepositoryPort } from '../ports/game-session-repository.port.js';
+import type {
+  GameSessionHistoryRecord,
+  GameSessionRepositoryPort,
+} from '../ports/game-session-repository.port.js';
 import { DepositToBankUseCase } from './deposit-to-bank.use-case.js';
 import { WithdrawFromBankUseCase } from './withdraw-from-bank.use-case.js';
 
@@ -23,41 +26,21 @@ class InMemoryGameSessionRepository implements GameSessionRepositoryPort {
     amount: string;
   }> = [];
 
-  async save(session: GameSession): Promise<void> {
+  async save(
+    session: GameSession,
+    history: GameSessionHistoryRecord[] = [],
+  ): Promise<void> {
     this.saved.push(session);
     this.session = session;
-  }
+    for (const record of history) {
+      if (record.type === 'deposit') {
+        this.deposits.push(record);
+      }
 
-  async saveWithDeposit(
-    session: GameSession,
-    deposit: { gameSessionId: string; agentId: string; amount: string },
-  ): Promise<void> {
-    await this.save(session);
-    this.deposits.push(deposit);
-  }
-
-  async saveWithWithdrawal(
-    session: GameSession,
-    withdrawal: { gameSessionId: string; agentId: string; amount: string },
-  ): Promise<void> {
-    await this.save(session);
-    this.withdrawals.push(withdrawal);
-  }
-
-  async saveWithCustodyPlacement(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
-  }
-
-  async saveWithCustodyRedemption(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
-  }
-
-  async saveWithCustodyAccruals(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
-  }
-
-  async saveWithTransfer(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
+      if (record.type === 'withdrawal') {
+        this.withdrawals.push(record);
+      }
+    }
   }
 
   async findById(id: string): Promise<GameSession | null> {
@@ -103,6 +86,7 @@ describe('Bank funds use cases', () => {
     expect(repository.saved).toHaveLength(1);
     expect(repository.deposits).toEqual([
       {
+        type: 'deposit',
         gameSessionId: 'game-1',
         agentId: 'agent-1',
         amount: '30.0000',
@@ -152,6 +136,7 @@ describe('Bank funds use cases', () => {
     expect(repository.saved).toHaveLength(1);
     expect(repository.withdrawals).toEqual([
       {
+        type: 'withdrawal',
         gameSessionId: 'game-1',
         agentId: 'agent-1',
         amount: '15.0000',

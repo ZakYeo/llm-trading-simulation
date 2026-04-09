@@ -1,6 +1,7 @@
 import type { GameSession } from '../../domain/entities/game-session.js';
 
 export interface TransferHistoryRecord {
+  type: 'transfer';
   gameSessionId: string;
   sourceAgentId: string;
   destinationAgentId: string;
@@ -8,18 +9,21 @@ export interface TransferHistoryRecord {
 }
 
 export interface DepositHistoryRecord {
+  type: 'deposit';
   gameSessionId: string;
   agentId: string;
   amount: string;
 }
 
 export interface WithdrawalHistoryRecord {
+  type: 'withdrawal';
   gameSessionId: string;
   agentId: string;
   amount: string;
 }
 
 export interface CustodyPlacementHistoryRecord {
+  type: 'custody_placement';
   gameSessionId: string;
   roundNumber: number;
   bankerAgentId: string;
@@ -28,6 +32,7 @@ export interface CustodyPlacementHistoryRecord {
 }
 
 export interface CustodyRedemptionHistoryRecord {
+  type: 'custody_redemption';
   gameSessionId: string;
   roundNumber: number;
   bankerAgentId: string;
@@ -36,6 +41,7 @@ export interface CustodyRedemptionHistoryRecord {
 }
 
 export interface CustodyAccrualHistoryRecord {
+  type: 'custody_accrual';
   gameSessionId: string;
   roundNumber: number;
   bankerAgentId: string;
@@ -43,31 +49,18 @@ export interface CustodyAccrualHistoryRecord {
   amount: string;
 }
 
+export type GameSessionHistoryRecord =
+  | TransferHistoryRecord
+  | DepositHistoryRecord
+  | WithdrawalHistoryRecord
+  | CustodyPlacementHistoryRecord
+  | CustodyRedemptionHistoryRecord
+  | CustodyAccrualHistoryRecord;
+
 export interface GameSessionRepositoryPort {
-  save(session: GameSession): Promise<void>;
-  saveWithTransfer(
+  save(
     session: GameSession,
-    transfer: TransferHistoryRecord,
-  ): Promise<void>;
-  saveWithDeposit(
-    session: GameSession,
-    deposit: DepositHistoryRecord,
-  ): Promise<void>;
-  saveWithWithdrawal(
-    session: GameSession,
-    withdrawal: WithdrawalHistoryRecord,
-  ): Promise<void>;
-  saveWithCustodyPlacement(
-    session: GameSession,
-    placement: CustodyPlacementHistoryRecord,
-  ): Promise<void>;
-  saveWithCustodyRedemption(
-    session: GameSession,
-    redemption: CustodyRedemptionHistoryRecord,
-  ): Promise<void>;
-  saveWithCustodyAccruals(
-    session: GameSession,
-    accruals: CustodyAccrualHistoryRecord[],
+    history?: GameSessionHistoryRecord[],
   ): Promise<void>;
   findById(id: string): Promise<GameSession | null>;
 }

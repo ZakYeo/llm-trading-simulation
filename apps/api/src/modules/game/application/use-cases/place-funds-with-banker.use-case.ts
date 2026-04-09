@@ -104,13 +104,16 @@ export class PlaceFundsWithBankerUseCase {
           : [...session.bankerCustodyPositions, updatedPosition],
       );
 
-    await this.repository.saveWithCustodyPlacement(updatedSession, {
-      gameSessionId: updatedSession.id,
-      roundNumber: updatedSession.currentRound,
-      bankerAgentId: bankerAgent.id,
-      ownerAgentId: ownerAgent.id,
-      amount: input.amount,
-    });
+    await this.repository.save(updatedSession, [
+      {
+        type: 'custody_placement',
+        gameSessionId: updatedSession.id,
+        roundNumber: updatedSession.currentRound,
+        bankerAgentId: bankerAgent.id,
+        ownerAgentId: ownerAgent.id,
+        amount: input.amount,
+      },
+    ]);
 
     return updatedSession;
   }

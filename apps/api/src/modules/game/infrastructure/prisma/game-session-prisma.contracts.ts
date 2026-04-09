@@ -11,6 +11,13 @@ import type {
   WithdrawalHistoryRecord,
 } from '../../application/ports/game-session-repository.port.js';
 
+type TransferCreateData = Omit<TransferHistoryRecord, 'type'>;
+type DepositCreateData = Omit<DepositHistoryRecord, 'type'>;
+type WithdrawalCreateData = Omit<WithdrawalHistoryRecord, 'type'>;
+type CustodyPlacementCreateData = Omit<CustodyPlacementHistoryRecord, 'type'>;
+type CustodyRedemptionCreateData = Omit<CustodyRedemptionHistoryRecord, 'type'>;
+type CustodyAccrualCreateData = Omit<CustodyAccrualHistoryRecord, 'type'>;
+
 export interface PrismaGameSessionDelegate {
   create(args: {
     data: ReturnType<typeof GameSessionPrismaMapper.toCreateInput>;
@@ -64,7 +71,7 @@ export interface PrismaGameRoundDelegate {
 }
 
 export interface PrismaTransferDelegate {
-  create(args: { data: TransferHistoryRecord }): Promise<unknown>;
+  create(args: { data: TransferCreateData }): Promise<unknown>;
 }
 
 export interface PrismaBankerCustodyPositionDelegate {
@@ -81,23 +88,23 @@ export interface PrismaBankerCustodyPositionDelegate {
 }
 
 export interface PrismaDepositDelegate {
-  create(args: { data: DepositHistoryRecord }): Promise<unknown>;
+  create(args: { data: DepositCreateData }): Promise<unknown>;
 }
 
 export interface PrismaWithdrawalDelegate {
-  create(args: { data: WithdrawalHistoryRecord }): Promise<unknown>;
+  create(args: { data: WithdrawalCreateData }): Promise<unknown>;
 }
 
 export interface PrismaCustodyPlacementDelegate {
-  create(args: { data: CustodyPlacementHistoryRecord }): Promise<unknown>;
+  create(args: { data: CustodyPlacementCreateData }): Promise<unknown>;
 }
 
 export interface PrismaCustodyRedemptionDelegate {
-  create(args: { data: CustodyRedemptionHistoryRecord }): Promise<unknown>;
+  create(args: { data: CustodyRedemptionCreateData }): Promise<unknown>;
 }
 
 export interface PrismaCustodyAccrualDelegate {
-  createMany(args: { data: CustodyAccrualHistoryRecord[] }): Promise<unknown>;
+  createMany(args: { data: CustodyAccrualCreateData[] }): Promise<unknown>;
 }
 
 export interface PrismaClientLike {

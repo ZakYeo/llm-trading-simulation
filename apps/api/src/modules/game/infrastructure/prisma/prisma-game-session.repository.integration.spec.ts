@@ -162,22 +162,31 @@ describe.runIf(Boolean(testDatabaseUrl))(
       });
 
       await repository.save(session);
-      await repository.saveWithTransfer(session, {
-        gameSessionId: session.id,
-        sourceAgentId: 'agent-int-1',
-        destinationAgentId: 'agent-int-2',
-        amount: '40.0000',
-      });
-      await repository.saveWithDeposit(session, {
-        gameSessionId: session.id,
-        agentId: 'agent-int-2',
-        amount: '20.0000',
-      });
-      await repository.saveWithWithdrawal(session, {
-        gameSessionId: session.id,
-        agentId: 'agent-int-2',
-        amount: '5.0000',
-      });
+      await repository.save(session, [
+        {
+          type: 'transfer',
+          gameSessionId: session.id,
+          sourceAgentId: 'agent-int-1',
+          destinationAgentId: 'agent-int-2',
+          amount: '40.0000',
+        },
+      ]);
+      await repository.save(session, [
+        {
+          type: 'deposit',
+          gameSessionId: session.id,
+          agentId: 'agent-int-2',
+          amount: '20.0000',
+        },
+      ]);
+      await repository.save(session, [
+        {
+          type: 'withdrawal',
+          gameSessionId: session.id,
+          agentId: 'agent-int-2',
+          amount: '5.0000',
+        },
+      ]);
 
       const transfers = await prisma.transfer.findMany({
         where: { gameSessionId: session.id },

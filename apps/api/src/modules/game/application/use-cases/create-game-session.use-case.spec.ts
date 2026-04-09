@@ -5,38 +5,21 @@ import type { AgentRole } from '@llm-sim/shared-types';
 import type { IdGeneratorPort } from '../../../shared/application/ports/id-generator.port.js';
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import type { GameSession } from '../../domain/entities/game-session.js';
-import type { GameSessionRepositoryPort } from '../ports/game-session-repository.port.js';
+import type {
+  GameSessionHistoryRecord,
+  GameSessionRepositoryPort,
+} from '../ports/game-session-repository.port.js';
 import { CreateGameSessionUseCase } from './create-game-session.use-case.js';
 
 class InMemoryGameSessionRepository implements GameSessionRepositoryPort {
   saved: GameSession[] = [];
 
-  async save(session: GameSession): Promise<void> {
+  async save(
+    session: GameSession,
+    history: GameSessionHistoryRecord[] = [],
+  ): Promise<void> {
+    void history;
     this.saved.push(session);
-  }
-
-  async saveWithTransfer(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
-  }
-
-  async saveWithDeposit(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
-  }
-
-  async saveWithWithdrawal(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
-  }
-
-  async saveWithCustodyPlacement(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
-  }
-
-  async saveWithCustodyRedemption(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
-  }
-
-  async saveWithCustodyAccruals(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
   }
 
   async findById(id: string): Promise<GameSession | null> {

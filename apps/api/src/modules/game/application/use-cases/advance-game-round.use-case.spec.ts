@@ -7,7 +7,10 @@ import { AccountBalance } from '../../domain/entities/account-balance.js';
 import { BankerCustodyPosition } from '../../domain/entities/banker-custody-position.js';
 import { GameAgent } from '../../domain/entities/game-agent.js';
 import { GameSession } from '../../domain/entities/game-session.js';
-import type { GameSessionRepositoryPort } from '../ports/game-session-repository.port.js';
+import type {
+  GameSessionHistoryRecord,
+  GameSessionRepositoryPort,
+} from '../ports/game-session-repository.port.js';
 import { AdvanceGameRoundUseCase } from './advance-game-round.use-case.js';
 
 class InMemoryGameSessionRepository implements GameSessionRepositoryPort {
@@ -15,33 +18,13 @@ class InMemoryGameSessionRepository implements GameSessionRepositoryPort {
 
   saved: GameSession[] = [];
 
-  async save(session: GameSession): Promise<void> {
+  async save(
+    session: GameSession,
+    history: GameSessionHistoryRecord[] = [],
+  ): Promise<void> {
+    void history;
     this.saved.push(session);
     this.session = session;
-  }
-
-  async saveWithTransfer(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
-  }
-
-  async saveWithDeposit(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
-  }
-
-  async saveWithWithdrawal(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
-  }
-
-  async saveWithCustodyPlacement(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
-  }
-
-  async saveWithCustodyRedemption(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
-  }
-
-  async saveWithCustodyAccruals(session: GameSession): Promise<void> {
-    await this.save(session);
   }
 
   async findById(id: string): Promise<GameSession | null> {

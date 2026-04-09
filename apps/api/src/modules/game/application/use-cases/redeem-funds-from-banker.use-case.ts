@@ -97,13 +97,16 @@ export class RedeemFundsFromBankerUseCase {
         ),
       );
 
-    await this.repository.saveWithCustodyRedemption(updatedSession, {
-      gameSessionId: updatedSession.id,
-      roundNumber: updatedSession.currentRound,
-      bankerAgentId: bankerAgent.id,
-      ownerAgentId: ownerAgent.id,
-      amount: input.amount,
-    });
+    await this.repository.save(updatedSession, [
+      {
+        type: 'custody_redemption',
+        gameSessionId: updatedSession.id,
+        roundNumber: updatedSession.currentRound,
+        bankerAgentId: bankerAgent.id,
+        ownerAgentId: ownerAgent.id,
+        amount: input.amount,
+      },
+    ]);
 
     return updatedSession;
   }

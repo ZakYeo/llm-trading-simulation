@@ -47,11 +47,14 @@ export class WithdrawFromBankUseCase {
       ),
     );
 
-    await this.repository.saveWithWithdrawal(updatedSession, {
-      gameSessionId: updatedSession.id,
-      agentId: targetAgent.id,
-      amount: input.amount,
-    });
+    await this.repository.save(updatedSession, [
+      {
+        type: 'withdrawal',
+        gameSessionId: updatedSession.id,
+        agentId: targetAgent.id,
+        amount: input.amount,
+      },
+    ]);
 
     return updatedSession;
   }

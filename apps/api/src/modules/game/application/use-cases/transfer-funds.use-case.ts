@@ -68,12 +68,15 @@ export class TransferFundsUseCase {
       }),
     );
 
-    await this.repository.saveWithTransfer(updatedSession, {
-      gameSessionId: updatedSession.id,
-      sourceAgentId: sourceAgent.id,
-      destinationAgentId: destinationAgent.id,
-      amount: input.amount,
-    });
+    await this.repository.save(updatedSession, [
+      {
+        type: 'transfer',
+        gameSessionId: updatedSession.id,
+        sourceAgentId: sourceAgent.id,
+        destinationAgentId: destinationAgent.id,
+        amount: input.amount,
+      },
+    ]);
 
     return updatedSession;
   }

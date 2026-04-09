@@ -1,11 +1,6 @@
 import type {
-  CustodyAccrualHistoryRecord,
-  CustodyPlacementHistoryRecord,
-  CustodyRedemptionHistoryRecord,
-  DepositHistoryRecord,
+  GameSessionHistoryRecord,
   GameSessionRepositoryPort,
-  TransferHistoryRecord,
-  WithdrawalHistoryRecord,
 } from '../../application/ports/game-session-repository.port.js';
 import type { GameSession } from '../../domain/entities/game-session.js';
 import { GameSessionPrismaMapper } from './game-session-prisma.mapper.js';
@@ -14,76 +9,84 @@ import type { PrismaClientLike } from './game-session-prisma.contracts.js';
 export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
   constructor(private readonly prisma: PrismaClientLike) {}
 
-  async save(session: GameSession): Promise<void> {
-    await this.persistSession(this.prisma, session);
-  }
-
-  async saveWithTransfer(
+  async save(
     session: GameSession,
-    transfer: TransferHistoryRecord,
+    history: GameSessionHistoryRecord[] = [],
   ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       await this.persistSession(tx, session);
-      await tx.transfer.create({
-        data: transfer,
-      });
-    });
-  }
 
-  async saveWithDeposit(
-    session: GameSession,
-    deposit: DepositHistoryRecord,
-  ): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      await this.persistSession(tx, session);
-      await tx.deposit.create({
-        data: deposit,
-      });
-    });
-  }
+      const accruals: Array<{
+        gameSessionId: string;
+        roundNumber: number;
+        bankerAgentId: string;
+        ownerAgentId: string;
+        amount: string;
+      }> = [];
 
-  async saveWithWithdrawal(
-    session: GameSession,
-    withdrawal: WithdrawalHistoryRecord,
-  ): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      await this.persistSession(tx, session);
-      await tx.withdrawal.create({
-        data: withdrawal,
-      });
-    });
-  }
-
-  async saveWithCustodyPlacement(
-    session: GameSession,
-    placement: CustodyPlacementHistoryRecord,
-  ): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      await this.persistSession(tx, session);
-      await tx.custodyPlacement.create({
-        data: placement,
-      });
-    });
-  }
-
-  async saveWithCustodyRedemption(
-    session: GameSession,
-    redemption: CustodyRedemptionHistoryRecord,
-  ): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      await this.persistSession(tx, session);
-      await tx.custodyRedemption.create({
-        data: redemption,
-      });
-    });
-  }
-
-  async saveWithCustodyAccruals(
-    session: GameSession,
-    accruals: CustodyAccrualHistoryRecord[],
-  ): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      await this.persistSession(tx, session);
+      for (const record of history) {
+        switch (record.type) {
+          case 'transfer':
+            await tx.transfer.create({
+              data: {
+                gameSessionId: record.gameSessionId,
+                sourceAgentId: record.sourceAgentId,
+                destinationAgentId: record.destinationAgentId,
+                amount: record.amount,
+              },
+            });
+            break;
+          case 'deposit':
+            await tx.deposit.create({
+              data: {
+                gameSessionId: record.gameSessionId,
+                agentId: record.agentId,
+                amount: record.amount,
+              },
+            });
+            break;
+          case 'withdrawal':
+            await tx.withdrawal.create({
+              data: {
+                gameSessionId: record.gameSessionId,
+                agentId: record.agentId,
+                amount: record.amount,
+              },
+            });
+            break;
+          case 'custody_placement':
+            await tx.custodyPlacement.create({
+              data: {
+                gameSessionId: record.gameSessionId,
+                roundNumber: record.roundNumber,
+                bankerAgentId: record.bankerAgentId,
+                ownerAgentId: record.ownerAgentId,
+                amount: record.amount,
+              },
+            });
+            break;
+          case 'custody_redemption':
+            await tx.custodyRedemption.create({
+              data: {
+                gameSessionId: record.gameSessionId,
+                roundNumber: record.roundNumber,
+                bankerAgentId: record.bankerAgentId,
+                ownerAgentId: record.ownerAgentId,
+                amount: record.amount,
+              },
+            });
+            break;
+          case 'custody_accrual':
+            accruals.push({
+              gameSessionId: record.gameSessionId,
+              roundNumber: record.roundNumber,
+              bankerAgentId: record.bankerAgentId,
+              ownerAgentId: record.ownerAgentId,
+              amount: record.amount,
+            });
+            break;
+        }
+      }
 
       if (accruals.length > 0) {
         await tx.custodyAccrual.createMany({

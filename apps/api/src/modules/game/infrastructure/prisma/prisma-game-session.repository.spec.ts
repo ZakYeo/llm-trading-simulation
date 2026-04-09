@@ -483,7 +483,7 @@ describe('PrismaGameSessionRepository', () => {
       },
     });
 
-    await repository.saveWithTransfer(
+    await repository.save(
       new GameSession({
         id: 'game-1',
         name: 'Treasury Table',
@@ -506,12 +506,15 @@ describe('PrismaGameSessionRepository', () => {
           }),
         ],
       }),
-      {
-        gameSessionId: 'game-1',
-        sourceAgentId: 'agent-1',
-        destinationAgentId: 'agent-2',
-        amount: '40.0000',
-      },
+      [
+        {
+          type: 'transfer',
+          gameSessionId: 'game-1',
+          sourceAgentId: 'agent-1',
+          destinationAgentId: 'agent-2',
+          amount: '40.0000',
+        },
+      ],
     );
 
     expect(receivedArgs).toContainEqual({

@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 import type { AgentAction, AgentTurnContext } from '@llm-sim/mcp-contracts';
 
 import { DepositAccount } from '../../../bank/domain/entities/deposit-account.js';
-import type { GameSessionRepositoryPort } from '../../../game/application/ports/game-session-repository.port.js';
+import type {
+  GameSessionHistoryRecord,
+  GameSessionRepositoryPort,
+} from '../../../game/application/ports/game-session-repository.port.js';
 import { AccountBalance } from '../../../game/domain/entities/account-balance.js';
 import { BankerCustodyPosition } from '../../../game/domain/entities/banker-custody-position.js';
 import { GameAgent } from '../../../game/domain/entities/game-agent.js';
@@ -70,13 +73,12 @@ class RecordingRedeemFundsFromBankerUseCase {
 class InMemoryGameSessionRepository implements GameSessionRepositoryPort {
   constructor(private readonly session: GameSession | null) {}
 
-  async save(): Promise<void> {}
-  async saveWithTransfer(): Promise<void> {}
-  async saveWithDeposit(): Promise<void> {}
-  async saveWithWithdrawal(): Promise<void> {}
-  async saveWithCustodyPlacement(): Promise<void> {}
-  async saveWithCustodyRedemption(): Promise<void> {}
-  async saveWithCustodyAccruals(): Promise<void> {}
+  async save(
+    _session: GameSession,
+    history: GameSessionHistoryRecord[] = [],
+  ): Promise<void> {
+    void history;
+  }
 
   async findById(id: string): Promise<GameSession | null> {
     if (this.session?.id === id) {

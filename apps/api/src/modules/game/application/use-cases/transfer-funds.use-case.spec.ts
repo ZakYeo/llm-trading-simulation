@@ -7,7 +7,10 @@ import { AccountBalance } from '../../domain/entities/account-balance.js';
 import { GameAgent } from '../../domain/entities/game-agent.js';
 import { GameSession } from '../../domain/entities/game-session.js';
 import { LedgerService } from '../../domain/services/ledger.service.js';
-import type { GameSessionRepositoryPort } from '../ports/game-session-repository.port.js';
+import type {
+  GameSessionHistoryRecord,
+  GameSessionRepositoryPort,
+} from '../ports/game-session-repository.port.js';
 import { TransferFundsUseCase } from './transfer-funds.use-case.js';
 
 class InMemoryGameSessionRepository implements GameSessionRepositoryPort {
@@ -21,42 +24,17 @@ class InMemoryGameSessionRepository implements GameSessionRepositoryPort {
     amount: string;
   }> = [];
 
-  async save(session: GameSession): Promise<void> {
+  async save(
+    session: GameSession,
+    history: GameSessionHistoryRecord[] = [],
+  ): Promise<void> {
     this.saved.push(session);
     this.session = session;
-  }
-
-  async saveWithTransfer(
-    session: GameSession,
-    transfer: {
-      gameSessionId: string;
-      sourceAgentId: string;
-      destinationAgentId: string;
-      amount: string;
-    },
-  ): Promise<void> {
-    await this.save(session);
-    this.transfers.push(transfer);
-  }
-
-  async saveWithDeposit(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
-  }
-
-  async saveWithWithdrawal(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
-  }
-
-  async saveWithCustodyPlacement(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
-  }
-
-  async saveWithCustodyRedemption(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
-  }
-
-  async saveWithCustodyAccruals(): Promise<void> {
-    throw new Error('Not implemented in this test repository.');
+    for (const record of history) {
+      if (record.type === 'transfer') {
+        this.transfers.push(record);
+      }
+    }
   }
 
   async findById(id: string): Promise<GameSession | null> {
@@ -108,6 +86,7 @@ describe('TransferFundsUseCase', () => {
     expect(repository.saved).toHaveLength(1);
     expect(repository.transfers).toEqual([
       {
+        type: 'transfer',
         gameSessionId: 'game-1',
         sourceAgentId: 'agent-1',
         destinationAgentId: 'agent-2',

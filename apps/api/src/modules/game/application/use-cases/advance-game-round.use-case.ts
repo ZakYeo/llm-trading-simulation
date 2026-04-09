@@ -91,14 +91,13 @@ export class AdvanceGameRoundUseCase {
       .withBankerCustodyPositions(accruedPositions)
       .advanceRound();
 
-    if (accrualHistory.length > 0) {
-      await this.repository.saveWithCustodyAccruals(
-        updatedSession,
-        accrualHistory,
-      );
-    } else {
-      await this.repository.save(updatedSession);
-    }
+    await this.repository.save(
+      updatedSession,
+      accrualHistory.map((record) => ({
+        type: 'custody_accrual' as const,
+        ...record,
+      })),
+    );
 
     return updatedSession;
   }
