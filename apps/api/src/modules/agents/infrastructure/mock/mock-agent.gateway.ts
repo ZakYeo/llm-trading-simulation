@@ -41,7 +41,6 @@ export class MockAgentGateway implements AgentGatewayPort {
     }
 
     if (
-      scenario === 'custody_cycle' &&
       context.self.role === 'trader' &&
       banker &&
       context.turnNumber === 2 &&
@@ -56,7 +55,6 @@ export class MockAgentGateway implements AgentGatewayPort {
     }
 
     if (
-      scenario === 'custody_cycle' &&
       context.self.role === 'trader' &&
       banker &&
       context.turnNumber >= 3 &&
@@ -74,6 +72,7 @@ export class MockAgentGateway implements AgentGatewayPort {
     }
 
     if (
+      (scenario === 'reject_proposal' || scenario === 'counter_proposal') &&
       context.self.role === 'trader' &&
       banker &&
       context.turnNumber === 2 &&

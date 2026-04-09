@@ -199,13 +199,14 @@ describe('RunAgentCommunicationTurnUseCase', () => {
         {
           type: 'send_private_message',
           recipientAgentId: 'agent-2',
-          content: 'I can offer funding if you show momentum.',
+          content:
+            'I can safeguard funds and report treasury balances clearly.',
         },
         {
-          type: 'propose_direct_transfer',
+          type: 'place_funds_with_banker',
           recipientAgentId: 'agent-1',
           amount: '15.0000',
-          rationale: 'I can turn this into a higher-return trade quickly.',
+          reasoning: 'I want my idle capital to earn custody interest.',
         },
       ]),
       eventStreamService as never,
@@ -231,9 +232,8 @@ describe('RunAgentCommunicationTurnUseCase', () => {
     expect(result.actionRecords[1]).toMatchObject({
       agentId: 'agent-2',
       recipientAgentId: 'agent-1',
-      actionType: 'propose_direct_transfer',
+      actionType: 'place_funds_with_banker',
       amount: '15.0000',
-      content: 'I can turn this into a higher-return trade quickly.',
       turnNumber: 2,
     });
     expect(result.messages[0]).toMatchObject({
@@ -262,7 +262,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
         turnNumber: 2,
         agentId: 'agent-2',
         agentName: 'Trader Bot',
-        actionType: 'propose_direct_transfer',
+        actionType: 'place_funds_with_banker',
         messageId: undefined,
         messageVisibility: undefined,
         occurredAt: expect.any(String),
@@ -436,7 +436,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
     ]);
     expect(gateway.contexts[0].actionSemantics).toMatchObject({
       proposeDirectTransfer: expect.stringContaining(
-        'concrete executable transfer proposal',
+        'recipient would pay the proposer',
       ),
       acceptDirectTransferProposal: expect.stringContaining('change balances'),
       finalizeTurn: expect.stringContaining('does not move money'),
@@ -631,5 +631,36 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       messageVisibility: undefined,
       occurredAt: expect.any(String),
     });
+  });
+
+  it('rejects banker-to-trader funding requests through direct transfer proposals', async () => {
+    const useCase = new RunAgentCommunicationTurnUseCase(
+      new InMemoryGameSessionRepository(createSession()),
+      new InMemoryAgentMessageRepository(),
+      new InMemoryAgentActionRepository(),
+      new ScriptedAgentGateway([
+        {
+          type: 'finalize_turn',
+        },
+        {
+          type: 'propose_direct_transfer',
+          recipientAgentId: 'agent-1',
+          amount: '12.5000',
+          rationale: 'Please fund my trading book.',
+        },
+      ]),
+      new RecordingAgentSessionEventStreamService() as never,
+      new RecordingPlaceFundsWithBankerUseCase() as never,
+      new RecordingRedeemFundsFromBankerUseCase() as never,
+    );
+
+    await expect(
+      useCase.execute({
+        gameSessionId: 'game-1',
+        turnNumber: 2,
+      }),
+    ).rejects.toThrow(
+      'Banker-to-trader funding proposals are not supported yet.',
+    );
   });
 });

@@ -302,6 +302,21 @@ function buildTreasuryContext(
   };
 }
 
+function wouldSettleAsBankerFundingTrader(
+  session: NonNullable<
+    Awaited<ReturnType<GameSessionRepositoryPort['findById']>>
+  >,
+  proposerAgentId: string,
+  recipientAgentId: string,
+): boolean {
+  const proposer = session.agents.find((agent) => agent.id === proposerAgentId);
+  const recipient = session.agents.find(
+    (agent) => agent.id === recipientAgentId,
+  );
+
+  return proposer?.role === 'trader' && recipient?.role === 'banker';
+}
+
 export class RunAgentCommunicationTurnUseCase {
   constructor(
     private readonly gameSessionRepository: GameSessionRepositoryPort,
@@ -423,13 +438,13 @@ export class RunAgentCommunicationTurnUseCase {
           sendPrivateMessage:
             'Opens or continues a bilateral negotiation. Does not move money directly.',
           proposeDirectTransfer:
-            'Creates a concrete executable transfer proposal with an amount for the counterparty to accept, reject, or counter.',
+            'Creates a concrete executable payment request where the recipient would pay the proposer if accepted.',
           counterDirectTransferProposal:
-            'Replaces a pending transfer proposal with a new executable amount back to the original proposer.',
+            'Replaces a pending payment request with a new executable amount back to the original proposer.',
           acceptDirectTransferProposal:
-            'Accepts a pending transfer proposal so it can execute and change balances.',
+            'Accepts a pending payment request so it can execute and change balances.',
           rejectDirectTransferProposal:
-            'Closes a pending transfer proposal without changing balances.',
+            'Closes a pending payment request without changing balances.',
           placeFundsWithBanker:
             'Moves your own available balance into banker custody with the targeted banker agent. Use recipientAgentId as the banker id.',
           redeemFundsFromBanker:
@@ -471,6 +486,21 @@ export class RunAgentCommunicationTurnUseCase {
         action.type === 'redeem_funds_from_banker'
       ) {
         Money.fromDecimal(action.amount);
+      }
+
+      if (
+        (action.type === 'propose_direct_transfer' ||
+          action.type === 'counter_direct_transfer_proposal') &&
+        recipientAgentId &&
+        wouldSettleAsBankerFundingTrader(
+          currentSession,
+          agent.id,
+          recipientAgentId,
+        )
+      ) {
+        throw new DomainInvariantError(
+          'Banker-to-trader funding proposals are not supported yet. Use custody actions for banker/trader treasury flows.',
+        );
       }
 
       if (
