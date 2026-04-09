@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { startTransition, useState } from 'react';
 
 import { ReplayTimeline } from './components/replay-timeline';
+import { SessionControls } from './components/session-controls';
 import { SessionSnapshot } from './components/session-snapshot';
 import {
   createGameSession,
@@ -11,9 +12,7 @@ import {
 } from './lib/api';
 import { useSessionEvents } from './hooks/use-session-events';
 
-const agentRoleOptions = ['banker', 'trader'] as const;
-
-type AgentRole = (typeof agentRoleOptions)[number];
+type AgentRole = 'banker' | 'trader';
 
 interface AgentDraft {
   id: string;
@@ -91,9 +90,6 @@ export function App() {
 
   const selectedSession = sessionQuery.data;
   const replay = replayQuery.data;
-  const normalizedTurnCount = Number.isNaN(turnCount)
-    ? 1
-    : Math.min(10, Math.max(1, turnCount));
   const canRemoveAgent = agentDrafts.length > 1;
 
   function updateAgentDraft(
@@ -145,175 +141,28 @@ export function App() {
       </section>
 
       <section className="workspace-grid">
-        <section className="panel command-panel">
-          <div className="panel-header">
-            <div>
-              <p className="panel-kicker">Control</p>
-              <h2>Session Controls</h2>
-            </div>
-            <span className="status-chip">
-              {selectedSessionId ? 'Connected' : 'No session'}
-            </span>
-          </div>
-
-          <label className="field">
-            <span>Session name</span>
-            <input
-              value={sessionName}
-              onChange={(event) => setSessionName(event.target.value)}
-              placeholder="Morning liquidity drill"
-            />
-          </label>
-
-          <label className="field">
-            <span>Initial balance</span>
-            <input
-              value={initialBalance}
-              onChange={(event) => setInitialBalance(event.target.value)}
-              placeholder="100.0000"
-            />
-          </label>
-
-          <div className="agent-stack">
-            <div className="agent-stack-header">
-              <span>Roster</span>
-              <button
-                className="agent-stack-button"
-                type="button"
-                onClick={addAgentDraft}
-              >
-                Add bot
-              </button>
-            </div>
-            {agentDrafts.map((agent, index) => (
-              <div key={agent.id} className="agent-editor-row">
-                <label className="field compact">
-                  <span>Bot {index + 1} name</span>
-                  <input
-                    value={agent.name}
-                    onChange={(event) =>
-                      updateAgentDraft(agent.id, (draft) => ({
-                        ...draft,
-                        name: event.target.value,
-                      }))
-                    }
-                    placeholder="Agent name"
-                  />
-                </label>
-                <label className="field compact">
-                  <span>Role</span>
-                  <select
-                    value={agent.role}
-                    onChange={(event) =>
-                      updateAgentDraft(agent.id, (draft) => ({
-                        ...draft,
-                        role: event.target.value as AgentRole,
-                      }))
-                    }
-                  >
-                    {agentRoleOptions.map((role) => (
-                      <option key={role} value={role}>
-                        {role}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  className="agent-remove-button"
-                  type="button"
-                  disabled={!canRemoveAgent}
-                  onClick={() => removeAgentDraft(agent.id)}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <button
-            className="action-button primary"
-            type="button"
-            disabled={
-              createSessionMutation.isPending || agentDrafts.length === 0
-            }
-            onClick={() => createSessionMutation.mutate()}
-          >
-            {createSessionMutation.isPending
-              ? 'Creating session...'
-              : 'Create session'}
-          </button>
-
-          <label className="field">
-            <span>Active session id</span>
-            <input
-              value={selectedSessionId}
-              onChange={(event) => setSelectedSessionId(event.target.value)}
-              placeholder="Paste a session id"
-            />
-          </label>
-
-          <label className="field">
-            <span>Turn count</span>
-            <input
-              type="number"
-              min={1}
-              max={10}
-              value={normalizedTurnCount}
-              onChange={(event) =>
-                setTurnCount(Number.parseInt(event.target.value || '1', 10))
-              }
-            />
-          </label>
-
-          <div className="turn-planner">
-            <div className="turn-planner-copy">
-              <strong>Run planner</strong>
-              <p>
-                Queue the next {normalizedTurnCount} turn
-                {normalizedTurnCount === 1 ? '' : 's'} for the active session.
-              </p>
-            </div>
-            <div className="turn-preset-row">
-              {[1, 2, 4, 8].map((preset) => (
-                <button
-                  key={preset}
-                  className={
-                    preset === normalizedTurnCount
-                      ? 'turn-preset active'
-                      : 'turn-preset'
-                  }
-                  type="button"
-                  onClick={() => setTurnCount(preset)}
-                >
-                  {preset} turn{preset === 1 ? '' : 's'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <button
-            className="action-button"
-            type="button"
-            disabled={!selectedSessionId || orchestrateMutation.isPending}
-            onClick={() => orchestrateMutation.mutate()}
-          >
-            {orchestrateMutation.isPending
-              ? `Running ${normalizedTurnCount} turn${normalizedTurnCount === 1 ? '' : 's'}...`
-              : `Run next ${normalizedTurnCount} turn${normalizedTurnCount === 1 ? '' : 's'}`}
-          </button>
-
-          <div className="feedback-block">
-            {latestRunSummary ? <p>{latestRunSummary}</p> : null}
-            {createSessionMutation.error ? (
-              <p className="error-copy">
-                {createSessionMutation.error.message}
-              </p>
-            ) : null}
-            {orchestrateMutation.error ? (
-              <p className="error-copy">{orchestrateMutation.error.message}</p>
-            ) : null}
-          </div>
-        </section>
+        <SessionControls
+          selectedSessionId={selectedSessionId}
+          sessionName={sessionName}
+          initialBalance={initialBalance}
+          turnCount={turnCount}
+          latestRunSummary={latestRunSummary}
+          agentDrafts={agentDrafts}
+          canRemoveAgent={canRemoveAgent}
+          isCreating={createSessionMutation.isPending}
+          isRunning={orchestrateMutation.isPending}
+          createError={createSessionMutation.error?.message}
+          runError={orchestrateMutation.error?.message}
+          onSessionNameChange={setSessionName}
+          onInitialBalanceChange={setInitialBalance}
+          onSelectedSessionIdChange={setSelectedSessionId}
+          onTurnCountChange={setTurnCount}
+          onAddAgentDraft={addAgentDraft}
+          onRemoveAgentDraft={removeAgentDraft}
+          onUpdateAgentDraft={updateAgentDraft}
+          onCreateSession={() => createSessionMutation.mutate()}
+          onRunTurns={() => orchestrateMutation.mutate()}
+        />
 
         <SessionSnapshot
           selectedSessionId={selectedSessionId}
