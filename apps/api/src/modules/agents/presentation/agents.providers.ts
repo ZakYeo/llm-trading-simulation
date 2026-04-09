@@ -7,6 +7,7 @@ import { TransferFundsUseCase } from '../../game/application/use-cases/transfer-
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service.js';
 import type { GameSessionRepositoryPort } from '../../game/application/ports/game-session-repository.port.js';
 import { AgentSessionEventStreamService } from '../application/services/agent-session-event-stream.service.js';
+import { AgentTurnContextFactory } from '../application/services/agent-turn-context.factory.js';
 import { OrchestrateAgentRoundUseCase } from '../application/use-cases/orchestrate-agent-round.use-case.js';
 import { MockAgentGateway } from '../infrastructure/mock/mock-agent.gateway.js';
 import { OpenAiAgentGateway } from '../infrastructure/openai/openai-agent.gateway.js';
@@ -53,6 +54,10 @@ export function createAgentsProviders() {
       inject: [PrismaService],
     },
     {
+      provide: AgentTurnContextFactory,
+      useFactory: () => new AgentTurnContextFactory(),
+    },
+    {
       provide: RunAgentCommunicationTurnUseCase,
       useFactory: (
         gameSessionRepository: GameSessionRepositoryPort,
@@ -62,6 +67,7 @@ export function createAgentsProviders() {
         agentSessionEventStreamService: AgentSessionEventStreamService,
         placeFundsWithBankerUseCase: PlaceFundsWithBankerUseCase,
         redeemFundsFromBankerUseCase: RedeemFundsFromBankerUseCase,
+        agentTurnContextFactory: AgentTurnContextFactory,
       ) =>
         new RunAgentCommunicationTurnUseCase(
           gameSessionRepository,
@@ -71,6 +77,7 @@ export function createAgentsProviders() {
           agentSessionEventStreamService,
           placeFundsWithBankerUseCase,
           redeemFundsFromBankerUseCase,
+          agentTurnContextFactory,
         ),
       inject: [
         GAME_SESSION_REPOSITORY,
@@ -80,6 +87,7 @@ export function createAgentsProviders() {
         AgentSessionEventStreamService,
         PlaceFundsWithBankerUseCase,
         RedeemFundsFromBankerUseCase,
+        AgentTurnContextFactory,
       ],
     },
     {
