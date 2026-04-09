@@ -217,6 +217,127 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
     });
   });
 
+  it('returns explicit custody placement, accrual, and redemption events', async () => {
+    const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'Custody Replay Table',
+        initialBalance: '100.0000',
+        agents: [
+          { name: 'Banker Bot', role: 'banker' },
+          { name: 'Trader Bot', role: 'trader' },
+        ],
+      }),
+    });
+    const createdSession = (await createResponse.json()) as {
+      id: string;
+      agents: Array<{ id: string; role: string }>;
+    };
+    const banker = createdSession.agents.find(
+      (agent) => agent.role === 'banker',
+    );
+    const trader = createdSession.agents.find(
+      (agent) => agent.role === 'trader',
+    );
+
+    expect(createResponse.status).toBe(201);
+    expect(banker).toBeDefined();
+    expect(trader).toBeDefined();
+
+    const placeResponse = await fetch(
+      `${baseUrl}/api/game/sessions/${createdSession.id}/custody/place`,
+      {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          ownerAgentId: trader!.id,
+          bankerAgentId: banker!.id,
+          amount: '20.0000',
+        }),
+      },
+    );
+    expect(placeResponse.status).toBe(200);
+
+    const advanceResponse = await fetch(
+      `${baseUrl}/api/game/sessions/${createdSession.id}/rounds/advance`,
+      {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          interestRateBps: 250,
+        }),
+      },
+    );
+    expect(advanceResponse.status).toBe(200);
+
+    const redeemResponse = await fetch(
+      `${baseUrl}/api/game/sessions/${createdSession.id}/custody/redeem`,
+      {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          ownerAgentId: trader!.id,
+          bankerAgentId: banker!.id,
+          amount: '5.0000',
+        }),
+      },
+    );
+    expect(redeemResponse.status).toBe(200);
+
+    const replayResponse = await fetch(
+      `${baseUrl}/api/replay/sessions/${createdSession.id}`,
+    );
+    const replay = (await replayResponse.json()) as {
+      events: Array<{
+        type: string;
+        amount?: string;
+        ownerAgentId?: string;
+        bankerAgentId?: string;
+      }>;
+    };
+
+    expect(replayResponse.status).toBe(200);
+    expect(
+      replay.events.filter((event) => event.type === 'custody_placement'),
+    ).toMatchObject([
+      {
+        type: 'custody_placement',
+        amount: '20',
+        ownerAgentId: trader!.id,
+        bankerAgentId: banker!.id,
+      },
+    ]);
+    expect(
+      replay.events.filter((event) => event.type === 'custody_accrual'),
+    ).toMatchObject([
+      {
+        type: 'custody_accrual',
+        amount: '0.5',
+        ownerAgentId: trader!.id,
+        bankerAgentId: banker!.id,
+      },
+    ]);
+    expect(
+      replay.events.filter((event) => event.type === 'custody_redemption'),
+    ).toMatchObject([
+      {
+        type: 'custody_redemption',
+        amount: '5',
+        ownerAgentId: trader!.id,
+        bankerAgentId: banker!.id,
+      },
+    ]);
+  });
+
   it('includes rejected proposal actions without an extra transfer event', async () => {
     process.env.AGENT_MOCK_SCENARIO = 'reject_proposal';
 

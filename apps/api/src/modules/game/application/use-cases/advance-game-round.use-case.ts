@@ -24,6 +24,31 @@ export class AdvanceGameRoundUseCase {
     const accruedPositions = session.bankerCustodyPositions.map((position) =>
       position.accrue(input.interestRateBps),
     );
+    const accrualHistory = session.bankerCustodyPositions.flatMap(
+      (position, index) => {
+        const accruedPosition = accruedPositions[index];
+
+        if (!accruedPosition) {
+          return [];
+        }
+
+        const interest = accruedPosition.accruedInterest.subtract(
+          position.accruedInterest,
+        );
+
+        return interest.isZero()
+          ? []
+          : [
+              {
+                gameSessionId: session.id,
+                roundNumber: session.currentRound + 1,
+                bankerAgentId: position.bankerAgentId,
+                ownerAgentId: position.ownerAgentId,
+                amount: interest.toDecimal(),
+              },
+            ];
+      },
+    );
 
     const interestByBanker = new Map<string, Money>();
 
@@ -66,7 +91,14 @@ export class AdvanceGameRoundUseCase {
       .withBankerCustodyPositions(accruedPositions)
       .advanceRound();
 
-    await this.repository.save(updatedSession);
+    if (accrualHistory.length > 0) {
+      await this.repository.saveWithCustodyAccruals(
+        updatedSession,
+        accrualHistory,
+      );
+    } else {
+      await this.repository.save(updatedSession);
+    }
 
     return updatedSession;
   }

@@ -1,4 +1,7 @@
 import type {
+  CustodyAccrualHistoryRecord,
+  CustodyPlacementHistoryRecord,
+  CustodyRedemptionHistoryRecord,
   DepositHistoryRecord,
   GameSessionRepositoryPort,
   TransferHistoryRecord,
@@ -48,6 +51,45 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
       await tx.withdrawal.create({
         data: withdrawal,
       });
+    });
+  }
+
+  async saveWithCustodyPlacement(
+    session: GameSession,
+    placement: CustodyPlacementHistoryRecord,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await this.persistSession(tx, session);
+      await tx.custodyPlacement.create({
+        data: placement,
+      });
+    });
+  }
+
+  async saveWithCustodyRedemption(
+    session: GameSession,
+    redemption: CustodyRedemptionHistoryRecord,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await this.persistSession(tx, session);
+      await tx.custodyRedemption.create({
+        data: redemption,
+      });
+    });
+  }
+
+  async saveWithCustodyAccruals(
+    session: GameSession,
+    accruals: CustodyAccrualHistoryRecord[],
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await this.persistSession(tx, session);
+
+      if (accruals.length > 0) {
+        await tx.custodyAccrual.createMany({
+          data: accruals,
+        });
+      }
     });
   }
 

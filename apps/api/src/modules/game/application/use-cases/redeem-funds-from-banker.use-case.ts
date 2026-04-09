@@ -97,7 +97,13 @@ export class RedeemFundsFromBankerUseCase {
         ),
       );
 
-    await this.repository.save(updatedSession);
+    await this.repository.saveWithCustodyRedemption(updatedSession, {
+      gameSessionId: updatedSession.id,
+      roundNumber: updatedSession.currentRound,
+      bankerAgentId: bankerAgent.id,
+      ownerAgentId: ownerAgent.id,
+      amount: input.amount,
+    });
 
     return updatedSession;
   }

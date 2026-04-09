@@ -48,6 +48,18 @@ function getEventLabel(event: GameReplayRecord['events'][number]) {
     return `${event.sourceAgentName} -> ${event.destinationAgentName}`;
   }
 
+  if (event.type === 'custody_placement') {
+    return `${event.ownerAgentName} placed funds with ${event.bankerAgentName}`;
+  }
+
+  if (event.type === 'custody_redemption') {
+    return `${event.ownerAgentName} redeemed from ${event.bankerAgentName}`;
+  }
+
+  if (event.type === 'custody_accrual') {
+    return `${event.ownerAgentName} accrued custody interest`;
+  }
+
   if (event.type === 'message') {
     return event.visibility === 'private'
       ? `${event.senderAgentName} -> ${event.recipientAgentName ?? 'Unknown'}`
@@ -55,6 +67,14 @@ function getEventLabel(event: GameReplayRecord['events'][number]) {
   }
 
   if (event.type === 'action') {
+    if (event.actionType === 'place_funds_with_banker') {
+      return `${event.agentName} / place funds with banker`;
+    }
+
+    if (event.actionType === 'redeem_funds_from_banker') {
+      return `${event.agentName} / redeem funds from banker`;
+    }
+
     return `${event.agentName} / ${event.actionType}`;
   }
 
@@ -64,6 +84,14 @@ function getEventLabel(event: GameReplayRecord['events'][number]) {
 function getEventDetail(event: GameReplayRecord['events'][number]) {
   if (event.type === 'message') {
     return event.content ?? 'No content';
+  }
+
+  if (
+    event.type === 'custody_placement' ||
+    event.type === 'custody_redemption' ||
+    event.type === 'custody_accrual'
+  ) {
+    return event.amount ? `Amount ${formatCurrency(event.amount)}` : null;
   }
 
   if (event.type === 'action') {
@@ -153,6 +181,30 @@ export function App() {
 
   const selectedSession = sessionQuery.data;
   const replay = replayQuery.data;
+  const banker = selectedSession?.agents.find(
+    (agent) => agent.role === 'banker',
+  );
+  const trader = selectedSession?.agents.find(
+    (agent) => agent.role === 'trader',
+  );
+  const traderCustodyPosition =
+    selectedSession && banker && trader
+      ? selectedSession.bankerCustodyPositions.find(
+          (position) =>
+            position.bankerAgentId === banker.id &&
+            position.ownerAgentId === trader.id,
+        )
+      : undefined;
+  const totalCustodiedBalance =
+    selectedSession?.bankerCustodyPositions.reduce(
+      (total, position) => total + Number.parseFloat(position.totalBalance),
+      0,
+    ) ?? 0;
+  const totalCustodiedInterest =
+    selectedSession?.bankerCustodyPositions.reduce(
+      (total, position) => total + Number.parseFloat(position.accruedInterest),
+      0,
+    ) ?? 0;
   const normalizedTurnCount = Number.isNaN(turnCount)
     ? 1
     : Math.min(10, Math.max(1, turnCount));
@@ -527,6 +579,71 @@ export function App() {
                   </article>
                 ))}
               </div>
+
+              <section className="treasury-panel">
+                <div className="treasury-header">
+                  <div>
+                    <p className="panel-kicker">Treasury</p>
+                    <h3>Custody Overview</h3>
+                  </div>
+                  <span className="status-chip muted">
+                    {selectedSession.bankerCustodyPositions.length} position
+                    {selectedSession.bankerCustodyPositions.length === 1
+                      ? ''
+                      : 's'}
+                  </span>
+                </div>
+
+                <div className="treasury-summary-grid">
+                  <article className="treasury-stat-card">
+                    <span>Total custodied</span>
+                    <strong>
+                      {formatCurrency(totalCustodiedBalance.toFixed(4))}
+                    </strong>
+                  </article>
+                  <article className="treasury-stat-card">
+                    <span>Accrued interest</span>
+                    <strong>
+                      {formatCurrency(totalCustodiedInterest.toFixed(4))}
+                    </strong>
+                  </article>
+                  <article className="treasury-stat-card">
+                    <span>Trader custody</span>
+                    <strong>
+                      {traderCustodyPosition
+                        ? formatCurrency(traderCustodyPosition.totalBalance)
+                        : formatCurrency('0.0000')}
+                    </strong>
+                  </article>
+                </div>
+
+                {traderCustodyPosition ? (
+                  <div className="treasury-position-card">
+                    <div>
+                      <span>Trader principal with banker</span>
+                      <strong>
+                        {formatCurrency(traderCustodyPosition.principal)}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Trader accrued interest</span>
+                      <strong>
+                        {formatCurrency(traderCustodyPosition.accruedInterest)}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Redeemable total</span>
+                      <strong>
+                        {formatCurrency(traderCustodyPosition.totalBalance)}
+                      </strong>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="empty-copy">
+                    No trader funds are currently placed with the banker.
+                  </p>
+                )}
+              </section>
             </>
           ) : null}
         </section>
@@ -554,7 +671,7 @@ export function App() {
               return (
                 <article key={event.id} className="timeline-event">
                   <div className={`event-badge event-${event.type}`}>
-                    {event.type}
+                    {event.type.replace(/_/gu, ' ')}
                   </div>
                   <div className="event-content">
                     <div className="event-topline">

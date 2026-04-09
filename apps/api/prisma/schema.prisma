@@ -55,6 +55,9 @@ model GameSession {
   deposits     Deposit[]
   withdrawals  Withdrawal[]
   bankerCustodyPositions BankerCustodyPosition[]
+  custodyPlacements CustodyPlacement[]
+  custodyRedemptions CustodyRedemption[]
+  custodyAccruals CustodyAccrual[]
 }
 
 model Agent {
@@ -76,6 +79,12 @@ model Agent {
   withdrawals   Withdrawal[]
   bankerCustodyPositionsAsBanker BankerCustodyPosition[] @relation("BankerCustodyBanker")
   bankerCustodyPositionsAsOwner BankerCustodyPosition[] @relation("BankerCustodyOwner")
+  custodyPlacementsAsBanker CustodyPlacement[] @relation("CustodyPlacementBanker")
+  custodyPlacementsAsOwner CustodyPlacement[] @relation("CustodyPlacementOwner")
+  custodyRedemptionsAsBanker CustodyRedemption[] @relation("CustodyRedemptionBanker")
+  custodyRedemptionsAsOwner CustodyRedemption[] @relation("CustodyRedemptionOwner")
+  custodyAccrualsAsBanker CustodyAccrual[] @relation("CustodyAccrualBanker")
+  custodyAccrualsAsOwner CustodyAccrual[] @relation("CustodyAccrualOwner")
 }
 
 model AgentBalance {
@@ -181,4 +190,43 @@ model BankerCustodyPosition {
   ownerAgent    Agent @relation("BankerCustodyOwner", fields: [ownerAgentId], references: [id], onDelete: Cascade)
 
   @@unique([gameSessionId, bankerAgentId, ownerAgentId])
+}
+
+model CustodyPlacement {
+  id            String   @id @default(uuid())
+  gameSessionId String
+  roundNumber   Int
+  bankerAgentId String
+  ownerAgentId  String
+  amount        Decimal  @db.Decimal(18, 4)
+  createdAt     DateTime @default(now())
+  gameSession   GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  bankerAgent   Agent @relation("CustodyPlacementBanker", fields: [bankerAgentId], references: [id], onDelete: Cascade)
+  ownerAgent    Agent @relation("CustodyPlacementOwner", fields: [ownerAgentId], references: [id], onDelete: Cascade)
+}
+
+model CustodyRedemption {
+  id            String   @id @default(uuid())
+  gameSessionId String
+  roundNumber   Int
+  bankerAgentId String
+  ownerAgentId  String
+  amount        Decimal  @db.Decimal(18, 4)
+  createdAt     DateTime @default(now())
+  gameSession   GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  bankerAgent   Agent @relation("CustodyRedemptionBanker", fields: [bankerAgentId], references: [id], onDelete: Cascade)
+  ownerAgent    Agent @relation("CustodyRedemptionOwner", fields: [ownerAgentId], references: [id], onDelete: Cascade)
+}
+
+model CustodyAccrual {
+  id            String   @id @default(uuid())
+  gameSessionId String
+  roundNumber   Int
+  bankerAgentId String
+  ownerAgentId  String
+  amount        Decimal  @db.Decimal(18, 4)
+  createdAt     DateTime @default(now())
+  gameSession   GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  bankerAgent   Agent @relation("CustodyAccrualBanker", fields: [bankerAgentId], references: [id], onDelete: Cascade)
+  ownerAgent    Agent @relation("CustodyAccrualOwner", fields: [ownerAgentId], references: [id], onDelete: Cascade)
 }

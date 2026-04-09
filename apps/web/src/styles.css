@@ -310,6 +310,70 @@ select {
   gap: 14px;
 }
 
+.treasury-panel {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(244, 177, 94, 0.08);
+  border: 1px solid rgba(244, 177, 94, 0.16);
+}
+
+.treasury-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.treasury-header h3 {
+  margin: 0;
+  font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+}
+
+.treasury-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.treasury-stat-card,
+.treasury-position-card {
+  border-radius: 16px;
+  background: rgba(10, 24, 38, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.treasury-stat-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+}
+
+.treasury-stat-card span,
+.treasury-position-card span {
+  color: rgba(248, 243, 234, 0.62);
+  font-size: 0.82rem;
+}
+
+.treasury-stat-card strong,
+.treasury-position-card strong {
+  font-family: 'IBM Plex Mono', 'SFMono-Regular', monospace;
+}
+
+.treasury-position-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.treasury-position-card div {
+  display: grid;
+  gap: 6px;
+}
+
 .balance-card {
   padding: 16px;
   border-radius: 18px;
@@ -376,6 +440,13 @@ select {
 .event-withdrawal {
   background: rgba(244, 177, 94, 0.16);
   color: #f4b15e;
+}
+
+.event-custody_placement,
+.event-custody_redemption,
+.event-custody_accrual {
+  background: rgba(255, 120, 120, 0.14);
+  color: #ffb3a8;
 }
 
 .event-message {

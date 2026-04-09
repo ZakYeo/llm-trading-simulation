@@ -3,6 +3,9 @@ import type {
   PersistedGameSessionRecord,
 } from './game-session-prisma.mapper.js';
 import type {
+  CustodyAccrualHistoryRecord,
+  CustodyPlacementHistoryRecord,
+  CustodyRedemptionHistoryRecord,
   DepositHistoryRecord,
   TransferHistoryRecord,
   WithdrawalHistoryRecord,
@@ -85,6 +88,18 @@ export interface PrismaWithdrawalDelegate {
   create(args: { data: WithdrawalHistoryRecord }): Promise<unknown>;
 }
 
+export interface PrismaCustodyPlacementDelegate {
+  create(args: { data: CustodyPlacementHistoryRecord }): Promise<unknown>;
+}
+
+export interface PrismaCustodyRedemptionDelegate {
+  create(args: { data: CustodyRedemptionHistoryRecord }): Promise<unknown>;
+}
+
+export interface PrismaCustodyAccrualDelegate {
+  createMany(args: { data: CustodyAccrualHistoryRecord[] }): Promise<unknown>;
+}
+
 export interface PrismaClientLike {
   gameSession: PrismaGameSessionDelegate;
   agent: PrismaAgentDelegate;
@@ -92,6 +107,9 @@ export interface PrismaClientLike {
   transfer: PrismaTransferDelegate;
   deposit: PrismaDepositDelegate;
   withdrawal: PrismaWithdrawalDelegate;
+  custodyPlacement: PrismaCustodyPlacementDelegate;
+  custodyRedemption: PrismaCustodyRedemptionDelegate;
+  custodyAccrual: PrismaCustodyAccrualDelegate;
   bankerCustodyPosition: PrismaBankerCustodyPositionDelegate;
   $transaction<T>(callback: (tx: PrismaClientLike) => Promise<T>): Promise<T>;
 }

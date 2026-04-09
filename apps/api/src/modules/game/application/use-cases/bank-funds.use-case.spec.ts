@@ -44,6 +44,18 @@ class InMemoryGameSessionRepository implements GameSessionRepositoryPort {
     this.withdrawals.push(withdrawal);
   }
 
+  async saveWithCustodyPlacement(): Promise<void> {
+    throw new Error('Not implemented in this test repository.');
+  }
+
+  async saveWithCustodyRedemption(): Promise<void> {
+    throw new Error('Not implemented in this test repository.');
+  }
+
+  async saveWithCustodyAccruals(): Promise<void> {
+    throw new Error('Not implemented in this test repository.');
+  }
+
   async saveWithTransfer(): Promise<void> {
     throw new Error('Not implemented in this test repository.');
   }

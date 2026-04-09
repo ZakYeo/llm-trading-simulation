@@ -6,7 +6,15 @@ export interface ReplayRoundRecord {
 
 export interface ReplayEventRecord {
   id: string;
-  type: 'transfer' | 'deposit' | 'withdrawal' | 'message' | 'action';
+  type:
+    | 'transfer'
+    | 'deposit'
+    | 'withdrawal'
+    | 'message'
+    | 'action'
+    | 'custody_placement'
+    | 'custody_redemption'
+    | 'custody_accrual';
   createdAt: string;
   amount?: string;
   roundNumber?: number;
@@ -17,6 +25,10 @@ export interface ReplayEventRecord {
   sourceAgentName?: string;
   destinationAgentId?: string;
   destinationAgentName?: string;
+  bankerAgentId?: string;
+  bankerAgentName?: string;
+  ownerAgentId?: string;
+  ownerAgentName?: string;
   senderAgentId?: string;
   senderAgentName?: string;
   recipientAgentId?: string | null;

@@ -74,6 +74,9 @@ class InMemoryGameSessionRepository implements GameSessionRepositoryPort {
   async saveWithTransfer(): Promise<void> {}
   async saveWithDeposit(): Promise<void> {}
   async saveWithWithdrawal(): Promise<void> {}
+  async saveWithCustodyPlacement(): Promise<void> {}
+  async saveWithCustodyRedemption(): Promise<void> {}
+  async saveWithCustodyAccruals(): Promise<void> {}
 
   async findById(id: string): Promise<GameSession | null> {
     if (this.session?.id === id) {

@@ -8,17 +8,34 @@ export interface GameAgentRecord {
   depositAccruedInterest: string;
 }
 
+export interface BankerCustodyPositionRecord {
+  bankerAgentId: string;
+  ownerAgentId: string;
+  principal: string;
+  accruedInterest: string;
+  totalBalance: string;
+}
+
 export interface GameSessionRecord {
   id: string;
   name: string;
   status: string;
   currentRound: number;
   agents: GameAgentRecord[];
+  bankerCustodyPositions: BankerCustodyPositionRecord[];
 }
 
 export interface ReplayEventRecord {
   id: string;
-  type: 'transfer' | 'deposit' | 'withdrawal' | 'message' | 'action';
+  type:
+    | 'transfer'
+    | 'deposit'
+    | 'withdrawal'
+    | 'message'
+    | 'action'
+    | 'custody_placement'
+    | 'custody_redemption'
+    | 'custody_accrual';
   createdAt: string;
   amount?: string;
   roundNumber?: number;
@@ -29,6 +46,10 @@ export interface ReplayEventRecord {
   sourceAgentName?: string;
   destinationAgentId?: string;
   destinationAgentName?: string;
+  bankerAgentId?: string;
+  bankerAgentName?: string;
+  ownerAgentId?: string;
+  ownerAgentName?: string;
   senderAgentId?: string;
   senderAgentName?: string;
   recipientAgentId?: string | null;
@@ -42,6 +63,8 @@ export interface ReplayEventRecord {
     | 'counter_direct_transfer_proposal'
     | 'accept_direct_transfer_proposal'
     | 'reject_direct_transfer_proposal'
+    | 'place_funds_with_banker'
+    | 'redeem_funds_from_banker'
     | 'finalize_turn';
   relatedProposalActionId?: string;
 }
@@ -106,7 +129,9 @@ export interface AgentSessionEventRecord {
     | 'propose_direct_transfer'
     | 'counter_direct_transfer_proposal'
     | 'accept_direct_transfer_proposal'
-    | 'reject_direct_transfer_proposal';
+    | 'reject_direct_transfer_proposal'
+    | 'place_funds_with_banker'
+    | 'redeem_funds_from_banker';
   messageId?: string;
   messageVisibility?: 'public' | 'private';
   sourceAgentId?: string;

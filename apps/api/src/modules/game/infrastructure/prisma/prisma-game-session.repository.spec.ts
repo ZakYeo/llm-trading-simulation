@@ -45,6 +45,15 @@ describe('PrismaGameSessionRepository', () => {
       transfer: {
         async create() {},
       },
+      custodyPlacement: {
+        async create() {},
+      },
+      custodyRedemption: {
+        async create() {},
+      },
+      custodyAccrual: {
+        async createMany() {},
+      },
       deposit: {
         async create() {},
       },
@@ -147,6 +156,15 @@ describe('PrismaGameSessionRepository', () => {
       },
       transfer: {
         async create() {},
+      },
+      custodyPlacement: {
+        async create() {},
+      },
+      custodyRedemption: {
+        async create() {},
+      },
+      custodyAccrual: {
+        async createMany() {},
       },
       deposit: {
         async create() {},
@@ -287,6 +305,15 @@ describe('PrismaGameSessionRepository', () => {
       transfer: {
         async create() {},
       },
+      custodyPlacement: {
+        async create() {},
+      },
+      custodyRedemption: {
+        async create() {},
+      },
+      custodyAccrual: {
+        async createMany() {},
+      },
       deposit: {
         async create() {},
       },
@@ -374,6 +401,15 @@ describe('PrismaGameSessionRepository', () => {
       transfer: {
         async create() {},
       },
+      custodyPlacement: {
+        async create() {},
+      },
+      custodyRedemption: {
+        async create() {},
+      },
+      custodyAccrual: {
+        async createMany() {},
+      },
       deposit: {
         async create() {},
       },
@@ -429,6 +465,15 @@ describe('PrismaGameSessionRepository', () => {
         async create(args) {
           receivedArgs.push(args);
         },
+      },
+      custodyPlacement: {
+        async create() {},
+      },
+      custodyRedemption: {
+        async create() {},
+      },
+      custodyAccrual: {
+        async createMany() {},
       },
       deposit: {
         async create() {},

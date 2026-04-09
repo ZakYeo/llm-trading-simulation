@@ -34,6 +34,36 @@ interface ReplaySessionRecord {
     agentId: string;
     agent: { name: string };
   }>;
+  custodyPlacements: Array<{
+    id: string;
+    createdAt: Date;
+    roundNumber: number;
+    amount: { toString(): string };
+    bankerAgentId: string;
+    bankerAgent: { name: string };
+    ownerAgentId: string;
+    ownerAgent: { name: string };
+  }>;
+  custodyRedemptions: Array<{
+    id: string;
+    createdAt: Date;
+    roundNumber: number;
+    amount: { toString(): string };
+    bankerAgentId: string;
+    bankerAgent: { name: string };
+    ownerAgentId: string;
+    ownerAgent: { name: string };
+  }>;
+  custodyAccruals: Array<{
+    id: string;
+    createdAt: Date;
+    roundNumber: number;
+    amount: { toString(): string };
+    bankerAgentId: string;
+    bankerAgent: { name: string };
+    ownerAgentId: string;
+    ownerAgent: { name: string };
+  }>;
   agentMessages: Array<{
     id: string;
     createdAt: Date;
@@ -113,6 +143,33 @@ export class PrismaReplayReadModel implements ReplayReadModelPort {
             createdAt: 'asc',
           },
         },
+        custodyPlacements: {
+          include: {
+            bankerAgent: true,
+            ownerAgent: true,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+        custodyRedemptions: {
+          include: {
+            bankerAgent: true,
+            ownerAgent: true,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+        custodyAccruals: {
+          include: {
+            bankerAgent: true,
+            ownerAgent: true,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
         agentMessages: {
           include: {
             senderAgent: true,
@@ -163,6 +220,39 @@ export class PrismaReplayReadModel implements ReplayReadModelPort {
         amount: toAmountString(withdrawal.amount),
         agentId: withdrawal.agentId,
         agentName: withdrawal.agent.name,
+      })),
+      ...session.custodyPlacements.map((placement) => ({
+        id: placement.id,
+        type: 'custody_placement' as const,
+        createdAt: placement.createdAt.toISOString(),
+        roundNumber: placement.roundNumber,
+        amount: toAmountString(placement.amount),
+        bankerAgentId: placement.bankerAgentId,
+        bankerAgentName: placement.bankerAgent.name,
+        ownerAgentId: placement.ownerAgentId,
+        ownerAgentName: placement.ownerAgent.name,
+      })),
+      ...session.custodyRedemptions.map((redemption) => ({
+        id: redemption.id,
+        type: 'custody_redemption' as const,
+        createdAt: redemption.createdAt.toISOString(),
+        roundNumber: redemption.roundNumber,
+        amount: toAmountString(redemption.amount),
+        bankerAgentId: redemption.bankerAgentId,
+        bankerAgentName: redemption.bankerAgent.name,
+        ownerAgentId: redemption.ownerAgentId,
+        ownerAgentName: redemption.ownerAgent.name,
+      })),
+      ...session.custodyAccruals.map((accrual) => ({
+        id: accrual.id,
+        type: 'custody_accrual' as const,
+        createdAt: accrual.createdAt.toISOString(),
+        roundNumber: accrual.roundNumber,
+        amount: toAmountString(accrual.amount),
+        bankerAgentId: accrual.bankerAgentId,
+        bankerAgentName: accrual.bankerAgent.name,
+        ownerAgentId: accrual.ownerAgentId,
+        ownerAgentName: accrual.ownerAgent.name,
       })),
       ...session.agentMessages.map((message) => {
         const visibility: ReplayEventRecord['visibility'] =
