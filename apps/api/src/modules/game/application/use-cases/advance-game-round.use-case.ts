@@ -29,10 +29,12 @@ export class AdvanceGameRoundUseCase {
         session.agents.map((agent) =>
           agent.withAccounts(
             agent.balance,
-            this.ledgerService.accrueInterest(
-              agent.depositAccount,
-              input.interestRateBps,
-            ),
+            agent.role === 'banker'
+              ? this.ledgerService.accrueInterest(
+                  agent.depositAccount,
+                  input.interestRateBps,
+                )
+              : agent.depositAccount,
           ),
         ),
       )

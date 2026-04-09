@@ -141,7 +141,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Game money flows integration', () => {
     expect(withdrawals[0]?.amount.toString()).toBe('5');
   });
 
-  it('persists round advancement and accrued interest against postgres', async () => {
+  it('persists round advancement with banker-only accrued interest against postgres', async () => {
     const createdSession = await createGameSessionUseCase.execute({
       name: 'Round Flow Table',
       initialBalance: '100.0000',
@@ -157,13 +157,22 @@ describe.runIf(Boolean(testDatabaseUrl))('Game money flows integration', () => {
     const banker = createdSession.agents.find(
       (agent) => agent.role === 'banker',
     );
+    const trader = createdSession.agents.find(
+      (agent) => agent.role === 'trader',
+    );
 
     expect(banker).toBeDefined();
+    expect(trader).toBeDefined();
 
     await depositToBankUseCase.execute({
       gameSessionId: createdSession.id,
       agentId: banker!.id,
       amount: '40.0000',
+    });
+    await depositToBankUseCase.execute({
+      gameSessionId: createdSession.id,
+      agentId: trader!.id,
+      amount: '30.0000',
     });
 
     await advanceGameRoundUseCase.execute({
@@ -177,6 +186,9 @@ describe.runIf(Boolean(testDatabaseUrl))('Game money flows integration', () => {
     const persistedBanker = persistedSession.agents.find(
       (agent) => agent.id === banker!.id,
     );
+    const persistedTrader = persistedSession.agents.find(
+      (agent) => agent.id === trader!.id,
+    );
 
     expect(persistedSession.status).toBe('active');
     expect(persistedSession.currentRound).toBe(1);
@@ -185,6 +197,12 @@ describe.runIf(Boolean(testDatabaseUrl))('Game money flows integration', () => {
     );
     expect(persistedBanker?.depositAccount.accruedInterest.toDecimal()).toBe(
       '1.0000',
+    );
+    expect(persistedTrader?.depositAccount.principal.toDecimal()).toBe(
+      '30.0000',
+    );
+    expect(persistedTrader?.depositAccount.accruedInterest.toDecimal()).toBe(
+      '0.0000',
     );
   });
 });

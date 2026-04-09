@@ -197,7 +197,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
     );
   });
 
-  it('advances a round and accrues interest through the HTTP boundary', async () => {
+  it('advances a round and accrues interest only for banker deposits through the HTTP boundary', async () => {
     const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
       method: 'POST',
       headers: {
@@ -230,11 +230,15 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
     const banker = createdSession.agents.find(
       (agent) => agent.role === 'banker',
     );
+    const trader = createdSession.agents.find(
+      (agent) => agent.role === 'trader',
+    );
 
     expect(createResponse.status).toBe(201);
     expect(banker).toBeDefined();
+    expect(trader).toBeDefined();
 
-    const depositResponse = await fetch(
+    const bankerDepositResponse = await fetch(
       `${baseUrl}/api/game/sessions/${createdSession.id}/deposit`,
       {
         method: 'PATCH',
@@ -247,8 +251,22 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
         }),
       },
     );
+    const traderDepositResponse = await fetch(
+      `${baseUrl}/api/game/sessions/${createdSession.id}/deposit`,
+      {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          agentId: trader!.id,
+          amount: '30.0000',
+        }),
+      },
+    );
 
-    expect(depositResponse.status).toBe(200);
+    expect(bankerDepositResponse.status).toBe(200);
+    expect(traderDepositResponse.status).toBe(200);
 
     const advanceResponse = await fetch(
       `${baseUrl}/api/game/sessions/${createdSession.id}/rounds/advance`,
@@ -267,12 +285,17 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
     const advancedBanker = advancedSession.agents.find(
       (agent) => agent.id === banker!.id,
     );
+    const advancedTrader = advancedSession.agents.find(
+      (agent) => agent.id === trader!.id,
+    );
 
     expect(advanceResponse.status).toBe(200);
     expect(advancedSession.status).toBe('active');
     expect(advancedSession.currentRound).toBe(1);
     expect(advancedBanker?.depositPrincipal).toBe('40.0000');
     expect(advancedBanker?.depositAccruedInterest).toBe('1.0000');
+    expect(advancedTrader?.depositPrincipal).toBe('30.0000');
+    expect(advancedTrader?.depositAccruedInterest).toBe('0.0000');
   });
 
   it('returns 400 for invalid request payloads', async () => {

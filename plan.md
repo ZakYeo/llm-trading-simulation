@@ -96,6 +96,135 @@ Immediate next steps:
 - keep deterministic mock tests as the main backend regression suite while the live-provider path remains a targeted confidence check
 - after the frontend MVP is useful, revisit backend turn-state refresh and deeper negotiation behavior
 
+Banker treasury redesign plan
+
+Goal:
+
+- make the banker role economically real by making banker-held custody the only path that accrues interest
+- keep the source of truth in backend state, not in model memory or prompt-only bookkeeping
+- ship this in small slices so the system stays testable throughout
+
+Why this is a better direction:
+
+- if every agent can accrue interest on its own deposit account, the banker is mostly narrative rather than mechanical
+- if only banker-held funds accrue, traders and other agents have a structural reason to negotiate with the banker
+- this makes banker/trader interaction more legible in replay, prompts, and future frontend UX
+
+Non-goals for the first slices:
+
+- do not ask the banker model to maintain balances from memory
+- do not make message content the source of truth for custody or obligations
+- do not jump straight to a generalized multi-party treasury with spreads, lockups, or default logic
+
+Target end state:
+
+- the backend owns a banker-custody ledger
+- non-banker agents can place funds with the banker
+- only banker-held custodial funds accrue interest
+- the backend tracks beneficial ownership per agent
+- banker return or redemption actions are validated against that ownership ledger
+- the banker sees treasury state in its turn context, but cannot invent it
+
+Step-by-step implementation plan
+
+Step 1 — smallest viable rules change
+
+- remove universal per-agent interest accrual
+- make round advancement accrue interest only on capital held in the banker treasury
+- keep this first slice backend-only and deterministic
+- for the first cut, it is acceptable if banker treasury state is still represented with a simple explicit ledger rather than a full new subdomain
+
+Implementation notes:
+
+- change `AdvanceGameRoundUseCase` so it no longer accrues each agent deposit account uniformly
+- introduce a banker-treasury accrual path that computes interest only over banker-controlled custodial balances
+- add unit coverage that proves non-banker idle balances do not accrue
+- add integration coverage that proves banker-held custody does accrue
+
+Step 2 — introduce explicit custody state
+
+- add durable backend state for banker-held funds by beneficial owner
+- recommended shape: one treasury account owned by the banker plus per-owner custody positions
+- track principal and accrued return separately for each beneficial owner
+
+Implementation notes:
+
+- represent custody in a way that supports replay and validation cleanly
+- avoid storing this only as derived transfer history if that makes redemption logic ambiguous
+- prefer explicit persistence over inference-heavy reads
+
+Step 3 — add banker custody actions
+
+- add explicit backend operations for placing funds with the banker and redeeming them
+- do not overload plain peer-to-peer transfer semantics forever if custody and redemption become first-class gameplay
+- keep validation strict: the banker can only redeem up to the owner’s tracked balance
+
+Implementation notes:
+
+- first version can still be orchestrated through existing proposal/transfer flows if needed, but the state transition should resolve into treasury ledger mutations, not ordinary free-form balances alone
+- add domain invariants so over-redemption is impossible
+- preserve replay visibility for both custody placement and redemption
+
+Step 4 — expose treasury state to agents
+
+- extend `AgentTurnContext` with treasury-specific fields
+- banker context should include full custody obligations by owner
+- non-banker context should include only the agent’s own position with the banker plus relevant public treasury cues
+
+Implementation notes:
+
+- keep the banker as the only agent with the full obligations view
+- give trader and other agents enough information to reason about their own placed capital and accrued return
+- do not leak unnecessary private balances between peers
+
+Step 5 — align prompts and mock behavior
+
+- update banker/trader prompt guidance around treasury custody rather than generic capital deployment
+- reduce emphasis on roles that are currently out of product scope on the frontend
+- update the mock runtime so banker/trader scenarios exercise custody placement and redemption decisions
+
+Implementation notes:
+
+- banker prompt should reason about deployment, custody obligations, and safe redemption limits
+- trader prompt should reason about whether to leave funds idle, place them with the banker, or redeem them
+- keep structured validation in the backend; prompts should describe options, not enforce them
+
+Step 6 — replay and frontend visibility
+
+- add replay event types or richer replay projections for banker custody placement, accrued return, and redemption
+- update the frontend to show only the currently relevant banker/trader treasury information
+- keep the operator view simpler than the backend model
+
+Implementation notes:
+
+- first UI slice should show: current banker-held amount per trader, accrued return, and recent custody/redemption events
+- defer richer treasury analytics until the mechanic is stable
+
+Step 7 — optional later improvements
+
+- banker spread or fee policy
+- lock-up periods or delayed redemption
+- bank solvency constraints
+- treasury-specific negotiation primitives
+- richer prompts for analyst/lawyer/influencer if those roles return to the frontend product surface
+
+Recommended delivery order
+
+1. remove universal accrual and add banker-only accrual rules
+2. add explicit banker custody persistence and invariants
+3. add treasury-aware replay
+4. add treasury-aware agent context and prompt updates
+5. add frontend treasury visibility
+6. only then consider richer banker economics like spreads or solvency
+
+What “good” looks like after the first better version
+
+- banker is the only interest-bearing intermediary
+- traders must deliberately place funds with the banker to earn return
+- banker obligations are fully backend-validated
+- replay can explain where funds were placed, what accrued, and what was redeemed
+- prompts consume treasury state but do not own it
+
 Execution guidance for code quality
 
 Always prefer:

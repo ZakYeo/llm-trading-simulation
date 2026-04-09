@@ -42,7 +42,7 @@ class InMemoryGameSessionRepository implements GameSessionRepositoryPort {
 }
 
 describe('AdvanceGameRoundUseCase', () => {
-  it('advances the round and accrues interest on deposited principal', async () => {
+  it('advances the round and accrues interest only for the banker deposit account', async () => {
     const repository = new InMemoryGameSessionRepository(
       new GameSession({
         id: 'game-1',
@@ -57,6 +57,16 @@ describe('AdvanceGameRoundUseCase', () => {
             balance: AccountBalance.open(Money.fromDecimal('80.0000')),
             depositAccount: DepositAccount.restore(
               Money.fromDecimal('20.0000'),
+              Money.zero(),
+            ),
+          }),
+          new GameAgent({
+            id: 'agent-2',
+            name: 'Trader Bot',
+            role: 'trader',
+            balance: AccountBalance.open(Money.fromDecimal('75.0000')),
+            depositAccount: DepositAccount.restore(
+              Money.fromDecimal('25.0000'),
               Money.zero(),
             ),
           }),
@@ -80,6 +90,12 @@ describe('AdvanceGameRoundUseCase', () => {
     );
     expect(session.agents[0]?.depositAccount.accruedInterest.toDecimal()).toBe(
       '0.5000',
+    );
+    expect(session.agents[1]?.depositAccount.principal.toDecimal()).toBe(
+      '25.0000',
+    );
+    expect(session.agents[1]?.depositAccount.accruedInterest.toDecimal()).toBe(
+      '0.0000',
     );
     expect(repository.saved).toHaveLength(1);
   });
