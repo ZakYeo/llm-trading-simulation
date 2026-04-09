@@ -183,17 +183,20 @@ describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
       results.push(await runScenario(runIndex));
     }
 
-    const runsWithStructuredEconomicActions = results.filter((result) => {
+    const runsWithSubstantiveInteraction = results.filter((result) => {
       const flattenedActionTypes = result.body.turns.flatMap((turn) =>
         turn.actionRecords.map((record) => record.actionType),
       );
 
       return flattenedActionTypes.some(
         (actionType) =>
+          actionType === 'send_private_message' ||
           actionType === 'propose_direct_transfer' ||
           actionType === 'counter_direct_transfer_proposal' ||
           actionType === 'accept_direct_transfer_proposal' ||
-          actionType === 'reject_direct_transfer_proposal',
+          actionType === 'reject_direct_transfer_proposal' ||
+          actionType === 'place_funds_with_banker' ||
+          actionType === 'redeem_funds_from_banker',
       );
     });
 
@@ -219,7 +222,9 @@ describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
           actionType === 'propose_direct_transfer' ||
           actionType === 'counter_direct_transfer_proposal' ||
           actionType === 'accept_direct_transfer_proposal' ||
-          actionType === 'reject_direct_transfer_proposal',
+          actionType === 'reject_direct_transfer_proposal' ||
+          actionType === 'place_funds_with_banker' ||
+          actionType === 'redeem_funds_from_banker',
       );
 
       expect(body.gameSessionId).toBe(result.sessionId);
@@ -244,7 +249,7 @@ describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
     }
 
     expect(
-      runsWithStructuredEconomicActions.length,
+      runsWithSubstantiveInteraction.length,
       JSON.stringify(
         results.map((result) => ({
           sessionId: result.sessionId,

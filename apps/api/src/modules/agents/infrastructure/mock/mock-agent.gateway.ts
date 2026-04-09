@@ -7,6 +7,7 @@ export class MockAgentGateway implements AgentGatewayPort {
     const scenario = process.env.AGENT_MOCK_SCENARIO;
     const banker = context.peers.find((peer) => peer.role === 'banker');
     const trader = context.peers.find((peer) => peer.role === 'trader');
+    const analyst = context.peers.find((peer) => peer.role === 'analyst');
     const ownCustodyPosition = context.treasuryContext.selfCustodyPosition;
     const pendingProposal = context.recentActions.find((action) => {
       if (
@@ -41,6 +42,21 @@ export class MockAgentGateway implements AgentGatewayPort {
     }
 
     if (
+      (scenario === 'reject_proposal' || scenario === 'counter_proposal') &&
+      context.self.role === 'analyst' &&
+      trader &&
+      context.turnNumber === 2 &&
+      !pendingProposal
+    ) {
+      return {
+        type: 'propose_direct_transfer',
+        recipientAgentId: trader.agentId,
+        amount: '12.5000',
+        rationale: 'Settle the analysis fee before I disclose the full signal.',
+      };
+    }
+
+    if (
       context.self.role === 'trader' &&
       banker &&
       context.turnNumber === 2 &&
@@ -51,6 +67,35 @@ export class MockAgentGateway implements AgentGatewayPort {
         type: 'place_funds_with_banker',
         recipientAgentId: banker.agentId,
         amount: '10.0000',
+      };
+    }
+
+    if (
+      context.self.role === 'trader' &&
+      context.turnNumber >= 3 &&
+      pendingProposal
+    ) {
+      if (scenario === 'reject_proposal') {
+        return {
+          type: 'reject_direct_transfer_proposal',
+          proposalActionId: pendingProposal.actionId,
+          rationale: 'The proposed transfer is too risky for this round.',
+        };
+      }
+
+      if (scenario === 'counter_proposal') {
+        return {
+          type: 'counter_direct_transfer_proposal',
+          proposalActionId: pendingProposal.actionId,
+          recipientAgentId: analyst?.agentId ?? pendingProposal.agentId,
+          amount: '8.5000',
+          rationale: 'I will settle, but only at a reduced fee.',
+        };
+      }
+
+      return {
+        type: 'accept_direct_transfer_proposal',
+        proposalActionId: pendingProposal.actionId,
       };
     }
 
@@ -72,52 +117,7 @@ export class MockAgentGateway implements AgentGatewayPort {
     }
 
     if (
-      (scenario === 'reject_proposal' || scenario === 'counter_proposal') &&
-      context.self.role === 'trader' &&
-      banker &&
-      context.turnNumber === 2 &&
-      receivedPrivateFundingPrompt &&
-      !pendingProposal
-    ) {
-      return {
-        type: 'propose_direct_transfer',
-        recipientAgentId: banker.agentId,
-        amount: '12.5000',
-        rationale: 'I need short-term capital to press a momentum setup.',
-      };
-    }
-
-    if (
-      context.self.role === 'banker' &&
-      context.turnNumber >= 3 &&
-      pendingProposal
-    ) {
-      if (scenario === 'reject_proposal') {
-        return {
-          type: 'reject_direct_transfer_proposal',
-          proposalActionId: pendingProposal.actionId,
-          rationale: 'The proposed transfer is too risky for this round.',
-        };
-      }
-
-      if (scenario === 'counter_proposal') {
-        return {
-          type: 'counter_direct_transfer_proposal',
-          proposalActionId: pendingProposal.actionId,
-          recipientAgentId: pendingProposal.agentId,
-          amount: '8.5000',
-          rationale: 'I can fund this round, but only at a lower amount.',
-        };
-      }
-
-      return {
-        type: 'accept_direct_transfer_proposal',
-        proposalActionId: pendingProposal.actionId,
-      };
-    }
-
-    if (
-      context.self.role === 'trader' &&
+      context.self.role === 'analyst' &&
       scenario === 'counter_proposal' &&
       context.turnNumber >= 4 &&
       pendingProposal?.type === 'counter_direct_transfer_proposal'

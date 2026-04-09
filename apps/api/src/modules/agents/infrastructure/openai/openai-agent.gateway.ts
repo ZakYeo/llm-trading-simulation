@@ -70,7 +70,69 @@ interface RawAgentDecision {
   reasoning: string | null;
 }
 
-function normalizeAgentDecision(rawDecision: RawAgentDecision): AgentAction {
+function resolveRecipientAgentId(
+  rawRecipientAgentId: string | null,
+  rawDecisionType: AgentAction['type'],
+  context: AgentTurnContext,
+): string | null {
+  if (!rawRecipientAgentId) {
+    return null;
+  }
+
+  if (context.peers.some((peer) => peer.agentId === rawRecipientAgentId)) {
+    return rawRecipientAgentId;
+  }
+
+  const namedPeer = context.peers.find(
+    (peer) => peer.name === rawRecipientAgentId,
+  );
+
+  if (namedPeer) {
+    return namedPeer.agentId;
+  }
+
+  const banker = context.peers.find((peer) => peer.role === 'banker');
+  const trader = context.peers.find((peer) => peer.role === 'trader');
+  const primaryCounterpartyAgentId =
+    context.negotiationState.primaryCounterpartyAgentId;
+
+  if (
+    context.self.role === 'banker' &&
+    trader &&
+    (rawDecisionType === 'send_private_message' ||
+      rawDecisionType === 'place_funds_with_banker' ||
+      rawDecisionType === 'redeem_funds_from_banker')
+  ) {
+    return trader.agentId;
+  }
+
+  if (
+    context.self.role === 'trader' &&
+    banker &&
+    (rawDecisionType === 'send_private_message' ||
+      rawDecisionType === 'place_funds_with_banker' ||
+      rawDecisionType === 'redeem_funds_from_banker')
+  ) {
+    return banker.agentId;
+  }
+
+  if (primaryCounterpartyAgentId) {
+    return primaryCounterpartyAgentId;
+  }
+
+  return rawRecipientAgentId;
+}
+
+function normalizeAgentDecision(
+  rawDecision: RawAgentDecision,
+  context: AgentTurnContext,
+): AgentAction {
+  const recipientAgentId = resolveRecipientAgentId(
+    rawDecision.recipientAgentId,
+    rawDecision.type,
+    context,
+  );
+
   switch (rawDecision.type) {
     case 'send_public_message':
       if (!rawDecision.content) {
@@ -85,7 +147,7 @@ function normalizeAgentDecision(rawDecision: RawAgentDecision): AgentAction {
         reasoning: rawDecision.reasoning ?? undefined,
       };
     case 'send_private_message':
-      if (!rawDecision.recipientAgentId || !rawDecision.content) {
+      if (!recipientAgentId || !rawDecision.content) {
         throw new DomainInvariantError(
           'send_private_message requires recipientAgentId and content from the model.',
         );
@@ -93,16 +155,12 @@ function normalizeAgentDecision(rawDecision: RawAgentDecision): AgentAction {
 
       return {
         type: rawDecision.type,
-        recipientAgentId: rawDecision.recipientAgentId,
+        recipientAgentId,
         content: rawDecision.content,
         reasoning: rawDecision.reasoning ?? undefined,
       };
     case 'propose_direct_transfer':
-      if (
-        !rawDecision.recipientAgentId ||
-        !rawDecision.amount ||
-        !rawDecision.rationale
-      ) {
+      if (!recipientAgentId || !rawDecision.amount || !rawDecision.rationale) {
         throw new DomainInvariantError(
           'propose_direct_transfer requires recipientAgentId, amount, and rationale from the model.',
         );
@@ -110,7 +168,7 @@ function normalizeAgentDecision(rawDecision: RawAgentDecision): AgentAction {
 
       return {
         type: rawDecision.type,
-        recipientAgentId: rawDecision.recipientAgentId,
+        recipientAgentId,
         amount: rawDecision.amount,
         rationale: rawDecision.rationale,
         reasoning: rawDecision.reasoning ?? undefined,
@@ -118,7 +176,7 @@ function normalizeAgentDecision(rawDecision: RawAgentDecision): AgentAction {
     case 'counter_direct_transfer_proposal':
       if (
         !rawDecision.proposalActionId ||
-        !rawDecision.recipientAgentId ||
+        !recipientAgentId ||
         !rawDecision.amount ||
         !rawDecision.rationale
       ) {
@@ -130,7 +188,7 @@ function normalizeAgentDecision(rawDecision: RawAgentDecision): AgentAction {
       return {
         type: rawDecision.type,
         proposalActionId: rawDecision.proposalActionId,
-        recipientAgentId: rawDecision.recipientAgentId,
+        recipientAgentId,
         amount: rawDecision.amount,
         rationale: rawDecision.rationale,
         reasoning: rawDecision.reasoning ?? undefined,
@@ -161,7 +219,7 @@ function normalizeAgentDecision(rawDecision: RawAgentDecision): AgentAction {
         reasoning: rawDecision.reasoning ?? undefined,
       };
     case 'place_funds_with_banker':
-      if (!rawDecision.recipientAgentId || !rawDecision.amount) {
+      if (!recipientAgentId || !rawDecision.amount) {
         throw new DomainInvariantError(
           'place_funds_with_banker requires recipientAgentId and amount from the model.',
         );
@@ -169,12 +227,12 @@ function normalizeAgentDecision(rawDecision: RawAgentDecision): AgentAction {
 
       return {
         type: rawDecision.type,
-        recipientAgentId: rawDecision.recipientAgentId,
+        recipientAgentId,
         amount: rawDecision.amount,
         reasoning: rawDecision.reasoning ?? undefined,
       };
     case 'redeem_funds_from_banker':
-      if (!rawDecision.recipientAgentId || !rawDecision.amount) {
+      if (!recipientAgentId || !rawDecision.amount) {
         throw new DomainInvariantError(
           'redeem_funds_from_banker requires recipientAgentId and amount from the model.',
         );
@@ -182,7 +240,7 @@ function normalizeAgentDecision(rawDecision: RawAgentDecision): AgentAction {
 
       return {
         type: rawDecision.type,
-        recipientAgentId: rawDecision.recipientAgentId,
+        recipientAgentId,
         amount: rawDecision.amount,
         reasoning: rawDecision.reasoning ?? undefined,
       };
@@ -247,6 +305,7 @@ export class OpenAiAgentGateway implements AgentGatewayPort {
       const parsedAction = agentActionSchema.parse(
         normalizeAgentDecision(
           JSON.parse(response.output_text) as RawAgentDecision,
+          context,
         ),
       );
 

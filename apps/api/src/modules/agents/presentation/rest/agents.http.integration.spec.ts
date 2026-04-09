@@ -262,20 +262,22 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
       body.turns.some((turn) =>
         turn.actionRecords.some(
           (action) =>
-            action.actionType === 'propose_direct_transfer' &&
-            action.amount === '12.5',
+            action.actionType === 'place_funds_with_banker' &&
+            action.amount === '10',
         ),
       ),
     ).toBe(true);
     expect(
       body.turns.some((turn) =>
         turn.actionRecords.some(
-          (action) => action.actionType === 'accept_direct_transfer_proposal',
+          (action) =>
+            action.actionType === 'redeem_funds_from_banker' &&
+            action.amount === '2.5',
         ),
       ),
     ).toBe(true);
-    expect(banker?.availableBalance).toBe('87.5000');
-    expect(trader?.availableBalance).toBe('112.5000');
+    expect(banker?.availableBalance).toBe('107.5000');
+    expect(trader?.availableBalance).toBe('92.5000');
   });
 
   it('persists rejected proposals without mutating balances', async () => {
@@ -339,8 +341,8 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
         ),
       ),
     ).toBe(true);
-    expect(banker?.availableBalance).toBe('100.0000');
-    expect(trader?.availableBalance).toBe('100.0000');
+    expect(banker?.availableBalance).toBe('110.0000');
+    expect(trader?.availableBalance).toBe('90.0000');
 
     delete process.env.AGENT_MOCK_SCENARIO;
   });
@@ -416,8 +418,8 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
     expect(response.status).toBe(201);
     expect(counterAction).toBeDefined();
     expect(acceptance?.relatedProposalActionId).toBeDefined();
-    expect(banker?.availableBalance).toBe('108.5000');
-    expect(trader?.availableBalance).toBe('91.5000');
+    expect(banker?.availableBalance).toBe('107.5000');
+    expect(trader?.availableBalance).toBe('101.0000');
 
     delete process.env.AGENT_MOCK_SCENARIO;
   });
