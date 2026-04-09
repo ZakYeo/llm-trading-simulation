@@ -19,6 +19,10 @@ describe('App', () => {
     expect(html).toContain('Run next 2 turns');
     expect(html).toContain('Roster');
     expect(html).toContain('Add bot');
+    expect(html).toContain('Banker Bot');
     expect(html).toContain('Trader Bot');
+    expect(html).not.toContain('Analyst Bot');
+    expect(html).not.toContain('Lawyer Bot');
+    expect(html).not.toContain('Influencer Bot');
   });
 });

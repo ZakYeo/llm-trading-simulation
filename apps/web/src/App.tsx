@@ -11,13 +11,7 @@ import {
   type GameReplayRecord,
 } from './lib/api';
 
-const agentRoleOptions = [
-  'banker',
-  'analyst',
-  'lawyer',
-  'influencer',
-  'trader',
-] as const;
+const agentRoleOptions = ['banker', 'trader'] as const;
 
 type AgentRole = (typeof agentRoleOptions)[number];
 
@@ -29,10 +23,7 @@ interface AgentDraft {
 
 const defaultAgentSetup: AgentDraft[] = [
   { id: 'agent-draft-1', name: 'Banker Bot', role: 'banker' },
-  { id: 'agent-draft-2', name: 'Analyst Bot', role: 'analyst' },
-  { id: 'agent-draft-3', name: 'Lawyer Bot', role: 'lawyer' },
-  { id: 'agent-draft-4', name: 'Influencer Bot', role: 'influencer' },
-  { id: 'agent-draft-5', name: 'Trader Bot', role: 'trader' },
+  { id: 'agent-draft-2', name: 'Trader Bot', role: 'trader' },
 ];
 
 function formatCurrency(value: string) {
