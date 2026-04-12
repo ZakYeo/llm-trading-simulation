@@ -39,75 +39,35 @@ The main quality risk is not correctness so much as **product-language and contr
 
 ## Findings
 
-### 1. The Prisma repository still deserves monitoring for write amplification
+The report items from this review have now been implemented:
 
-File: `apps/api/src/modules/game/infrastructure/prisma/prisma-game-session.repository.ts`
+- `RunAgentCommunicationTurnUseCase` was decomposed into focused services
+- `App.tsx` was split into smaller components and hooks
+- replay mapping was typed and simplified
+- shared transport contracts are now reused across apps
+- misleading transfer action names were replaced with canonical payment-request terminology
+- the temporary alias layer for legacy action names has been removed from shared contracts
+- custody persistence now uses keyed upserts and targeted deletes instead of full row rewrites
+- provider construction is narrower and covered by tests
 
-The repository now uses keyed custody-position upserts and targeted deletes instead of deleting all custody rows on every save. That is a material improvement. It still loops through every agent with individual upserts:
+## Ongoing Watchpoints
 
-- lines `156-160`
+These are not active refactor items anymore, but they are worth monitoring as the product grows:
 
-This is acceptable at MVP scale, but persistence cost is still coupled to aggregate size more than strict change size.
-
-Recommendation:
-
-- Keep the keyed custody persistence approach
-- Revisit agent persistence if aggregate size grows enough for per-agent upserts to become a bottleneck
-- Consider a dedicated persistence component for custody state if treasury complexity keeps increasing
-
-### 2. Some provider wiring still warrants discipline
-
-File: `apps/api/src/modules/agents/presentation/agents.providers.ts`
-
-The provider wiring is cleaner than before: repository and gateway creation are now isolated in narrow factory functions, and the provider graph is covered by tests. The remaining concern is architectural discipline over time rather than an immediate hotspot.
-
-Recommendation:
-
-- Keep provider construction behind narrow factory functions and tokens
-- Avoid letting future provider edits drift back toward large inline constructor logic
-
-### 3. Some naming is technically correct but product-confusing
-
-Examples:
-
-- legacy transfer semantics had previously drifted from the user-facing product language
-- helper names such as `wouldSettleAsBankerFundingTrader(...)` had to carry compensating logic because the action vocabulary was misleading
-
-That migration is now underway with canonical payment-request terminology. The remaining risk is making sure the compatibility layer is removed cleanly once old aliases are no longer needed.
-
-Recommendation:
-
-- Finish the alias-removal phase once stored history, prompts, replay, tests, and frontend code no longer depend on the legacy names
-- Keep the persistence-layer mapping isolated so the rest of the codebase can stay on canonical terminology
-
-Proposed cleanup plan:
-
-1. Keep canonical payment-request names as the only internal vocabulary
-2. Retain the persistence compatibility mapping only at the Prisma boundary
-3. Remove legacy aliases from shared contracts once stored/action payload compatibility is no longer required
+1. Agent persistence still uses per-agent upserts, which is acceptable at current scale but could become a bottleneck with much larger sessions.
+2. Provider construction should stay behind narrow factories and tokens instead of drifting back toward large inline constructor logic.
+3. The Prisma mapping layer remains the correct place to isolate persistence-specific naming and enum translation.
 
 ## Priority Order
 
-### High Priority
+There are no remaining high-priority refactor items from this report.
 
-1. Remove legacy action-name aliases from shared contracts once the compatibility window is no longer needed
+If the codebase grows in complexity, the next likely revisit points would be:
 
-### Medium Priority
-
-2. Revisit agent persistence if aggregate size grows enough for per-agent upserts to become a bottleneck
-
-### Lower Priority
-
-3. Keep provider wiring disciplined as new agent infrastructure is added
-
-## Suggested Next Refactors
-
-If I were sequencing this as a senior engineer, I would do it in this order:
-
-1. Remove legacy action aliases from shared contracts after the compatibility window closes
-2. Revisit agent persistence if write amplification becomes a real concern
-3. Keep provider construction narrow and tested as the agent stack grows
+1. agent persistence performance under larger aggregate sizes
+2. treasury persistence complexity if custody products become substantially richer
+3. provider discipline as more agent runtimes or repositories are introduced
 
 ## Final Take
 
-This codebase is in a healthy MVP state and most of the major structural refactors from the original report are now complete. The main remaining risk is now the usual one for evolving systems: temporary compatibility paths can outlive their usefulness. If the legacy action aliases are retired deliberately, the codebase should remain straightforward to extend as the treasury and agent mechanics expand.
+This codebase is in a healthy MVP state and the major structural refactors identified in this report are now complete. The remaining concerns are normal growth concerns rather than outstanding cleanup debt. If future changes preserve the same discipline around shared contracts, prompt semantics, persistence boundaries, and provider wiring, the codebase should remain straightforward to extend.

@@ -3,7 +3,6 @@ import type {
   AgentActionRepositoryPort,
 } from '../../application/ports/agent-action-repository.port.js';
 import type { PrismaClient } from '../../../shared/infrastructure/prisma/prisma-client.js';
-import { normalizeAgentActionType } from '@llm-sim/shared-types';
 
 function toPrismaActionType(
   actionType: AgentActionRecord['actionType'],
@@ -41,13 +40,13 @@ function fromPrismaActionType(
     case 'SEND_PRIVATE_MESSAGE':
       return 'send_private_message';
     case 'PROPOSE_DIRECT_TRANSFER':
-      return normalizeAgentActionType('propose_direct_transfer');
+      return 'request_payment';
     case 'COUNTER_DIRECT_TRANSFER_PROPOSAL':
-      return normalizeAgentActionType('counter_direct_transfer_proposal');
+      return 'counter_payment_request';
     case 'ACCEPT_DIRECT_TRANSFER_PROPOSAL':
-      return normalizeAgentActionType('accept_direct_transfer_proposal');
+      return 'accept_payment_request';
     case 'REJECT_DIRECT_TRANSFER_PROPOSAL':
-      return normalizeAgentActionType('reject_direct_transfer_proposal');
+      return 'reject_payment_request';
     case 'PLACE_FUNDS_WITH_BANKER':
       return 'place_funds_with_banker';
     case 'REDEEM_FUNDS_FROM_BANKER':

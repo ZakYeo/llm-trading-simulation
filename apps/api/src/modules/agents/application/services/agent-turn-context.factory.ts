@@ -3,7 +3,6 @@ import type {
   RecentAgentAction,
   RecentAgentMessage,
 } from '@llm-sim/mcp-contracts';
-import { normalizeAgentActionType } from '@llm-sim/shared-types';
 
 import type { GameSessionRepositoryPort } from '../../../game/application/ports/game-session-repository.port.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
@@ -73,7 +72,7 @@ function toRecentAction(
     agentId: action.agentId,
     agentName,
     recipientAgentId: action.recipientAgentId,
-    type: normalizeAgentActionType(action.actionType),
+    type: action.actionType,
     amount: action.amount,
     content: action.content,
     relatedProposalActionId: action.relatedProposalActionId,
