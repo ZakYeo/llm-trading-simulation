@@ -49,7 +49,7 @@ describe('AgentActionValidator', () => {
       createSession(),
       'agent-1',
       {
-        type: 'counter_direct_transfer_proposal',
+        type: 'counter_payment_request',
         proposalActionId: 'action-1',
         recipientAgentId: 'agent-2',
         amount: '8.5000',
@@ -63,7 +63,7 @@ describe('AgentActionValidator', () => {
           turnNumber: 2,
           agentId: 'agent-2',
           recipientAgentId: 'agent-1',
-          actionType: 'propose_direct_transfer',
+          actionType: 'request_payment',
           amount: '15.0000',
           content: 'Fund me.',
           createdAt: new Date(Date.UTC(2026, 3, 8, 10, 0, 0)).toISOString(),
@@ -85,7 +85,7 @@ describe('AgentActionValidator', () => {
         createSession(),
         'agent-2',
         {
-          type: 'propose_direct_transfer',
+          type: 'request_payment',
           recipientAgentId: 'agent-1',
           amount: '12.5000',
           rationale: 'Please fund my trading book.',
@@ -120,7 +120,7 @@ describe('AgentActionValidator', () => {
         createSession(),
         'agent-1',
         {
-          type: 'accept_direct_transfer_proposal',
+          type: 'accept_payment_request',
           proposalActionId: 'action-1',
         },
         [
@@ -131,7 +131,7 @@ describe('AgentActionValidator', () => {
             turnNumber: 2,
             agentId: 'agent-2',
             recipientAgentId: 'agent-1',
-            actionType: 'propose_direct_transfer',
+            actionType: 'request_payment',
             amount: '15.0000',
             content: 'Fund me.',
             createdAt: new Date(Date.UTC(2026, 3, 8, 10, 0, 0)).toISOString(),
@@ -144,7 +144,7 @@ describe('AgentActionValidator', () => {
             agentId: 'agent-1',
             recipientAgentId: null,
             relatedProposalActionId: 'action-1',
-            actionType: 'reject_direct_transfer_proposal',
+            actionType: 'reject_payment_request',
             content: 'No.',
             createdAt: new Date(Date.UTC(2026, 3, 8, 10, 0, 1)).toISOString(),
           },

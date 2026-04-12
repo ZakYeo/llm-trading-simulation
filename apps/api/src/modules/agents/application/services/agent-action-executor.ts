@@ -51,8 +51,8 @@ export class AgentActionExecutor {
       relatedProposalActionId: input.relatedProposalActionId,
       actionType: input.action.type,
       amount:
-        input.action.type === 'propose_direct_transfer' ||
-        input.action.type === 'counter_direct_transfer_proposal' ||
+        input.action.type === 'request_payment' ||
+        input.action.type === 'counter_payment_request' ||
         input.action.type === 'place_funds_with_banker' ||
         input.action.type === 'redeem_funds_from_banker'
           ? input.action.amount
@@ -61,10 +61,10 @@ export class AgentActionExecutor {
         input.action.type === 'send_public_message' ||
         input.action.type === 'send_private_message'
           ? input.action.content
-          : input.action.type === 'propose_direct_transfer' ||
-              input.action.type === 'counter_direct_transfer_proposal'
+          : input.action.type === 'request_payment' ||
+              input.action.type === 'counter_payment_request'
             ? input.action.rationale
-            : input.action.type === 'reject_direct_transfer_proposal'
+            : input.action.type === 'reject_payment_request'
               ? input.action.rationale
               : undefined,
     });

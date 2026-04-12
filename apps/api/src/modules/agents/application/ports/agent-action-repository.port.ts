@@ -1,3 +1,5 @@
+import type { AgentActionType } from '@llm-sim/shared-types';
+
 export interface AgentActionRecord {
   id?: string;
   gameSessionId: string;
@@ -5,16 +7,7 @@ export interface AgentActionRecord {
   turnNumber: number;
   agentId: string;
   recipientAgentId: string | null;
-  actionType:
-    | 'send_public_message'
-    | 'send_private_message'
-    | 'propose_direct_transfer'
-    | 'counter_direct_transfer_proposal'
-    | 'accept_direct_transfer_proposal'
-    | 'reject_direct_transfer_proposal'
-    | 'place_funds_with_banker'
-    | 'redeem_funds_from_banker'
-    | 'finalize_turn';
+  actionType: AgentActionType;
   relatedProposalActionId?: string;
   amount?: string;
   content?: string;

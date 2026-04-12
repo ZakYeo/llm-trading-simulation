@@ -20,13 +20,36 @@ export interface GameSessionSummary {
 export type AgentActionType =
   | 'send_public_message'
   | 'send_private_message'
-  | 'propose_direct_transfer'
-  | 'counter_direct_transfer_proposal'
-  | 'accept_direct_transfer_proposal'
-  | 'reject_direct_transfer_proposal'
+  | 'request_payment'
+  | 'counter_payment_request'
+  | 'accept_payment_request'
+  | 'reject_payment_request'
   | 'place_funds_with_banker'
   | 'redeem_funds_from_banker'
   | 'finalize_turn';
+
+export type LegacyPaymentActionType =
+  | 'propose_direct_transfer'
+  | 'counter_direct_transfer_proposal'
+  | 'accept_direct_transfer_proposal'
+  | 'reject_direct_transfer_proposal';
+
+export function normalizeAgentActionType(
+  actionType: AgentActionType | LegacyPaymentActionType,
+): AgentActionType {
+  switch (actionType) {
+    case 'propose_direct_transfer':
+      return 'request_payment';
+    case 'counter_direct_transfer_proposal':
+      return 'counter_payment_request';
+    case 'accept_direct_transfer_proposal':
+      return 'accept_payment_request';
+    case 'reject_direct_transfer_proposal':
+      return 'reject_payment_request';
+    default:
+      return actionType;
+  }
+}
 
 export type AgentMessageVisibility = 'public' | 'private';
 

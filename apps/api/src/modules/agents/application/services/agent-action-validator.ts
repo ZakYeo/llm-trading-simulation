@@ -7,25 +7,22 @@ import type { AgentActionRecord } from '../ports/agent-action-repository.port.js
 
 function isTransferProposalActionType(
   actionType: AgentActionRecord['actionType'],
-): actionType is
-  | 'propose_direct_transfer'
-  | 'counter_direct_transfer_proposal' {
+): actionType is 'request_payment' | 'counter_payment_request' {
   return (
-    actionType === 'propose_direct_transfer' ||
-    actionType === 'counter_direct_transfer_proposal'
+    actionType === 'request_payment' || actionType === 'counter_payment_request'
   );
 }
 
 function isTransferProposalResolutionType(
   actionType: AgentActionRecord['actionType'],
 ): actionType is
-  | 'counter_direct_transfer_proposal'
-  | 'accept_direct_transfer_proposal'
-  | 'reject_direct_transfer_proposal' {
+  | 'counter_payment_request'
+  | 'accept_payment_request'
+  | 'reject_payment_request' {
   return (
-    actionType === 'counter_direct_transfer_proposal' ||
-    actionType === 'accept_direct_transfer_proposal' ||
-    actionType === 'reject_direct_transfer_proposal'
+    actionType === 'counter_payment_request' ||
+    actionType === 'accept_payment_request' ||
+    actionType === 'reject_payment_request'
   );
 }
 
@@ -60,8 +57,8 @@ export class AgentActionValidator {
   ): ValidatedAgentAction {
     const recipientAgentId =
       action.type === 'send_private_message' ||
-      action.type === 'propose_direct_transfer' ||
-      action.type === 'counter_direct_transfer_proposal' ||
+      action.type === 'request_payment' ||
+      action.type === 'counter_payment_request' ||
       action.type === 'place_funds_with_banker' ||
       action.type === 'redeem_funds_from_banker'
         ? action.recipientAgentId
@@ -80,8 +77,8 @@ export class AgentActionValidator {
     }
 
     if (
-      action.type === 'propose_direct_transfer' ||
-      action.type === 'counter_direct_transfer_proposal' ||
+      action.type === 'request_payment' ||
+      action.type === 'counter_payment_request' ||
       action.type === 'place_funds_with_banker' ||
       action.type === 'redeem_funds_from_banker'
     ) {
@@ -89,8 +86,8 @@ export class AgentActionValidator {
     }
 
     if (
-      (action.type === 'propose_direct_transfer' ||
-        action.type === 'counter_direct_transfer_proposal') &&
+      (action.type === 'request_payment' ||
+        action.type === 'counter_payment_request') &&
       recipientAgentId &&
       wouldSettleAsBankerFundingTrader(session, agentId, recipientAgentId)
     ) {
@@ -117,9 +114,9 @@ export class AgentActionValidator {
     let relatedProposalActionId: string | undefined;
 
     if (
-      action.type === 'counter_direct_transfer_proposal' ||
-      action.type === 'accept_direct_transfer_proposal' ||
-      action.type === 'reject_direct_transfer_proposal'
+      action.type === 'counter_payment_request' ||
+      action.type === 'accept_payment_request' ||
+      action.type === 'reject_payment_request'
     ) {
       const proposal = recentActions.find(
         (candidate) =>
@@ -152,7 +149,7 @@ export class AgentActionValidator {
       }
 
       if (
-        action.type === 'counter_direct_transfer_proposal' &&
+        action.type === 'counter_payment_request' &&
         action.recipientAgentId !== proposal.agentId
       ) {
         throw new DomainInvariantError(

@@ -11,8 +11,8 @@ export class MockAgentGateway implements AgentGatewayPort {
     const ownCustodyPosition = context.treasuryContext.selfCustodyPosition;
     const pendingProposal = context.recentActions.find((action) => {
       if (
-        (action.type !== 'propose_direct_transfer' &&
-          action.type !== 'counter_direct_transfer_proposal') ||
+        (action.type !== 'request_payment' &&
+          action.type !== 'counter_payment_request') ||
         action.recipientAgentId !== context.self.agentId
       ) {
         return false;
@@ -20,9 +20,9 @@ export class MockAgentGateway implements AgentGatewayPort {
 
       return !context.recentActions.some(
         (candidate) =>
-          (candidate.type === 'counter_direct_transfer_proposal' ||
-            candidate.type === 'accept_direct_transfer_proposal' ||
-            candidate.type === 'reject_direct_transfer_proposal') &&
+          (candidate.type === 'counter_payment_request' ||
+            candidate.type === 'accept_payment_request' ||
+            candidate.type === 'reject_payment_request') &&
           candidate.relatedProposalActionId === action.actionId,
       );
     });
@@ -49,7 +49,7 @@ export class MockAgentGateway implements AgentGatewayPort {
       !pendingProposal
     ) {
       return {
-        type: 'propose_direct_transfer',
+        type: 'request_payment',
         recipientAgentId: trader.agentId,
         amount: '12.5000',
         rationale: 'Settle the analysis fee before I disclose the full signal.',
@@ -77,7 +77,7 @@ export class MockAgentGateway implements AgentGatewayPort {
     ) {
       if (scenario === 'reject_proposal') {
         return {
-          type: 'reject_direct_transfer_proposal',
+          type: 'reject_payment_request',
           proposalActionId: pendingProposal.actionId,
           rationale: 'The proposed transfer is too risky for this round.',
         };
@@ -85,7 +85,7 @@ export class MockAgentGateway implements AgentGatewayPort {
 
       if (scenario === 'counter_proposal') {
         return {
-          type: 'counter_direct_transfer_proposal',
+          type: 'counter_payment_request',
           proposalActionId: pendingProposal.actionId,
           recipientAgentId: analyst?.agentId ?? pendingProposal.agentId,
           amount: '8.5000',
@@ -94,7 +94,7 @@ export class MockAgentGateway implements AgentGatewayPort {
       }
 
       return {
-        type: 'accept_direct_transfer_proposal',
+        type: 'accept_payment_request',
         proposalActionId: pendingProposal.actionId,
       };
     }
@@ -120,10 +120,10 @@ export class MockAgentGateway implements AgentGatewayPort {
       context.self.role === 'analyst' &&
       scenario === 'counter_proposal' &&
       context.turnNumber >= 4 &&
-      pendingProposal?.type === 'counter_direct_transfer_proposal'
+      pendingProposal?.type === 'counter_payment_request'
     ) {
       return {
-        type: 'accept_direct_transfer_proposal',
+        type: 'accept_payment_request',
         proposalActionId: pendingProposal.actionId,
       };
     }

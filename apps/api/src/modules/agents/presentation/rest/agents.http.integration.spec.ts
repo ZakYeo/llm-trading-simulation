@@ -337,7 +337,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
     expect(
       body.turns.some((turn) =>
         turn.actionRecords.some(
-          (action) => action.actionType === 'reject_direct_transfer_proposal',
+          (action) => action.actionType === 'reject_payment_request',
         ),
       ),
     ).toBe(true);
@@ -406,12 +406,12 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
     const flattenedActions = body.turns.flatMap((turn) => turn.actionRecords);
     const counterAction = flattenedActions.find(
       (action) =>
-        action.actionType === 'counter_direct_transfer_proposal' &&
+        action.actionType === 'counter_payment_request' &&
         action.amount === '8.5',
     );
     const acceptance = flattenedActions.find(
       (action) =>
-        action.actionType === 'accept_direct_transfer_proposal' &&
+        action.actionType === 'accept_payment_request' &&
         action.relatedProposalActionId,
     );
 

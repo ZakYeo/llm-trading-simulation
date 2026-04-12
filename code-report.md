@@ -28,7 +28,7 @@ The codebase is moving in a good direction:
 - tests exist at unit and integration levels
 - recent work on the OpenAI system-context builder was a good refactor
 
-The main quality risk is not correctness so much as **growing coordination complexity**. Several core flows are now concentrated in a few large files, and infrastructure contracts are becoming event-type-specific. If this continues, feature work will get slower and regressions will become easier to introduce.
+The main quality risk is not correctness so much as **product-language and contract coordination complexity**. The largest structural hotspots identified earlier have now been refactored, but the remaining work still crosses backend logic, prompts, replay, and frontend semantics. If naming and transport contracts drift, feature work will get slower and regressions will become easier to introduce.
 
 ## Strengths
 
@@ -39,62 +39,7 @@ The main quality risk is not correctness so much as **growing coordination compl
 
 ## Findings
 
-### 1. `RunAgentCommunicationTurnUseCase` is doing too much
-
-File: `apps/api/src/modules/agents/application/use-cases/run-agent-communication-turn.use-case.ts`
-
-This file is currently 680 lines long and mixes:
-
-- prompt/context assembly
-- negotiation-state derivation
-- treasury-context derivation
-- validation
-- action persistence
-- message persistence
-- custody execution
-- event publication
-
-Examples:
-
-- context construction inside the main loop at lines `359-455`
-- action validation and branching at lines `457-568`
-- persistence and side effects at lines `570-617` and below
-
-This is the clearest “god object” in the codebase. It is still understandable today, but it is already carrying several independent responsibilities. Every new agent action will make this class harder to reason about.
-
-Recommendation:
-
-- Extract a `AgentTurnContextFactory`
-- Extract an `AgentActionValidator`
-- Extract an `AgentActionExecutor`
-- Keep the use case as orchestration glue only
-
-### 2. The repository port is growing by event type instead of modeling persistence more generically
-
-File: `apps/api/src/modules/game/application/ports/game-session-repository.port.ts`
-
-The repository interface now contains:
-
-- `saveWithTransfer`
-- `saveWithDeposit`
-- `saveWithWithdrawal`
-- `saveWithCustodyPlacement`
-- `saveWithCustodyRedemption`
-- `saveWithCustodyAccruals`
-
-This is a design smell. Every new history/event type forces a port change, an implementation change, and downstream wiring changes.
-
-That is a sign the abstraction is too specific to current event storage mechanics.
-
-Recommendation:
-
-- Introduce a more generic persistence model, such as:
-  - `save(session, domainEvents[])`
-  - or a `UnitOfWork`
-  - or a separate ledger/history writer port
-- Keep `GameSessionRepositoryPort` focused on aggregate persistence and retrieval
-
-### 3. The Prisma repository rewrites too much state on each save
+### 1. The Prisma repository rewrites too much state on each save
 
 File: `apps/api/src/modules/game/infrastructure/prisma/prisma-game-session.repository.ts`
 
@@ -114,81 +59,7 @@ Recommendation:
 - Consider a dedicated persistence component for custody state
 - If full replacement stays for now, document it explicitly because it has performance and concurrency implications
 
-### 4. The replay read model uses unsafe typing and a large in-memory assembly step
-
-File: `apps/api/src/modules/replay/infrastructure/prisma/prisma-replay-read-model.ts`
-
-Two issues stand out:
-
-- unsafe casting of the Prisma delegate:
-  - lines `104-112`
-- large manual event assembly and sorting in memory:
-  - lines `115-190`
-  - lines `197-331`
-
-The unsafe cast weakens type safety exactly where infrastructure correctness matters. The manual event-building block is also becoming a second “god function”.
-
-Recommendation:
-
-- Replace the `unknown as` delegate cast with a typed query abstraction or a properly typed repository helper
-- Extract event mapping into small functions per event family
-- Consider pagination or streamed replay reads if session histories grow
-
-### 5. The frontend `App.tsx` is too large and owns too many concerns
-
-File: `apps/web/src/App.tsx`
-
-This file is 703 lines long and currently owns:
-
-- API query orchestration
-- mutation handling
-- SSE subscription lifecycle
-- session form state
-- event formatting
-- treasury calculations
-- most of the rendered UI
-
-Examples:
-
-- event formatting helpers at lines `46-117`
-- query/mutation setup at lines `132-180`
-- derived treasury/session state at lines `182-211`
-- SSE lifecycle at lines `244-333`
-- all UI rendering at lines `335-703`
-
-This makes the frontend harder to evolve than it needs to be.
-
-Recommendation:
-
-- Split into focused components:
-  - `SessionControls`
-  - `SessionSnapshot`
-  - `TreasuryOverview`
-  - `ReplayTimeline`
-- Move SSE logic into a custom hook such as `useSessionEvents`
-- Move formatting helpers into `lib/formatters.ts`
-
-### 6. Frontend types duplicate backend/shared contracts manually
-
-File: `apps/web/src/lib/api.ts`
-
-The frontend manually defines transport types such as:
-
-- `ReplayEventRecord`
-- `AgentSessionEventRecord`
-- `GameSessionRecord`
-
-This duplicates backend response shapes and action enums. The risk is silent drift: the frontend can compile while the backend contract changes underneath it.
-
-Recommendation:
-
-- Promote API DTO types into a shared package, or
-- generate typed clients from shared schemas, or
-- at minimum centralize response schemas with runtime validation on the frontend
-
-The current setup is workable, but it will become brittle as replay and agent actions continue to evolve.
-
-### 7. Provider wiring is more concrete than it should be
+### 2. Provider wiring is more concrete than it should be
 
 File: `apps/api/src/modules/agents/presentation/agents.providers.ts`
 
@@ -207,75 +78,49 @@ Recommendation:
 - Use port types and tokens consistently in provider signatures
 - Keep environment selection logic, but hide concrete classes behind narrower interfaces
 
-### 8. The domain model and UI still expose legacy deposit concepts that are no longer central to the current product
-
-Files:
-
-- `apps/api/src/modules/game/presentation/rest/mappers/game-session-response.mapper.ts`
-- `apps/web/src/App.tsx`
-
-The API still returns per-agent:
-
-- `depositPrincipal`
-- `depositAccruedInterest`
-
-See mapper lines `10-18`.
-
-The frontend then renders those values directly:
-
-- `App.tsx` lines `570-577`
-
-Given the current banker/trader direction, custody is now the more meaningful mechanic. Keeping both models visible without a clear product distinction increases cognitive load and can confuse operators.
-
-Recommendation:
-
-- Either hide legacy deposit balances from the primary UI
-- or relabel them clearly as a separate mechanic
-- or remove them from operator-facing responses if they are no longer part of the intended experience
-
-### 9. Some naming is technically correct but product-confusing
+### 3. Some naming is technically correct but product-confusing
 
 Examples:
 
-- `propose_direct_transfer` means “recipient pays proposer”
-- `wouldSettleAsBankerFundingTrader(...)` in `run-agent-communication-turn.use-case.ts` lines `305-318`
+- legacy transfer semantics had previously drifted from the user-facing product language
+- helper names such as `wouldSettleAsBankerFundingTrader(...)` had to carry compensating logic because the action vocabulary was misleading
 
-The code now documents the semantics better than before, but the action name itself still invites incorrect mental models. This is a product-language problem as much as a code problem.
+That migration is now underway with canonical payment-request terminology. The remaining risk is making sure the compatibility layer is removed cleanly once old aliases are no longer needed.
 
 Recommendation:
 
-- Consider renaming transfer actions in shared contracts to something closer to actual mechanics, such as `request_payment` / `counter_payment_request`
-- If renaming is too expensive right now, keep tightening helper names and prompt wording
+- Finish the alias-removal phase once stored history, prompts, replay, tests, and frontend code no longer depend on the legacy names
+- Keep the persistence-layer mapping isolated so the rest of the codebase can stay on canonical terminology
+
+Proposed cleanup plan:
+
+1. Keep canonical payment-request names as the only internal vocabulary
+2. Retain the persistence compatibility mapping only at the Prisma boundary
+3. Remove legacy aliases from shared contracts once stored/action payload compatibility is no longer required
 
 ## Priority Order
 
 ### High Priority
 
-1. Decompose `RunAgentCommunicationTurnUseCase`
-2. Split `App.tsx` into components/hooks
-3. Stop growing `GameSessionRepositoryPort` by event subtype
+1. Revisit persistence churn in `PrismaGameSessionRepository`
 
 ### Medium Priority
 
-4. Clean up unsafe casts and large mapping blocks in `PrismaReplayReadModel`
-5. Move frontend API DTOs toward shared/generated contracts
-6. Tighten DI to depend on ports instead of concrete classes
+2. Tighten any remaining DI usage that still depends on concrete classes
 
 ### Lower Priority
 
-7. Revisit operator-facing exposure of legacy deposit fields
-8. Improve action naming to better match business semantics
+3. Remove legacy action-name aliases from shared contracts once the compatibility window is no longer needed
+4. Consider delta-based persistence for banker custody positions
 
 ## Suggested Next Refactors
 
 If I were sequencing this as a senior engineer, I would do it in this order:
 
-1. Extract `AgentTurnContextFactory`, `AgentActionValidator`, and `AgentActionExecutor`
-2. Break `App.tsx` into presentational sections and a small session-events hook
-3. Introduce a generic session-save plus history-events persistence API
-4. Move replay event mapping into dedicated mapper helpers
-5. Create a shared API-contract package for frontend DTOs
+1. Revisit custody persistence churn if write amplification becomes a real concern
+2. Remove legacy action aliases from shared contracts after the compatibility window closes
+3. Tighten any remaining DI sites that still expose concrete implementations unnecessarily
 
 ## Final Take
 
-This codebase is in a healthy MVP state, but it is at the point where the next wave of features will either benefit from structural refactors or make the core orchestration files noticeably harder to maintain. The biggest risk is not low code quality; it is **concentration of responsibility** in a few central files and interfaces. Addressing that now will keep the project moving quickly as the agent and treasury mechanics expand.
+This codebase is in a healthy MVP state and most of the major structural refactors from the original report are now complete. The main remaining risks are more operational than architectural: write amplification in persistence, and the discipline to remove temporary compatibility layers once migrations have landed. If those are handled deliberately, the codebase should remain straightforward to extend as the treasury and agent mechanics expand.

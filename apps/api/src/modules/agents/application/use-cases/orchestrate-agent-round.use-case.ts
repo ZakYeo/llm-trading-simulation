@@ -6,8 +6,7 @@ import type { RunAgentCommunicationTurnUseCase } from './run-agent-communication
 
 function isTransferProposalActionType(actionType: string): boolean {
   return (
-    actionType === 'propose_direct_transfer' ||
-    actionType === 'counter_direct_transfer_proposal'
+    actionType === 'request_payment' || actionType === 'counter_payment_request'
   );
 }
 
@@ -110,7 +109,7 @@ export class OrchestrateAgentRoundUseCase {
     const acceptedProposals = actions.filter(
       (action) =>
         action.turnNumber === turnNumber &&
-        action.actionType === 'accept_direct_transfer_proposal' &&
+        action.actionType === 'accept_payment_request' &&
         action.relatedProposalActionId,
     );
 

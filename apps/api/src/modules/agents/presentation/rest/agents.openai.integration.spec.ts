@@ -191,10 +191,10 @@ describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
       return flattenedActionTypes.some(
         (actionType) =>
           actionType === 'send_private_message' ||
-          actionType === 'propose_direct_transfer' ||
-          actionType === 'counter_direct_transfer_proposal' ||
-          actionType === 'accept_direct_transfer_proposal' ||
-          actionType === 'reject_direct_transfer_proposal' ||
+          actionType === 'request_payment' ||
+          actionType === 'counter_payment_request' ||
+          actionType === 'accept_payment_request' ||
+          actionType === 'reject_payment_request' ||
           actionType === 'place_funds_with_banker' ||
           actionType === 'redeem_funds_from_banker',
       );
@@ -219,10 +219,10 @@ describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
       const substantiveInteractionActionTypes = flattenedActionTypes.filter(
         (actionType) =>
           actionType === 'send_private_message' ||
-          actionType === 'propose_direct_transfer' ||
-          actionType === 'counter_direct_transfer_proposal' ||
-          actionType === 'accept_direct_transfer_proposal' ||
-          actionType === 'reject_direct_transfer_proposal' ||
+          actionType === 'request_payment' ||
+          actionType === 'counter_payment_request' ||
+          actionType === 'accept_payment_request' ||
+          actionType === 'reject_payment_request' ||
           actionType === 'place_funds_with_banker' ||
           actionType === 'redeem_funds_from_banker',
       );

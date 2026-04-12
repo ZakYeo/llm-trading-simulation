@@ -22,6 +22,10 @@ export const recentAgentActionSchema = z.object({
   type: z.enum([
     'send_public_message',
     'send_private_message',
+    'request_payment',
+    'counter_payment_request',
+    'accept_payment_request',
+    'reject_payment_request',
     'propose_direct_transfer',
     'counter_direct_transfer_proposal',
     'accept_direct_transfer_proposal',
@@ -137,14 +141,14 @@ export const agentActionSchema = z.discriminatedUnion('type', [
     reasoning: z.string().min(1).optional(),
   }),
   z.object({
-    type: z.literal('propose_direct_transfer'),
+    type: z.literal('request_payment'),
     recipientAgentId: z.string().min(1),
     amount: z.string().min(1),
     rationale: z.string().min(1),
     reasoning: z.string().min(1).optional(),
   }),
   z.object({
-    type: z.literal('counter_direct_transfer_proposal'),
+    type: z.literal('counter_payment_request'),
     proposalActionId: z.string().min(1),
     recipientAgentId: z.string().min(1),
     amount: z.string().min(1),
@@ -152,12 +156,12 @@ export const agentActionSchema = z.discriminatedUnion('type', [
     reasoning: z.string().min(1).optional(),
   }),
   z.object({
-    type: z.literal('accept_direct_transfer_proposal'),
+    type: z.literal('accept_payment_request'),
     proposalActionId: z.string().min(1),
     reasoning: z.string().min(1).optional(),
   }),
   z.object({
-    type: z.literal('reject_direct_transfer_proposal'),
+    type: z.literal('reject_payment_request'),
     proposalActionId: z.string().min(1),
     rationale: z.string().min(1),
     reasoning: z.string().min(1).optional(),

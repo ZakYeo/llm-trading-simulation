@@ -4,6 +4,8 @@ import { AdvanceGameRoundUseCase } from '../application/use-cases/advance-game-r
 import { CreateGameSessionUseCase } from '../application/use-cases/create-game-session.use-case.js';
 import { DepositToBankUseCase } from '../application/use-cases/deposit-to-bank.use-case.js';
 import { GetGameSessionUseCase } from '../application/use-cases/get-game-session.use-case.js';
+import { PlaceFundsWithBankerUseCase } from '../application/use-cases/place-funds-with-banker.use-case.js';
+import { RedeemFundsFromBankerUseCase } from '../application/use-cases/redeem-funds-from-banker.use-case.js';
 import { TransferFundsUseCase } from '../application/use-cases/transfer-funds.use-case.js';
 import { WithdrawFromBankUseCase } from '../application/use-cases/withdraw-from-bank.use-case.js';
 import { LedgerService } from '../domain/services/ledger.service.js';
@@ -37,7 +39,7 @@ describe('createGameProviders', () => {
   it('registers the expected infrastructure and use-case providers', () => {
     const providers = createGameProviders();
 
-    expect(providers).toHaveLength(10);
+    expect(providers).toHaveLength(12);
     expect(providers[0]).toBe(PrismaService);
     expect(providers[1]).toBe(LedgerService);
     expect(providers[2]).toMatchObject({
@@ -58,7 +60,7 @@ describe('createGameProviders', () => {
     });
     expect(providers[6]).toMatchObject({
       provide: AdvanceGameRoundUseCase,
-      inject: [GAME_SESSION_REPOSITORY, LedgerService],
+      inject: [GAME_SESSION_REPOSITORY],
     });
     expect(providers[7]).toMatchObject({
       provide: DepositToBankUseCase,
@@ -72,6 +74,14 @@ describe('createGameProviders', () => {
       provide: TransferFundsUseCase,
       inject: [GAME_SESSION_REPOSITORY, LedgerService],
     });
+    expect(providers[10]).toMatchObject({
+      provide: PlaceFundsWithBankerUseCase,
+      inject: [GAME_SESSION_REPOSITORY, LedgerService],
+    });
+    expect(providers[11]).toMatchObject({
+      provide: RedeemFundsFromBankerUseCase,
+      inject: [GAME_SESSION_REPOSITORY, LedgerService],
+    });
   });
 
   it('builds the repository and use cases from their factories', () => {
@@ -83,6 +93,8 @@ describe('createGameProviders', () => {
     const depositProvider = expectFactoryProvider(providers[7]);
     const withdrawProvider = expectFactoryProvider(providers[8]);
     const transferProvider = expectFactoryProvider(providers[9]);
+    const placeFundsProvider = expectFactoryProvider(providers[10]);
+    const redeemFundsProvider = expectFactoryProvider(providers[11]);
 
     const prismaService = {} as PrismaService;
     const repository = repositoryProvider.useFactory(prismaService);
@@ -96,9 +108,9 @@ describe('createGameProviders', () => {
     expect(getSessionProvider.useFactory(repository)).toBeInstanceOf(
       GetGameSessionUseCase,
     );
-    expect(
-      advanceRoundProvider.useFactory(repository, ledgerService),
-    ).toBeInstanceOf(AdvanceGameRoundUseCase);
+    expect(advanceRoundProvider.useFactory(repository)).toBeInstanceOf(
+      AdvanceGameRoundUseCase,
+    );
     expect(
       depositProvider.useFactory(repository, ledgerService),
     ).toBeInstanceOf(DepositToBankUseCase);
@@ -108,5 +120,11 @@ describe('createGameProviders', () => {
     expect(
       transferProvider.useFactory(repository, ledgerService),
     ).toBeInstanceOf(TransferFundsUseCase);
+    expect(
+      placeFundsProvider.useFactory(repository, ledgerService),
+    ).toBeInstanceOf(PlaceFundsWithBankerUseCase);
+    expect(
+      redeemFundsProvider.useFactory(repository, ledgerService),
+    ).toBeInstanceOf(RedeemFundsFromBankerUseCase);
   });
 });

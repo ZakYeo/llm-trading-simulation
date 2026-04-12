@@ -387,7 +387,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
       replay.events.some(
         (event) =>
           event.type === 'action' &&
-          event.actionType === 'reject_direct_transfer_proposal',
+          event.actionType === 'reject_payment_request',
       ),
     ).toBe(true);
 
@@ -446,14 +446,14 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
       replay.events.some(
         (event) =>
           event.type === 'action' &&
-          event.actionType === 'counter_direct_transfer_proposal',
+          event.actionType === 'counter_payment_request',
       ),
     ).toBe(true);
     expect(
       replay.events.some(
         (event) =>
           event.type === 'action' &&
-          event.actionType === 'accept_direct_transfer_proposal' &&
+          event.actionType === 'accept_payment_request' &&
           typeof event.relatedProposalActionId === 'string',
       ),
     ).toBe(true);

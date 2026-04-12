@@ -66,7 +66,7 @@ describe('GetGameReplayUseCase', () => {
           recipientAgentId: 'agent-2',
           amount: '12.5000',
           content: 'I need short-term capital to press a momentum setup.',
-          actionType: 'propose_direct_transfer',
+          actionType: 'request_payment',
         },
         {
           id: 'action-2',
@@ -77,7 +77,7 @@ describe('GetGameReplayUseCase', () => {
           agentId: 'agent-2',
           agentName: 'Banker Bot',
           relatedProposalActionId: 'action-1',
-          actionType: 'accept_direct_transfer_proposal',
+          actionType: 'accept_payment_request',
         },
       ],
     };

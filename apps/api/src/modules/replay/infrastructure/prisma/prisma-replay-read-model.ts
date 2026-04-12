@@ -201,13 +201,13 @@ function toReplayActionType(
     case 'SEND_PRIVATE_MESSAGE':
       return 'send_private_message';
     case 'PROPOSE_DIRECT_TRANSFER':
-      return 'propose_direct_transfer';
+      return 'request_payment';
     case 'COUNTER_DIRECT_TRANSFER_PROPOSAL':
-      return 'counter_direct_transfer_proposal';
+      return 'counter_payment_request';
     case 'ACCEPT_DIRECT_TRANSFER_PROPOSAL':
-      return 'accept_direct_transfer_proposal';
+      return 'accept_payment_request';
     case 'REJECT_DIRECT_TRANSFER_PROPOSAL':
-      return 'reject_direct_transfer_proposal';
+      return 'reject_payment_request';
     case 'PLACE_FUNDS_WITH_BANKER':
       return 'place_funds_with_banker';
     case 'REDEEM_FUNDS_FROM_BANKER':

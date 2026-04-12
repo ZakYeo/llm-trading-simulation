@@ -41,6 +41,22 @@ export function getReplayEventLabel(event: GameReplayRecord['events'][number]) {
   }
 
   if (event.type === 'action') {
+    if (event.actionType === 'request_payment') {
+      return `${event.agentName} / request payment`;
+    }
+
+    if (event.actionType === 'counter_payment_request') {
+      return `${event.agentName} / counter payment request`;
+    }
+
+    if (event.actionType === 'accept_payment_request') {
+      return `${event.agentName} / accept payment request`;
+    }
+
+    if (event.actionType === 'reject_payment_request') {
+      return `${event.agentName} / reject payment request`;
+    }
+
     if (event.actionType === 'place_funds_with_banker') {
       return `${event.agentName} / place funds with banker`;
     }

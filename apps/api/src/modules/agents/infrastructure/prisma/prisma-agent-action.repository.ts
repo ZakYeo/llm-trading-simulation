@@ -3,6 +3,7 @@ import type {
   AgentActionRepositoryPort,
 } from '../../application/ports/agent-action-repository.port.js';
 import type { PrismaClient } from '../../../shared/infrastructure/prisma/prisma-client.js';
+import { normalizeAgentActionType } from '@llm-sim/shared-types';
 
 function toPrismaActionType(
   actionType: AgentActionRecord['actionType'],
@@ -12,13 +13,13 @@ function toPrismaActionType(
       return 'SEND_PUBLIC_MESSAGE';
     case 'send_private_message':
       return 'SEND_PRIVATE_MESSAGE';
-    case 'propose_direct_transfer':
+    case 'request_payment':
       return 'PROPOSE_DIRECT_TRANSFER';
-    case 'counter_direct_transfer_proposal':
+    case 'counter_payment_request':
       return 'COUNTER_DIRECT_TRANSFER_PROPOSAL';
-    case 'accept_direct_transfer_proposal':
+    case 'accept_payment_request':
       return 'ACCEPT_DIRECT_TRANSFER_PROPOSAL';
-    case 'reject_direct_transfer_proposal':
+    case 'reject_payment_request':
       return 'REJECT_DIRECT_TRANSFER_PROPOSAL';
     case 'place_funds_with_banker':
       return 'PLACE_FUNDS_WITH_BANKER';
@@ -40,13 +41,13 @@ function fromPrismaActionType(
     case 'SEND_PRIVATE_MESSAGE':
       return 'send_private_message';
     case 'PROPOSE_DIRECT_TRANSFER':
-      return 'propose_direct_transfer';
+      return normalizeAgentActionType('propose_direct_transfer');
     case 'COUNTER_DIRECT_TRANSFER_PROPOSAL':
-      return 'counter_direct_transfer_proposal';
+      return normalizeAgentActionType('counter_direct_transfer_proposal');
     case 'ACCEPT_DIRECT_TRANSFER_PROPOSAL':
-      return 'accept_direct_transfer_proposal';
+      return normalizeAgentActionType('accept_direct_transfer_proposal');
     case 'REJECT_DIRECT_TRANSFER_PROPOSAL':
-      return 'reject_direct_transfer_proposal';
+      return normalizeAgentActionType('reject_direct_transfer_proposal');
     case 'PLACE_FUNDS_WITH_BANKER':
       return 'place_funds_with_banker';
     case 'REDEEM_FUNDS_FROM_BANKER':

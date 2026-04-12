@@ -79,7 +79,7 @@ function createRecentActions(): AgentActionRecord[] {
       turnNumber: 2,
       agentId: 'agent-2',
       recipientAgentId: 'agent-1',
-      actionType: 'propose_direct_transfer',
+      actionType: 'request_payment',
       amount: '15.0000',
       content: 'I can turn this into a higher-return trade quickly.',
       createdAt: new Date(Date.UTC(2026, 3, 8, 10, 0, 2)).toISOString(),

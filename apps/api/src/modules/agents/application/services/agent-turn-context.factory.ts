@@ -3,6 +3,7 @@ import type {
   RecentAgentAction,
   RecentAgentMessage,
 } from '@llm-sim/mcp-contracts';
+import { normalizeAgentActionType } from '@llm-sim/shared-types';
 
 import type { GameSessionRepositoryPort } from '../../../game/application/ports/game-session-repository.port.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
@@ -11,25 +12,22 @@ import type { AgentMessageRecord } from '../ports/agent-message-repository.port.
 
 function isTransferProposalActionType(
   actionType: AgentActionRecord['actionType'],
-): actionType is
-  | 'propose_direct_transfer'
-  | 'counter_direct_transfer_proposal' {
+): actionType is 'request_payment' | 'counter_payment_request' {
   return (
-    actionType === 'propose_direct_transfer' ||
-    actionType === 'counter_direct_transfer_proposal'
+    actionType === 'request_payment' || actionType === 'counter_payment_request'
   );
 }
 
 function isTransferProposalResolutionType(
   actionType: AgentActionRecord['actionType'],
 ): actionType is
-  | 'counter_direct_transfer_proposal'
-  | 'accept_direct_transfer_proposal'
-  | 'reject_direct_transfer_proposal' {
+  | 'counter_payment_request'
+  | 'accept_payment_request'
+  | 'reject_payment_request' {
   return (
-    actionType === 'counter_direct_transfer_proposal' ||
-    actionType === 'accept_direct_transfer_proposal' ||
-    actionType === 'reject_direct_transfer_proposal'
+    actionType === 'counter_payment_request' ||
+    actionType === 'accept_payment_request' ||
+    actionType === 'reject_payment_request'
   );
 }
 
@@ -75,7 +73,7 @@ function toRecentAction(
     agentId: action.agentId,
     agentName,
     recipientAgentId: action.recipientAgentId,
-    type: action.actionType,
+    type: normalizeAgentActionType(action.actionType),
     amount: action.amount,
     content: action.content,
     relatedProposalActionId: action.relatedProposalActionId,

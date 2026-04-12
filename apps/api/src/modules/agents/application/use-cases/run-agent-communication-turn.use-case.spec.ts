@@ -280,7 +280,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       turnNumber: 2,
       agentId: 'agent-2',
       recipientAgentId: 'agent-1',
-      actionType: 'propose_direct_transfer',
+      actionType: 'request_payment',
       amount: '15.0000',
       content: 'I can turn this into a higher-return trade quickly.',
     });
@@ -290,7 +290,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       turnNumber: 3,
       agentId: 'agent-1',
       recipientAgentId: null,
-      actionType: 'accept_direct_transfer_proposal',
+      actionType: 'accept_payment_request',
       relatedProposalActionId: 'action-1',
     });
 
@@ -300,7 +300,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       actionRepository,
       new ScriptedAgentGateway([
         {
-          type: 'reject_direct_transfer_proposal',
+          type: 'reject_payment_request',
           proposalActionId: 'action-1',
           rationale: 'This should not be allowed twice.',
         },
@@ -329,7 +329,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       turnNumber: 2,
       agentId: 'agent-2',
       recipientAgentId: 'agent-1',
-      actionType: 'propose_direct_transfer',
+      actionType: 'request_payment',
       amount: '15.0000',
       content: 'I can turn this into a higher-return trade quickly.',
     });
@@ -340,7 +340,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       actionRepository,
       new ScriptedAgentGateway([
         {
-          type: 'counter_direct_transfer_proposal',
+          type: 'counter_payment_request',
           proposalActionId: 'action-1',
           recipientAgentId: 'agent-2',
           amount: '8.5000',
@@ -363,7 +363,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
     expect(result.actionRecords[0]).toMatchObject({
       agentId: 'agent-1',
       recipientAgentId: 'agent-2',
-      actionType: 'counter_direct_transfer_proposal',
+      actionType: 'counter_payment_request',
       relatedProposalActionId: 'action-1',
       amount: '8.5000',
       content: 'I can fund this trade, but only at a lower amount.',
@@ -398,7 +398,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       turnNumber: 2,
       agentId: 'agent-2',
       recipientAgentId: 'agent-1',
-      actionType: 'propose_direct_transfer',
+      actionType: 'request_payment',
       amount: '15.0000',
       content: 'I can turn this into a higher-return trade quickly.',
     });
@@ -645,7 +645,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
           type: 'finalize_turn',
         },
         {
-          type: 'propose_direct_transfer',
+          type: 'request_payment',
           recipientAgentId: 'agent-1',
           amount: '12.5000',
           rationale: 'Please fund my trading book.',

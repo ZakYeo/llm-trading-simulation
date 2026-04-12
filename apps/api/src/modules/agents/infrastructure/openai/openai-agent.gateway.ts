@@ -29,10 +29,10 @@ const agentDecisionJsonSchema = {
         enum: [
           'send_public_message',
           'send_private_message',
-          'propose_direct_transfer',
-          'counter_direct_transfer_proposal',
-          'accept_direct_transfer_proposal',
-          'reject_direct_transfer_proposal',
+          'request_payment',
+          'counter_payment_request',
+          'accept_payment_request',
+          'reject_payment_request',
           'place_funds_with_banker',
           'redeem_funds_from_banker',
           'finalize_turn',
@@ -159,10 +159,10 @@ function normalizeAgentDecision(
         content: rawDecision.content,
         reasoning: rawDecision.reasoning ?? undefined,
       };
-    case 'propose_direct_transfer':
+    case 'request_payment':
       if (!recipientAgentId || !rawDecision.amount || !rawDecision.rationale) {
         throw new DomainInvariantError(
-          'propose_direct_transfer requires recipientAgentId, amount, and rationale from the model.',
+          'request_payment requires recipientAgentId, amount, and rationale from the model.',
         );
       }
 
@@ -173,7 +173,7 @@ function normalizeAgentDecision(
         rationale: rawDecision.rationale,
         reasoning: rawDecision.reasoning ?? undefined,
       };
-    case 'counter_direct_transfer_proposal':
+    case 'counter_payment_request':
       if (
         !rawDecision.proposalActionId ||
         !recipientAgentId ||
@@ -181,7 +181,7 @@ function normalizeAgentDecision(
         !rawDecision.rationale
       ) {
         throw new DomainInvariantError(
-          'counter_direct_transfer_proposal requires proposalActionId, recipientAgentId, amount, and rationale from the model.',
+          'counter_payment_request requires proposalActionId, recipientAgentId, amount, and rationale from the model.',
         );
       }
 
@@ -193,10 +193,10 @@ function normalizeAgentDecision(
         rationale: rawDecision.rationale,
         reasoning: rawDecision.reasoning ?? undefined,
       };
-    case 'accept_direct_transfer_proposal':
+    case 'accept_payment_request':
       if (!rawDecision.proposalActionId) {
         throw new DomainInvariantError(
-          'accept_direct_transfer_proposal requires proposalActionId from the model.',
+          'accept_payment_request requires proposalActionId from the model.',
         );
       }
 
@@ -205,10 +205,10 @@ function normalizeAgentDecision(
         proposalActionId: rawDecision.proposalActionId,
         reasoning: rawDecision.reasoning ?? undefined,
       };
-    case 'reject_direct_transfer_proposal':
+    case 'reject_payment_request':
       if (!rawDecision.proposalActionId || !rawDecision.rationale) {
         throw new DomainInvariantError(
-          'reject_direct_transfer_proposal requires proposalActionId and rationale from the model.',
+          'reject_payment_request requires proposalActionId and rationale from the model.',
         );
       }
 
