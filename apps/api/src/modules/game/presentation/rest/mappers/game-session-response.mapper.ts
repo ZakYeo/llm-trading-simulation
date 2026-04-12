@@ -1,7 +1,9 @@
+import type { GameSessionRecord } from '@llm-sim/shared-types';
+
 import type { GameSession } from '../../../domain/entities/game-session.js';
 
 export class GameSessionResponseMapper {
-  static toResponse(session: GameSession) {
+  static toResponse(session: GameSession): GameSessionRecord {
     return {
       id: session.id,
       name: session.name,

@@ -1,8 +1,5 @@
-import type {
-  Prisma} from '../../../shared/infrastructure/prisma/prisma-client.js';
-import {
-  type PrismaClient,
-} from '../../../shared/infrastructure/prisma/prisma-client.js';
+import type { Prisma } from '../../../shared/infrastructure/prisma/prisma-client.js';
+import { type PrismaClient } from '../../../shared/infrastructure/prisma/prisma-client.js';
 import type {
   GameReplayRecord,
   ReplayEventRecord,
@@ -260,6 +257,23 @@ function mapReplayEvents(session: ReplaySessionRecord): ReplayEventRecord[] {
   });
 }
 
+function toReplaySessionStatus(
+  status: ReplaySessionRecord['status'],
+): GameReplayRecord['gameSession']['status'] {
+  switch (status) {
+    case 'SETUP':
+      return 'setup';
+    case 'ACTIVE':
+      return 'active';
+    case 'SETTLEMENT':
+      return 'settlement';
+    case 'COMPLETED':
+      return 'completed';
+    case 'FAILED':
+      return 'failed';
+  }
+}
+
 export class PrismaReplayReadModel implements ReplayReadModelPort {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -279,7 +293,7 @@ export class PrismaReplayReadModel implements ReplayReadModelPort {
       gameSession: {
         id: session.id,
         name: session.name,
-        status: session.status.toLowerCase(),
+        status: toReplaySessionStatus(session.status),
         currentRound: session.currentRound,
       },
       rounds: session.rounds.map((round) => ({

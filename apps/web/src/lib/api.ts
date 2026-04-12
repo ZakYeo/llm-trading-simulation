@@ -1,143 +1,15 @@
-export interface GameAgentRecord {
-  id: string;
-  name: string;
-  role: string;
-  availableBalance: string;
-  reservedBalance: string;
-  depositPrincipal: string;
-  depositAccruedInterest: string;
-}
+import type {
+  GameReplayRecord,
+  GameSessionRecord,
+  OrchestratedRoundRecord,
+} from '@llm-sim/shared-types';
 
-export interface BankerCustodyPositionRecord {
-  bankerAgentId: string;
-  ownerAgentId: string;
-  principal: string;
-  accruedInterest: string;
-  totalBalance: string;
-}
-
-export interface GameSessionRecord {
-  id: string;
-  name: string;
-  status: string;
-  currentRound: number;
-  agents: GameAgentRecord[];
-  bankerCustodyPositions: BankerCustodyPositionRecord[];
-}
-
-export interface ReplayEventRecord {
-  id: string;
-  type:
-    | 'transfer'
-    | 'deposit'
-    | 'withdrawal'
-    | 'message'
-    | 'action'
-    | 'custody_placement'
-    | 'custody_redemption'
-    | 'custody_accrual';
-  createdAt: string;
-  amount?: string;
-  roundNumber?: number;
-  turnNumber?: number;
-  agentId?: string;
-  agentName?: string;
-  sourceAgentId?: string;
-  sourceAgentName?: string;
-  destinationAgentId?: string;
-  destinationAgentName?: string;
-  bankerAgentId?: string;
-  bankerAgentName?: string;
-  ownerAgentId?: string;
-  ownerAgentName?: string;
-  senderAgentId?: string;
-  senderAgentName?: string;
-  recipientAgentId?: string | null;
-  recipientAgentName?: string;
-  visibility?: 'public' | 'private';
-  content?: string;
-  actionType?:
-    | 'send_public_message'
-    | 'send_private_message'
-    | 'propose_direct_transfer'
-    | 'counter_direct_transfer_proposal'
-    | 'accept_direct_transfer_proposal'
-    | 'reject_direct_transfer_proposal'
-    | 'place_funds_with_banker'
-    | 'redeem_funds_from_banker'
-    | 'finalize_turn';
-  relatedProposalActionId?: string;
-}
-
-export interface GameReplayRecord {
-  gameSession: {
-    id: string;
-    name: string;
-    status: string;
-    currentRound: number;
-  };
-  rounds: Array<{
-    id: string;
-    roundNumber: number;
-    createdAt: string;
-  }>;
-  events: ReplayEventRecord[];
-}
-
-export interface OrchestratedRoundRecord {
-  gameSessionId: string;
-  roundNumber: number;
-  turns: Array<{
-    turnNumber: number;
-    actions: Array<{
-      agentId: string;
-      agentName: string;
-      action: {
-        type: string;
-      };
-    }>;
-    actionRecords: Array<{
-      id?: string;
-      actionType: string;
-    }>;
-    messages: Array<{
-      id?: string;
-      visibility: 'public' | 'private';
-      content: string;
-    }>;
-  }>;
-}
-
-export interface AgentSessionEventRecord {
-  type:
-    | 'action_progressed'
-    | 'transfer_settled'
-    | 'turn_completed'
-    | 'round_completed';
-  gameSessionId: string;
-  roundNumber: number;
-  occurredAt: string;
-  turnNumber?: number;
-  turnCount?: number;
-  actionCount?: number;
-  messageCount?: number;
-  agentId?: string;
-  agentName?: string;
-  actionType?:
-    | 'send_public_message'
-    | 'send_private_message'
-    | 'propose_direct_transfer'
-    | 'counter_direct_transfer_proposal'
-    | 'accept_direct_transfer_proposal'
-    | 'reject_direct_transfer_proposal'
-    | 'place_funds_with_banker'
-    | 'redeem_funds_from_banker';
-  messageId?: string;
-  messageVisibility?: 'public' | 'private';
-  sourceAgentId?: string;
-  destinationAgentId?: string;
-  amount?: string;
-}
+export type {
+  AgentSessionEventRecord,
+  GameReplayRecord,
+  GameSessionRecord,
+  OrchestratedRoundRecord,
+} from '@llm-sim/shared-types';
 
 const defaultApiBaseUrl = 'http://localhost:3000/api';
 const apiBaseUrl =

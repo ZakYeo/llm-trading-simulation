@@ -41,8 +41,12 @@ export function useSessionEvents({
     function handleActionProgressed(event: MessageEvent<string>) {
       const payload = JSON.parse(event.data) as AgentSessionEventRecord;
 
+      if (payload.type !== 'action_progressed') {
+        return;
+      }
+
       setLatestRunSummary(
-        `${payload.agentName ?? 'Agent'} progressed ${payload.actionType ?? 'an action'} on turn ${payload.turnNumber ?? '?'}.`,
+        `${payload.agentName} progressed ${payload.actionType} on turn ${payload.turnNumber}.`,
       );
       refreshLiveState();
     }
@@ -50,8 +54,12 @@ export function useSessionEvents({
     function handleTransferSettled(event: MessageEvent<string>) {
       const payload = JSON.parse(event.data) as AgentSessionEventRecord;
 
+      if (payload.type !== 'transfer_settled') {
+        return;
+      }
+
       setLatestRunSummary(
-        `Transfer settled on turn ${payload.turnNumber ?? '?'} for ${payload.amount ?? '0.0000'}.`,
+        `Transfer settled on turn ${payload.turnNumber} for ${payload.amount}.`,
       );
       refreshLiveState();
     }
@@ -59,16 +67,24 @@ export function useSessionEvents({
     function handleTurnCompleted(event: MessageEvent<string>) {
       const payload = JSON.parse(event.data) as AgentSessionEventRecord;
 
+      if (payload.type !== 'turn_completed') {
+        return;
+      }
+
       setLatestRunSummary(
-        `Turn ${payload.turnNumber ?? '?'} completed with ${payload.actionCount ?? 0} actions and ${payload.messageCount ?? 0} messages.`,
+        `Turn ${payload.turnNumber} completed with ${payload.actionCount} actions and ${payload.messageCount} messages.`,
       );
     }
 
     function handleRoundCompleted(event: MessageEvent<string>) {
       const payload = JSON.parse(event.data) as AgentSessionEventRecord;
 
+      if (payload.type !== 'round_completed') {
+        return;
+      }
+
       setLatestRunSummary(
-        `Round ${payload.roundNumber} finished after ${payload.turnCount ?? 0} turn${payload.turnCount === 1 ? '' : 's'}.`,
+        `Round ${payload.roundNumber} finished after ${payload.turnCount} turn${payload.turnCount === 1 ? '' : 's'}.`,
       );
       refreshLiveState();
     }
