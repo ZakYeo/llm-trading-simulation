@@ -24,38 +24,50 @@ export const AGENT_GATEWAY = Symbol('AGENT_GATEWAY');
 export const AGENT_ACTION_REPOSITORY = Symbol('AGENT_ACTION_REPOSITORY');
 export const AGENT_MESSAGE_REPOSITORY = Symbol('AGENT_MESSAGE_REPOSITORY');
 
+function createAgentGateway(): AgentGatewayPort {
+  if (
+    process.env.AGENT_RUNTIME_PROVIDER === 'mock' ||
+    !process.env.OPENAI_API_KEY
+  ) {
+    return new MockAgentGateway();
+  }
+
+  return new OpenAiAgentGateway(
+    new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    }),
+    process.env.OPENAI_MODEL ?? 'gpt-5.2',
+    process.env.OPENAI_AGENT_SYSTEM_PROMPT,
+    process.env.OPENAI_AGENT_STRICT_MODE === '1',
+  );
+}
+
+function createAgentActionRepository(
+  prismaService: PrismaService,
+): AgentActionRepositoryPort {
+  return new PrismaAgentActionRepository(prismaService);
+}
+
+function createAgentMessageRepository(
+  prismaService: PrismaService,
+): AgentMessageRepositoryPort {
+  return new PrismaAgentMessageRepository(prismaService);
+}
+
 export function createAgentsProviders() {
   return [
     {
       provide: AGENT_GATEWAY,
-      useFactory: () => {
-        if (
-          process.env.AGENT_RUNTIME_PROVIDER === 'mock' ||
-          !process.env.OPENAI_API_KEY
-        ) {
-          return new MockAgentGateway();
-        }
-
-        return new OpenAiAgentGateway(
-          new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-          }),
-          process.env.OPENAI_MODEL ?? 'gpt-5.2',
-          process.env.OPENAI_AGENT_SYSTEM_PROMPT,
-          process.env.OPENAI_AGENT_STRICT_MODE === '1',
-        );
-      },
+      useFactory: createAgentGateway,
     },
     {
       provide: AGENT_ACTION_REPOSITORY,
-      useFactory: (prismaService: PrismaService) =>
-        new PrismaAgentActionRepository(prismaService),
+      useFactory: createAgentActionRepository,
       inject: [PrismaService],
     },
     {
       provide: AGENT_MESSAGE_REPOSITORY,
-      useFactory: (prismaService: PrismaService) =>
-        new PrismaAgentMessageRepository(prismaService),
+      useFactory: createAgentMessageRepository,
       inject: [PrismaService],
     },
     {

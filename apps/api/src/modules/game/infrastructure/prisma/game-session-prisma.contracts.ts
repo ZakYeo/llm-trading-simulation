@@ -75,15 +75,39 @@ export interface PrismaTransferDelegate {
 }
 
 export interface PrismaBankerCustodyPositionDelegate {
-  deleteMany(args: {
+  findMany(args: {
     where: {
       gameSessionId: string;
     };
+    select: {
+      bankerAgentId: true;
+      ownerAgentId: true;
+    };
+  }): Promise<Array<{ bankerAgentId: string; ownerAgentId: string }>>;
+  deleteMany(args: {
+    where: {
+      gameSessionId: string;
+      OR?: Array<{
+        bankerAgentId: string;
+        ownerAgentId: string;
+      }>;
+    };
   }): Promise<unknown>;
-  createMany(args: {
-    data: ReturnType<
+  upsert(args: {
+    where: {
+      gameSessionId_bankerAgentId_ownerAgentId: {
+        gameSessionId: string;
+        bankerAgentId: string;
+        ownerAgentId: string;
+      };
+    };
+    create: ReturnType<
       typeof GameSessionPrismaMapper.toBankerCustodyPositionCreateManyInput
-    >;
+    >[number];
+    update: {
+      principal: string;
+      accrued: string;
+    };
   }): Promise<unknown>;
 }
 

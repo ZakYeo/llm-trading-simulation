@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { DepositAccount } from '../../../bank/domain/entities/deposit-account.js';
+import { BankerCustodyPosition } from '../../domain/entities/banker-custody-position.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import { AccountBalance } from '../../domain/entities/account-balance.js';
 import { GameAgent } from '../../domain/entities/game-agent.js';
@@ -35,7 +36,11 @@ describe('PrismaGameSessionRepository', () => {
         },
       },
       bankerCustodyPosition: {
-        async createMany(args) {
+        async findMany(args) {
+          receivedArgs.push(args);
+          return [];
+        },
+        async upsert(args) {
           receivedArgs.push(args);
         },
         async deleteMany(args) {
@@ -147,7 +152,11 @@ describe('PrismaGameSessionRepository', () => {
         },
       },
       bankerCustodyPosition: {
-        async createMany(args) {
+        async findMany(args) {
+          receivedArgs.push(args);
+          return [];
+        },
+        async upsert(args) {
           receivedArgs.push(args);
         },
         async deleteMany(args) {
@@ -261,6 +270,10 @@ describe('PrismaGameSessionRepository', () => {
       where: {
         gameSessionId: 'game-1',
       },
+      select: {
+        bankerAgentId: true,
+        ownerAgentId: true,
+      },
     });
   });
 
@@ -295,7 +308,10 @@ describe('PrismaGameSessionRepository', () => {
         },
       },
       bankerCustodyPosition: {
-        async createMany(args) {
+        async findMany() {
+          return [];
+        },
+        async upsert(args) {
           receivedArgs.push(args);
         },
         async deleteMany(args) {
@@ -354,6 +370,131 @@ describe('PrismaGameSessionRepository', () => {
     });
   });
 
+  it('updates custody positions with keyed upserts and deletes only removed rows', async () => {
+    const receivedArgs: unknown[] = [];
+
+    const repository = new PrismaGameSessionRepository({
+      async $transaction(callback) {
+        return callback(this as unknown as never);
+      },
+      agent: {
+        async create() {},
+        async upsert(args) {
+          receivedArgs.push(args);
+        },
+        async deleteMany(args) {
+          receivedArgs.push(args);
+        },
+      },
+      gameSession: {
+        async findUnique() {
+          return { id: 'game-1', currentRound: 0 } as never;
+        },
+        async create() {},
+        async update(args) {
+          receivedArgs.push(args);
+        },
+      },
+      gameRound: {
+        async createMany(args) {
+          receivedArgs.push(args);
+        },
+      },
+      bankerCustodyPosition: {
+        async findMany() {
+          return [
+            { bankerAgentId: 'agent-1', ownerAgentId: 'agent-2' },
+            { bankerAgentId: 'agent-1', ownerAgentId: 'agent-3' },
+          ];
+        },
+        async upsert(args) {
+          receivedArgs.push(args);
+        },
+        async deleteMany(args) {
+          receivedArgs.push(args);
+        },
+      },
+      transfer: {
+        async create() {},
+      },
+      custodyPlacement: {
+        async create() {},
+      },
+      custodyRedemption: {
+        async create() {},
+      },
+      custodyAccrual: {
+        async createMany() {},
+      },
+      deposit: {
+        async create() {},
+      },
+      withdrawal: {
+        async create() {},
+      },
+    });
+
+    await repository.save(
+      new GameSession({
+        id: 'game-1',
+        name: 'Treasury Table',
+        status: 'active',
+        currentRound: 0,
+        agents: [
+          new GameAgent({
+            id: 'agent-1',
+            name: 'Banker Bot',
+            role: 'banker',
+            balance: AccountBalance.open(Money.fromDecimal('100.0000')),
+            depositAccount: DepositAccount.open(),
+          }),
+          new GameAgent({
+            id: 'agent-2',
+            name: 'Trader Bot',
+            role: 'trader',
+            balance: AccountBalance.open(Money.fromDecimal('100.0000')),
+            depositAccount: DepositAccount.open(),
+          }),
+        ],
+        bankerCustodyPositions: [
+          new BankerCustodyPosition({
+            bankerAgentId: 'agent-1',
+            ownerAgentId: 'agent-2',
+            principal: Money.fromDecimal('25.0000'),
+            accruedInterest: Money.fromDecimal('0.6250'),
+          }),
+        ],
+      }),
+    );
+
+    expect(receivedArgs).toContainEqual({
+      where: {
+        gameSessionId: 'game-1',
+        OR: [{ bankerAgentId: 'agent-1', ownerAgentId: 'agent-3' }],
+      },
+    });
+    expect(receivedArgs).toContainEqual({
+      where: {
+        gameSessionId_bankerAgentId_ownerAgentId: {
+          gameSessionId: 'game-1',
+          bankerAgentId: 'agent-1',
+          ownerAgentId: 'agent-2',
+        },
+      },
+      create: {
+        gameSessionId: 'game-1',
+        bankerAgentId: 'agent-1',
+        ownerAgentId: 'agent-2',
+        principal: '25.0000',
+        accrued: '0.6250',
+      },
+      update: {
+        principal: '25.0000',
+        accrued: '0.6250',
+      },
+    });
+  });
+
   it('hydrates a session from prisma records', async () => {
     const repository = new PrismaGameSessionRepository({
       async $transaction(callback) {
@@ -395,7 +536,10 @@ describe('PrismaGameSessionRepository', () => {
         async createMany() {},
       },
       bankerCustodyPosition: {
-        async createMany() {},
+        async findMany() {
+          return [];
+        },
+        async upsert() {},
         async deleteMany() {},
       },
       transfer: {
@@ -454,7 +598,11 @@ describe('PrismaGameSessionRepository', () => {
         async createMany() {},
       },
       bankerCustodyPosition: {
-        async createMany(args) {
+        async findMany(args) {
+          receivedArgs.push(args);
+          return [];
+        },
+        async upsert(args) {
           receivedArgs.push(args);
         },
         async deleteMany(args) {

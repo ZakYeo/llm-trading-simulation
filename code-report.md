@@ -39,44 +39,32 @@ The main quality risk is not correctness so much as **product-language and contr
 
 ## Findings
 
-### 1. The Prisma repository rewrites too much state on each save
+### 1. The Prisma repository still deserves monitoring for write amplification
 
 File: `apps/api/src/modules/game/infrastructure/prisma/prisma-game-session.repository.ts`
 
-The repository deletes and recreates all banker custody positions on every update:
-
-- lines `162-174`
-
-It also loops through every agent with individual upserts:
+The repository now uses keyed custody-position upserts and targeted deletes instead of deleting all custody rows on every save. That is a material improvement. It still loops through every agent with individual upserts:
 
 - lines `156-160`
 
-This is acceptable at MVP scale, but it creates avoidable churn and makes write behavior less transparent. It also couples persistence cost to aggregate size rather than actual change size.
+This is acceptable at MVP scale, but persistence cost is still coupled to aggregate size more than strict change size.
 
 Recommendation:
 
-- Move toward delta-based persistence for custody positions
-- Consider a dedicated persistence component for custody state
-- If full replacement stays for now, document it explicitly because it has performance and concurrency implications
+- Keep the keyed custody persistence approach
+- Revisit agent persistence if aggregate size grows enough for per-agent upserts to become a bottleneck
+- Consider a dedicated persistence component for custody state if treasury complexity keeps increasing
 
-### 2. Provider wiring is more concrete than it should be
+### 2. Some provider wiring still warrants discipline
 
 File: `apps/api/src/modules/agents/presentation/agents.providers.ts`
 
-The DI layer still relies on concrete classes in several places:
-
-- `PrismaAgentActionRepository`
-- `PrismaAgentMessageRepository`
-- `MockAgentGateway | OpenAiAgentGateway`
-
-See lines `56-65` and `86-92`.
-
-This works, but it weakens the architectural separation implied by the ports. Provider factories should depend on ports/tokens where possible, not on concrete implementation details.
+The provider wiring is cleaner than before: repository and gateway creation are now isolated in narrow factory functions, and the provider graph is covered by tests. The remaining concern is architectural discipline over time rather than an immediate hotspot.
 
 Recommendation:
 
-- Use port types and tokens consistently in provider signatures
-- Keep environment selection logic, but hide concrete classes behind narrower interfaces
+- Keep provider construction behind narrow factory functions and tokens
+- Avoid letting future provider edits drift back toward large inline constructor logic
 
 ### 3. Some naming is technically correct but product-confusing
 
@@ -102,25 +90,24 @@ Proposed cleanup plan:
 
 ### High Priority
 
-1. Revisit persistence churn in `PrismaGameSessionRepository`
+1. Remove legacy action-name aliases from shared contracts once the compatibility window is no longer needed
 
 ### Medium Priority
 
-2. Tighten any remaining DI usage that still depends on concrete classes
+2. Revisit agent persistence if aggregate size grows enough for per-agent upserts to become a bottleneck
 
 ### Lower Priority
 
-3. Remove legacy action-name aliases from shared contracts once the compatibility window is no longer needed
-4. Consider delta-based persistence for banker custody positions
+3. Keep provider wiring disciplined as new agent infrastructure is added
 
 ## Suggested Next Refactors
 
 If I were sequencing this as a senior engineer, I would do it in this order:
 
-1. Revisit custody persistence churn if write amplification becomes a real concern
-2. Remove legacy action aliases from shared contracts after the compatibility window closes
-3. Tighten any remaining DI sites that still expose concrete implementations unnecessarily
+1. Remove legacy action aliases from shared contracts after the compatibility window closes
+2. Revisit agent persistence if write amplification becomes a real concern
+3. Keep provider construction narrow and tested as the agent stack grows
 
 ## Final Take
 
-This codebase is in a healthy MVP state and most of the major structural refactors from the original report are now complete. The main remaining risks are more operational than architectural: write amplification in persistence, and the discipline to remove temporary compatibility layers once migrations have landed. If those are handled deliberately, the codebase should remain straightforward to extend as the treasury and agent mechanics expand.
+This codebase is in a healthy MVP state and most of the major structural refactors from the original report are now complete. The main remaining risk is now the usual one for evolving systems: temporary compatibility paths can outlive their usefulness. If the legacy action aliases are retired deliberately, the codebase should remain straightforward to extend as the treasury and agent mechanics expand.

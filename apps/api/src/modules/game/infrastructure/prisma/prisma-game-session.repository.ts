@@ -9,6 +9,13 @@ import type { PrismaClientLike } from './game-session-prisma.contracts.js';
 export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
   constructor(private readonly prisma: PrismaClientLike) {}
 
+  private static toCustodyPositionKey(position: {
+    bankerAgentId: string;
+    ownerAgentId: string;
+  }) {
+    return `${position.bankerAgentId}:${position.ownerAgentId}`;
+  }
+
   async save(
     session: GameSession,
     history: GameSessionHistoryRecord[] = [],
@@ -162,17 +169,55 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
       );
     }
 
-    await tx.bankerCustodyPosition.deleteMany({
+    const bankerCustodyPositionData =
+      GameSessionPrismaMapper.toBankerCustodyPositionCreateManyInput(session);
+    const existingCustodyPositions = await tx.bankerCustodyPosition.findMany({
       where: {
         gameSessionId: session.id,
       },
+      select: {
+        bankerAgentId: true,
+        ownerAgentId: true,
+      },
     });
-    const bankerCustodyPositionData =
-      GameSessionPrismaMapper.toBankerCustodyPositionCreateManyInput(session);
+    const nextCustodyPositionKeys = new Set(
+      bankerCustodyPositionData.map((position) =>
+        PrismaGameSessionRepository.toCustodyPositionKey(position),
+      ),
+    );
+    const custodyPositionsToDelete = existingCustodyPositions.filter(
+      (position) =>
+        !nextCustodyPositionKeys.has(
+          PrismaGameSessionRepository.toCustodyPositionKey(position),
+        ),
+    );
 
-    if (bankerCustodyPositionData.length > 0) {
-      await tx.bankerCustodyPosition.createMany({
-        data: bankerCustodyPositionData,
+    if (custodyPositionsToDelete.length > 0) {
+      await tx.bankerCustodyPosition.deleteMany({
+        where: {
+          gameSessionId: session.id,
+          OR: custodyPositionsToDelete.map((position) => ({
+            bankerAgentId: position.bankerAgentId,
+            ownerAgentId: position.ownerAgentId,
+          })),
+        },
+      });
+    }
+
+    for (const position of bankerCustodyPositionData) {
+      await tx.bankerCustodyPosition.upsert({
+        where: {
+          gameSessionId_bankerAgentId_ownerAgentId: {
+            gameSessionId: session.id,
+            bankerAgentId: position.bankerAgentId,
+            ownerAgentId: position.ownerAgentId,
+          },
+        },
+        create: position,
+        update: {
+          principal: position.principal,
+          accrued: position.accrued,
+        },
       });
     }
 
