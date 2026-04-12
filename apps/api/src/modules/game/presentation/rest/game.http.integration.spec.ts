@@ -56,7 +56,6 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
         id: string;
         role: string;
         availableBalance: string;
-        depositPrincipal: string;
       }>;
     };
 
@@ -140,7 +139,6 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
     );
 
     expect(finalBanker?.availableBalance).toBe('100.0000');
-    expect(finalBanker?.depositPrincipal).toBe('15.0000');
     expect(finalTrader?.availableBalance).toBe('85.0000');
   });
 
@@ -223,8 +221,6 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
         id: string;
         role: string;
         availableBalance: string;
-        depositPrincipal: string;
-        depositAccruedInterest: string;
       }>;
       bankerCustodyPositions: Array<{
         bankerAgentId: string;
@@ -306,7 +302,6 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
     expect(advancedSession.status).toBe('active');
     expect(advancedSession.currentRound).toBe(1);
     expect(advancedBanker?.availableBalance).toBe('136.0000');
-    expect(advancedBanker?.depositAccruedInterest).toBe('0.0000');
     expect(advancedTrader?.availableBalance).toBe('65.0000');
     expect(advancedSession.bankerCustodyPositions).toEqual([
       {

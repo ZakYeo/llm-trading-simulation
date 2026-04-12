@@ -36,8 +36,6 @@ export interface GameAgentRecord {
   role: AgentRole;
   availableBalance: string;
   reservedBalance: string;
-  depositPrincipal: string;
-  depositAccruedInterest: string;
 }
 
 export interface BankerCustodyPositionRecord {

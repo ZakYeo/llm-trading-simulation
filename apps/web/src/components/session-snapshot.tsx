@@ -91,14 +91,6 @@ export function SessionSnapshot({
                     <dt>Reserved</dt>
                     <dd>{formatCurrency(agent.reservedBalance)}</dd>
                   </div>
-                  <div>
-                    <dt>Deposit</dt>
-                    <dd>{formatCurrency(agent.depositPrincipal)}</dd>
-                  </div>
-                  <div>
-                    <dt>Interest</dt>
-                    <dd>{formatCurrency(agent.depositAccruedInterest)}</dd>
-                  </div>
                 </dl>
               </article>
             ))}

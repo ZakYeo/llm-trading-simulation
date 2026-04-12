@@ -101,8 +101,6 @@ describe('GameController', () => {
           role: 'banker',
           availableBalance: '100.0000',
           reservedBalance: '0.0000',
-          depositPrincipal: '15.0000',
-          depositAccruedInterest: '0.0000',
         },
         {
           id: 'agent-2',
@@ -110,8 +108,6 @@ describe('GameController', () => {
           role: 'trader',
           availableBalance: '85.0000',
           reservedBalance: '0.0000',
-          depositPrincipal: '0.0000',
-          depositAccruedInterest: '0.0000',
         },
       ],
       bankerCustodyPositions: [
