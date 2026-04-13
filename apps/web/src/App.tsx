@@ -10,8 +10,6 @@ import {
   getGameReplay,
   getGameSession,
   orchestrateAgentRound,
-  placeFundsWithBanker,
-  redeemFundsFromBanker,
 } from './lib/api';
 import { useSessionEvents } from './hooks/use-session-events';
 
@@ -34,11 +32,9 @@ export function App() {
   const [sessionName, setSessionName] = useState('Operator Demo Table');
   const [initialBalance, setInitialBalance] = useState('100.0000');
   const [turnCount, setTurnCount] = useState(2);
-  const [custodyPlacementAmount, setCustodyPlacementAmount] =
-    useState('10.0000');
-  const [custodyRedemptionAmount, setCustodyRedemptionAmount] =
-    useState('5.0000');
+  const [interestRateBps, setInterestRateBps] = useState('250');
   const [latestRunSummary, setLatestRunSummary] = useState('');
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [agentDrafts, setAgentDrafts] =
     useState<AgentDraft[]>(defaultAgentSetup);
   const [nextAgentDraftId, setNextAgentDraftId] = useState(
@@ -78,6 +74,12 @@ export function App() {
     },
   });
 
+  const parsedInterestRateBps = Number.parseInt(interestRateBps, 10);
+  const roundInterestRateBps =
+    interestRateBps.trim().length === 0 || Number.isNaN(parsedInterestRateBps)
+      ? undefined
+      : parsedInterestRateBps;
+
   const orchestrateMutation = useMutation({
     mutationFn: () => orchestrateAgentRound(selectedSessionId, turnCount),
     onSuccess: (result) => {
@@ -96,74 +98,10 @@ export function App() {
   });
 
   const advanceRoundMutation = useMutation({
-    mutationFn: () => advanceGameRound(selectedSessionId),
+    mutationFn: () => advanceGameRound(selectedSessionId, roundInterestRateBps),
     onSuccess: (session) => {
       setLatestRunSummary(
-        `Advanced to round ${session.currentRound} using the backend default interest policy`,
-      );
-      queryClient.setQueryData(['game-session', session.id], session);
-      void queryClient.invalidateQueries({
-        queryKey: ['game-replay', selectedSessionId],
-      });
-    },
-  });
-
-  const placeCustodyMutation = useMutation({
-    mutationFn: () => {
-      const banker = sessionQuery.data?.agents.find(
-        (agent) => agent.role === 'banker',
-      );
-      const trader = sessionQuery.data?.agents.find(
-        (agent) => agent.role === 'trader',
-      );
-
-      if (!banker || !trader) {
-        throw new Error(
-          'A banker and trader are required for custody actions.',
-        );
-      }
-
-      return placeFundsWithBanker(selectedSessionId, {
-        ownerAgentId: trader.id,
-        bankerAgentId: banker.id,
-        amount: custodyPlacementAmount,
-      });
-    },
-    onSuccess: (session) => {
-      setLatestRunSummary(
-        `Placed ${custodyPlacementAmount} with the banker in round ${session.currentRound}`,
-      );
-      queryClient.setQueryData(['game-session', session.id], session);
-      void queryClient.invalidateQueries({
-        queryKey: ['game-replay', selectedSessionId],
-      });
-    },
-  });
-
-  const redeemCustodyMutation = useMutation({
-    mutationFn: () => {
-      const banker = sessionQuery.data?.agents.find(
-        (agent) => agent.role === 'banker',
-      );
-      const trader = sessionQuery.data?.agents.find(
-        (agent) => agent.role === 'trader',
-      );
-
-      if (!banker || !trader) {
-        throw new Error(
-          'A banker and trader are required for custody actions.',
-        );
-      }
-
-      return redeemFundsFromBanker(selectedSessionId, {
-        ownerAgentId: trader.id,
-        bankerAgentId: banker.id,
-        amount: custodyRedemptionAmount,
-      });
-    },
-    onSuccess: (session) => {
-      setLatestRunSummary(
-        `Redeemed ${custodyRedemptionAmount} from the banker in round ${session.currentRound}`,
+        `Advanced to round ${session.currentRound} with ${roundInterestRateBps ?? 'default'} bps custody interest`,
       );
       queryClient.setQueryData(['game-session', session.id], session);
       void queryClient.invalidateQueries({
@@ -175,20 +113,6 @@ export function App() {
   const selectedSession = sessionQuery.data;
   const replay = replayQuery.data;
   const canRemoveAgent = agentDrafts.length > 1;
-  const banker = selectedSession?.agents.find(
-    (agent) => agent.role === 'banker',
-  );
-  const trader = selectedSession?.agents.find(
-    (agent) => agent.role === 'trader',
-  );
-  const traderCustodyPosition =
-    banker && trader
-      ? selectedSession?.bankerCustodyPositions.find(
-          (position) =>
-            position.bankerAgentId === banker.id &&
-            position.ownerAgentId === trader.id,
-        )
-      : undefined;
 
   function updateAgentDraft(
     draftId: string,
@@ -229,70 +153,162 @@ export function App() {
 
   return (
     <main className="app-shell">
-      <section className="hero">
-        <p className="eyebrow">Frontend MVP</p>
-        <h1>LLM Trading Operator Console</h1>
-        <p className="lede">
-          Create a session, run agent turns, inspect balances, and audit replay
-          events from the backend MVP without leaving the browser.
-        </p>
+      <section className="topbar panel">
+        <div className="topbar-copy">
+          <p className="eyebrow">Operator Console</p>
+          <h1>LLM Trading Simulator</h1>
+          <p className="lede">
+            A browser-based control room for creating simulated agent sessions,
+            running negotiation rounds, tracking balances, and reviewing replay
+            history in one place.
+          </p>
+        </div>
+
+        <div className="topbar-side">
+          <div className="topbar-actions">
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => setIsHelpOpen(true)}
+            >
+              Help
+            </button>
+          </div>
+
+          <div className="topbar-metrics">
+            <article className="topbar-metric">
+              <span>Session</span>
+              <strong>{selectedSession?.name ?? 'No session connected'}</strong>
+            </article>
+            <article className="topbar-metric">
+              <span>Round</span>
+              <strong>{selectedSession?.currentRound ?? 0}</strong>
+            </article>
+            <article className="topbar-metric">
+              <span>Status</span>
+              <strong>{selectedSession?.status ?? 'setup'}</strong>
+            </article>
+            <article className="topbar-metric highlight">
+              <span>Latest activity</span>
+              <strong>{latestRunSummary || 'Awaiting operator input'}</strong>
+            </article>
+          </div>
+        </div>
       </section>
 
-      <section className="workspace-grid">
+      <section className="dashboard-grid">
         <SessionControls
           selectedSessionId={selectedSessionId}
           currentRound={selectedSession?.currentRound}
-          bankerName={banker?.name}
-          traderName={trader?.name}
-          traderCustodyTotal={traderCustodyPosition?.totalBalance}
-          custodyPlacementAmount={custodyPlacementAmount}
-          custodyRedemptionAmount={custodyRedemptionAmount}
           sessionName={sessionName}
           initialBalance={initialBalance}
           turnCount={turnCount}
+          interestRateBps={interestRateBps}
           latestRunSummary={latestRunSummary}
           agentDrafts={agentDrafts}
           canRemoveAgent={canRemoveAgent}
           isCreating={createSessionMutation.isPending}
           isRunning={orchestrateMutation.isPending}
           isAdvancing={advanceRoundMutation.isPending}
-          isPlacingCustody={placeCustodyMutation.isPending}
-          isRedeemingCustody={redeemCustodyMutation.isPending}
           createError={createSessionMutation.error?.message}
           runError={orchestrateMutation.error?.message}
           advanceError={advanceRoundMutation.error?.message}
-          custodyError={
-            placeCustodyMutation.error?.message ??
-            redeemCustodyMutation.error?.message
-          }
           onSessionNameChange={setSessionName}
           onInitialBalanceChange={setInitialBalance}
           onSelectedSessionIdChange={setSelectedSessionId}
           onTurnCountChange={setTurnCount}
-          onCustodyPlacementAmountChange={setCustodyPlacementAmount}
-          onCustodyRedemptionAmountChange={setCustodyRedemptionAmount}
+          onInterestRateBpsChange={setInterestRateBps}
           onAddAgentDraft={addAgentDraft}
           onRemoveAgentDraft={removeAgentDraft}
           onUpdateAgentDraft={updateAgentDraft}
           onCreateSession={() => createSessionMutation.mutate()}
           onRunTurns={() => orchestrateMutation.mutate()}
           onAdvanceRound={() => advanceRoundMutation.mutate()}
-          onPlaceFundsWithBanker={() => placeCustodyMutation.mutate()}
-          onRedeemFundsFromBanker={() => redeemCustodyMutation.mutate()}
         />
 
-        <SessionSnapshot
-          selectedSessionId={selectedSessionId}
-          selectedSession={selectedSession}
-          isFetching={sessionQuery.isFetching}
-        />
+        <div className="workspace-column">
+          <SessionSnapshot
+            selectedSessionId={selectedSessionId}
+            selectedSession={selectedSession}
+            isFetching={sessionQuery.isFetching}
+          />
+
+          <ReplayTimeline
+            replay={replay}
+            selectedRound={selectedSession?.currentRound}
+            isFetching={replayQuery.isFetching}
+          />
+        </div>
       </section>
 
-      <ReplayTimeline
-        replay={replay}
-        selectedRound={selectedSession?.currentRound}
-        isFetching={replayQuery.isFetching}
-      />
+      {isHelpOpen ? (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={() => setIsHelpOpen(false)}
+        >
+          <section
+            className="help-modal panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Help and usage guide"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="panel-header">
+              <div>
+                <p className="panel-kicker">Help</p>
+                <h2>How To Use The Dashboard</h2>
+              </div>
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => setIsHelpOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="help-grid">
+              <article className="help-card">
+                <strong>1. Create or connect</strong>
+                <p>
+                  Use Session Setup to create a new simulation or load an
+                  existing session id.
+                </p>
+              </article>
+              <article className="help-card">
+                <strong>2. Run the session</strong>
+                <p>
+                  Choose a turn count, run the next turns, and watch balances,
+                  status, and replay update.
+                </p>
+              </article>
+              <article className="help-card">
+                <strong>3. Settle rounds</strong>
+                <p>
+                  Advance the round when you want the backend custody interest
+                  policy applied.
+                </p>
+              </article>
+              <article className="help-card">
+                <strong>4. Inspect state</strong>
+                <p>
+                  Use the workspace to review session state, agent balances, and
+                  treasury exposure at a glance.
+                </p>
+              </article>
+              <article className="help-card">
+                <strong>5. Audit history</strong>
+                <p>
+                  Filter the Audit Trail by treasury, messages, actions, or
+                  transfers, and limit the view to recent events when the log
+                  grows.
+                </p>
+              </article>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }

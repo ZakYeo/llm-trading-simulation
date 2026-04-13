@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 interface AgentDraft {
   id: string;
   name: string;
@@ -7,32 +9,24 @@ interface AgentDraft {
 interface SessionControlsProps {
   selectedSessionId: string;
   currentRound?: number;
-  bankerName?: string;
-  traderName?: string;
-  traderCustodyTotal?: string;
-  custodyPlacementAmount: string;
-  custodyRedemptionAmount: string;
   sessionName: string;
   initialBalance: string;
   turnCount: number;
+  interestRateBps: string;
   latestRunSummary: string;
   agentDrafts: AgentDraft[];
   canRemoveAgent: boolean;
   isCreating: boolean;
   isRunning: boolean;
   isAdvancing: boolean;
-  isPlacingCustody: boolean;
-  isRedeemingCustody: boolean;
   createError?: string;
   runError?: string;
   advanceError?: string;
-  custodyError?: string;
   onSessionNameChange: (value: string) => void;
   onInitialBalanceChange: (value: string) => void;
   onSelectedSessionIdChange: (value: string) => void;
   onTurnCountChange: (value: number) => void;
-  onCustodyPlacementAmountChange: (value: string) => void;
-  onCustodyRedemptionAmountChange: (value: string) => void;
+  onInterestRateBpsChange: (value: string) => void;
   onAddAgentDraft: () => void;
   onRemoveAgentDraft: (draftId: string) => void;
   onUpdateAgentDraft: (
@@ -42,8 +36,6 @@ interface SessionControlsProps {
   onCreateSession: () => void;
   onRunTurns: () => void;
   onAdvanceRound: () => void;
-  onPlaceFundsWithBanker: () => void;
-  onRedeemFundsFromBanker: () => void;
 }
 
 const agentRoleOptions = ['banker', 'trader'] as const;
@@ -51,170 +43,215 @@ const agentRoleOptions = ['banker', 'trader'] as const;
 export function SessionControls({
   selectedSessionId,
   currentRound,
-  bankerName,
-  traderName,
-  traderCustodyTotal,
-  custodyPlacementAmount,
-  custodyRedemptionAmount,
   sessionName,
   initialBalance,
   turnCount,
+  interestRateBps,
   latestRunSummary,
   agentDrafts,
   canRemoveAgent,
   isCreating,
   isRunning,
   isAdvancing,
-  isPlacingCustody,
-  isRedeemingCustody,
   createError,
   runError,
   advanceError,
-  custodyError,
   onSessionNameChange,
   onInitialBalanceChange,
   onSelectedSessionIdChange,
   onTurnCountChange,
-  onCustodyPlacementAmountChange,
-  onCustodyRedemptionAmountChange,
+  onInterestRateBpsChange,
   onAddAgentDraft,
   onRemoveAgentDraft,
   onUpdateAgentDraft,
   onCreateSession,
   onRunTurns,
   onAdvanceRound,
-  onPlaceFundsWithBanker,
-  onRedeemFundsFromBanker,
 }: SessionControlsProps) {
+  const [isSetupExpanded, setIsSetupExpanded] = useState(true);
   const normalizedTurnCount = Number.isNaN(turnCount)
     ? 1
     : Math.min(10, Math.max(1, turnCount));
 
   return (
-    <section className="panel command-panel">
-      <div className="panel-header">
-        <div>
-          <p className="panel-kicker">Control</p>
-          <h2>Session Controls</h2>
-        </div>
-        <span className="status-chip">
-          {selectedSessionId ? 'Connected' : 'No session'}
-        </span>
-      </div>
-
-      <label className="field">
-        <span>Session name</span>
-        <input
-          value={sessionName}
-          onChange={(event) => onSessionNameChange(event.target.value)}
-          placeholder="Morning liquidity drill"
-        />
-      </label>
-
-      <label className="field">
-        <span>Initial balance</span>
-        <input
-          value={initialBalance}
-          onChange={(event) => onInitialBalanceChange(event.target.value)}
-          placeholder="100.0000"
-        />
-      </label>
-
-      <div className="agent-stack">
-        <div className="agent-stack-header">
-          <span>Roster</span>
-          <button
-            className="agent-stack-button"
-            type="button"
-            onClick={onAddAgentDraft}
-          >
-            Add bot
-          </button>
-        </div>
-        {agentDrafts.map((agent, index) => (
-          <div key={agent.id} className="agent-editor-row">
-            <label className="field compact">
-              <span>Bot {index + 1} name</span>
-              <input
-                value={agent.name}
-                onChange={(event) =>
-                  onUpdateAgentDraft(agent.id, (draft) => ({
-                    ...draft,
-                    name: event.target.value,
-                  }))
-                }
-                placeholder="Agent name"
-              />
-            </label>
-            <label className="field compact">
-              <span>Role</span>
-              <select
-                value={agent.role}
-                onChange={(event) =>
-                  onUpdateAgentDraft(agent.id, (draft) => ({
-                    ...draft,
-                    role: event.target.value as AgentDraft['role'],
-                  }))
-                }
-              >
-                {agentRoleOptions.map((role) => (
-                  <option key={role} value={role}>
-                    {role}
-                  </option>
-                ))}
-              </select>
-            </label>
+    <aside className="control-rail">
+      <section className="panel rail-card">
+        <div className="panel-header compact">
+          <div>
+            <p className="panel-kicker">Setup</p>
+            <h2>Session Setup</h2>
+          </div>
+          <div className="panel-header-actions">
+            <span className="status-chip">
+              {selectedSessionId ? 'Active session' : 'New session'}
+            </span>
             <button
-              className="agent-remove-button"
+              className="icon-button"
+              aria-label={
+                isSetupExpanded
+                  ? 'Minimise session setup'
+                  : 'Maximise session setup'
+              }
               type="button"
-              disabled={!canRemoveAgent}
-              onClick={() => onRemoveAgentDraft(agent.id)}
+              onClick={() => setIsSetupExpanded((current) => !current)}
             >
-              Remove
+              {isSetupExpanded ? '−' : '+'}
             </button>
           </div>
-        ))}
-      </div>
-
-      <button
-        className="action-button primary"
-        type="button"
-        disabled={isCreating || agentDrafts.length === 0}
-        onClick={onCreateSession}
-      >
-        {isCreating ? 'Creating session...' : 'Create session'}
-      </button>
-
-      <label className="field">
-        <span>Active session id</span>
-        <input
-          value={selectedSessionId}
-          onChange={(event) => onSelectedSessionIdChange(event.target.value)}
-          placeholder="Paste a session id"
-        />
-      </label>
-
-      <label className="field">
-        <span>Turn count</span>
-        <input
-          type="number"
-          min={1}
-          max={10}
-          value={normalizedTurnCount}
-          onChange={(event) =>
-            onTurnCountChange(Number.parseInt(event.target.value || '1', 10))
-          }
-        />
-      </label>
-
-      <div className="turn-planner">
-        <div className="turn-planner-copy">
-          <strong>Run planner</strong>
-          <p>
-            Queue the next {normalizedTurnCount} turn
-            {normalizedTurnCount === 1 ? '' : 's'} for the active session.
-          </p>
         </div>
+
+        {isSetupExpanded ? (
+          <div className="setup-section-body">
+            <label className="field">
+              <span>Session name</span>
+              <input
+                value={sessionName}
+                onChange={(event) => onSessionNameChange(event.target.value)}
+                placeholder="Morning liquidity drill"
+              />
+            </label>
+
+            <label className="field">
+              <span>Initial balance</span>
+              <input
+                value={initialBalance}
+                onChange={(event) => onInitialBalanceChange(event.target.value)}
+                placeholder="100.0000"
+              />
+            </label>
+
+            <label className="field">
+              <span>Treasury interest per round (bps)</span>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={interestRateBps}
+                onChange={(event) =>
+                  onInterestRateBpsChange(event.target.value)
+                }
+                placeholder="250"
+              />
+            </label>
+
+            <div className="section-copy">
+              <strong>Agent roster</strong>
+              <p>
+                Define the banker and trader before starting or replacing a
+                session.
+              </p>
+            </div>
+
+            <div className="agent-stack">
+              <div className="agent-stack-header">
+                <span>Bots</span>
+                <button
+                  className="agent-stack-button"
+                  type="button"
+                  onClick={onAddAgentDraft}
+                >
+                  Add bot
+                </button>
+              </div>
+              {agentDrafts.map((agent, index) => (
+                <div key={agent.id} className="agent-editor-row">
+                  <label className="field compact">
+                    <span>Bot {index + 1} name</span>
+                    <input
+                      value={agent.name}
+                      onChange={(event) =>
+                        onUpdateAgentDraft(agent.id, (draft) => ({
+                          ...draft,
+                          name: event.target.value,
+                        }))
+                      }
+                      placeholder="Agent name"
+                    />
+                  </label>
+                  <label className="field compact">
+                    <span>Role</span>
+                    <select
+                      value={agent.role}
+                      onChange={(event) =>
+                        onUpdateAgentDraft(agent.id, (draft) => ({
+                          ...draft,
+                          role: event.target.value as AgentDraft['role'],
+                        }))
+                      }
+                    >
+                      {agentRoleOptions.map((role) => (
+                        <option key={role} value={role}>
+                          {role}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    className="agent-remove-button"
+                    type="button"
+                    disabled={!canRemoveAgent}
+                    onClick={() => onRemoveAgentDraft(agent.id)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              className="action-button primary"
+              type="button"
+              disabled={isCreating || agentDrafts.length === 0}
+              onClick={onCreateSession}
+            >
+              {isCreating ? 'Creating session...' : 'Create session'}
+            </button>
+
+            <label className="field">
+              <span>Or connect to session id</span>
+              <input
+                value={selectedSessionId}
+                onChange={(event) =>
+                  onSelectedSessionIdChange(event.target.value)
+                }
+                placeholder="Paste an existing session id"
+              />
+            </label>
+
+            {createError ? <p className="error-copy">{createError}</p> : null}
+          </div>
+        ) : (
+          <div className="collapsed-setup-copy">
+            <p>
+              Session setup is hidden. Expand it to create a new session or edit
+              the roster.
+            </p>
+          </div>
+        )}
+      </section>
+
+      <section className="panel rail-card">
+        <div className="panel-header compact">
+          <div>
+            <p className="panel-kicker">Operate</p>
+            <h2>Run The Session</h2>
+          </div>
+          <span className="status-chip muted">Round {currentRound ?? 0}</span>
+        </div>
+
+        <label className="field">
+          <span>Turn count</span>
+          <input
+            type="number"
+            min={1}
+            max={10}
+            value={normalizedTurnCount}
+            onChange={(event) =>
+              onTurnCountChange(Number.parseInt(event.target.value || '1', 10))
+            }
+          />
+        </label>
+
         <div className="turn-preset-row">
           {[1, 2, 4, 8].map((preset) => (
             <button
@@ -231,96 +268,37 @@ export function SessionControls({
             </button>
           ))}
         </div>
-      </div>
 
-      <button
-        className="action-button"
-        type="button"
-        disabled={!selectedSessionId || isRunning}
-        onClick={onRunTurns}
-      >
-        {isRunning
-          ? `Running ${normalizedTurnCount} turn${normalizedTurnCount === 1 ? '' : 's'}...`
-          : `Run next ${normalizedTurnCount} turn${normalizedTurnCount === 1 ? '' : 's'}`}
-      </button>
+        <div className="action-stack">
+          <button
+            className="action-button primary"
+            type="button"
+            disabled={!selectedSessionId || isRunning}
+            onClick={onRunTurns}
+          >
+            {isRunning
+              ? `Running ${normalizedTurnCount} turn${normalizedTurnCount === 1 ? '' : 's'}...`
+              : `Run next ${normalizedTurnCount} turn${normalizedTurnCount === 1 ? '' : 's'}`}
+          </button>
 
-      <div className="turn-planner">
-        <div className="turn-planner-copy">
-          <strong>Round settlement</strong>
-          <p>
-            Current round: {currentRound ?? 0}. Advance explicitly to apply the
-            backend default custody interest rate.
-          </p>
+          <button
+            className="action-button secondary"
+            type="button"
+            disabled={!selectedSessionId || isAdvancing}
+            onClick={onAdvanceRound}
+          >
+            {isAdvancing ? 'Advancing round...' : 'Advance round settlement'}
+          </button>
         </div>
-      </div>
 
-      <button
-        className="action-button"
-        type="button"
-        disabled={!selectedSessionId || isAdvancing}
-        onClick={onAdvanceRound}
-      >
-        {isAdvancing ? 'Advancing round...' : 'Advance Round'}
-      </button>
-
-      <div className="turn-planner">
-        <div className="turn-planner-copy">
-          <strong>Treasury actions</strong>
-          <p>
-            Move funds directly between {traderName ?? 'the trader'} and{' '}
-            {bankerName ?? 'the banker'} using the custody ledger. Current
-            trader custody: {traderCustodyTotal ?? '0.0000'}.
-          </p>
+        <div className="activity-note">
+          <span>Latest activity</span>
+          <strong>{latestRunSummary || 'No actions yet.'}</strong>
         </div>
-      </div>
 
-      <label className="field">
-        <span>Place with banker</span>
-        <input
-          value={custodyPlacementAmount}
-          onChange={(event) =>
-            onCustodyPlacementAmountChange(event.target.value)
-          }
-          placeholder="10.0000"
-        />
-      </label>
-
-      <button
-        className="action-button"
-        type="button"
-        disabled={!selectedSessionId || isPlacingCustody}
-        onClick={onPlaceFundsWithBanker}
-      >
-        {isPlacingCustody ? 'Placing funds...' : 'Place Funds With Banker'}
-      </button>
-
-      <label className="field">
-        <span>Redeem from banker</span>
-        <input
-          value={custodyRedemptionAmount}
-          onChange={(event) =>
-            onCustodyRedemptionAmountChange(event.target.value)
-          }
-          placeholder="5.0000"
-        />
-      </label>
-
-      <button
-        className="action-button"
-        type="button"
-        disabled={!selectedSessionId || isRedeemingCustody}
-        onClick={onRedeemFundsFromBanker}
-      >
-        {isRedeemingCustody ? 'Redeeming funds...' : 'Redeem Funds From Banker'}
-      </button>
-
-      <div className="feedback-block">
-        {latestRunSummary ? <p>{latestRunSummary}</p> : null}
-        {createError ? <p className="error-copy">{createError}</p> : null}
         {runError ? <p className="error-copy">{runError}</p> : null}
         {advanceError ? <p className="error-copy">{advanceError}</p> : null}
-        {custodyError ? <p className="error-copy">{custodyError}</p> : null}
-      </div>
-    </section>
+      </section>
+    </aside>
   );
 }
