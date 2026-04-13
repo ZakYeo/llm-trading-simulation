@@ -5,6 +5,7 @@ import { ReplayTimeline } from './components/replay-timeline';
 import { SessionControls } from './components/session-controls';
 import { SessionSnapshot } from './components/session-snapshot';
 import {
+  advanceGameRound,
   createGameSession,
   getGameReplay,
   getGameSession,
@@ -88,6 +89,19 @@ export function App() {
     },
   });
 
+  const advanceRoundMutation = useMutation({
+    mutationFn: () => advanceGameRound(selectedSessionId),
+    onSuccess: (session) => {
+      setLatestRunSummary(
+        `Advanced to round ${session.currentRound} using the backend default interest policy`,
+      );
+      queryClient.setQueryData(['game-session', session.id], session);
+      void queryClient.invalidateQueries({
+        queryKey: ['game-replay', selectedSessionId],
+      });
+    },
+  });
+
   const selectedSession = sessionQuery.data;
   const replay = replayQuery.data;
   const canRemoveAgent = agentDrafts.length > 1;
@@ -143,6 +157,7 @@ export function App() {
       <section className="workspace-grid">
         <SessionControls
           selectedSessionId={selectedSessionId}
+          currentRound={selectedSession?.currentRound}
           sessionName={sessionName}
           initialBalance={initialBalance}
           turnCount={turnCount}
@@ -151,8 +166,10 @@ export function App() {
           canRemoveAgent={canRemoveAgent}
           isCreating={createSessionMutation.isPending}
           isRunning={orchestrateMutation.isPending}
+          isAdvancing={advanceRoundMutation.isPending}
           createError={createSessionMutation.error?.message}
           runError={orchestrateMutation.error?.message}
+          advanceError={advanceRoundMutation.error?.message}
           onSessionNameChange={setSessionName}
           onInitialBalanceChange={setInitialBalance}
           onSelectedSessionIdChange={setSelectedSessionId}
@@ -162,6 +179,7 @@ export function App() {
           onUpdateAgentDraft={updateAgentDraft}
           onCreateSession={() => createSessionMutation.mutate()}
           onRunTurns={() => orchestrateMutation.mutate()}
+          onAdvanceRound={() => advanceRoundMutation.mutate()}
         />
 
         <SessionSnapshot

@@ -81,6 +81,7 @@ The frontend is an operator dashboard that currently supports:
 - creating sessions
 - selecting an active session
 - running agent rounds for a chosen number of turns
+- explicitly advancing rounds from the UI
 - inspecting balances and current session state
 - viewing replay events
 
@@ -103,6 +104,7 @@ Main environment variables:
 - `OPENAI_MODEL`: OpenAI model used by the backend agent gateway
 - `OPENAI_AGENT_SYSTEM_PROMPT`: optional prompt override
 - `OPENAI_AGENT_STRICT_MODE`: optional stricter output handling flag
+- `DEFAULT_INTEREST_RATE_BPS`: optional backend default for round advancement when `interestRateBps` is omitted; defaults to `250`
 
 ## Prerequisites
 
@@ -155,6 +157,8 @@ Local URLs:
 
 - Frontend: `http://localhost:5173`
 - API: `http://localhost:3000/api`
+
+Round advancement is explicit. Communication turns do not change the round. Use the frontend `Advance Round` control or call `PATCH /api/game/sessions/:id/rounds/advance` to apply custody interest and increment the round.
 
 ### Run Frontend Only
 
@@ -263,6 +267,8 @@ corepack pnpm test:integration
 ```
 
 `test:integration` automatically prepares the test database first. It loads `.env` when present and defaults `TEST_DATABASE_URL` to the conventional local test database shown above.
+
+Round-advance requests can omit `interestRateBps`. In that case the backend uses `DEFAULT_INTEREST_RATE_BPS` or falls back to `250`.
 
 Run linting:
 

@@ -6,6 +6,7 @@ interface AgentDraft {
 
 interface SessionControlsProps {
   selectedSessionId: string;
+  currentRound?: number;
   sessionName: string;
   initialBalance: string;
   turnCount: number;
@@ -14,8 +15,10 @@ interface SessionControlsProps {
   canRemoveAgent: boolean;
   isCreating: boolean;
   isRunning: boolean;
+  isAdvancing: boolean;
   createError?: string;
   runError?: string;
+  advanceError?: string;
   onSessionNameChange: (value: string) => void;
   onInitialBalanceChange: (value: string) => void;
   onSelectedSessionIdChange: (value: string) => void;
@@ -28,12 +31,14 @@ interface SessionControlsProps {
   ) => void;
   onCreateSession: () => void;
   onRunTurns: () => void;
+  onAdvanceRound: () => void;
 }
 
 const agentRoleOptions = ['banker', 'trader'] as const;
 
 export function SessionControls({
   selectedSessionId,
+  currentRound,
   sessionName,
   initialBalance,
   turnCount,
@@ -42,8 +47,10 @@ export function SessionControls({
   canRemoveAgent,
   isCreating,
   isRunning,
+  isAdvancing,
   createError,
   runError,
+  advanceError,
   onSessionNameChange,
   onInitialBalanceChange,
   onSelectedSessionIdChange,
@@ -53,6 +60,7 @@ export function SessionControls({
   onUpdateAgentDraft,
   onCreateSession,
   onRunTurns,
+  onAdvanceRound,
 }: SessionControlsProps) {
   const normalizedTurnCount = Number.isNaN(turnCount)
     ? 1
@@ -212,10 +220,30 @@ export function SessionControls({
           : `Run next ${normalizedTurnCount} turn${normalizedTurnCount === 1 ? '' : 's'}`}
       </button>
 
+      <div className="turn-planner">
+        <div className="turn-planner-copy">
+          <strong>Round settlement</strong>
+          <p>
+            Current round: {currentRound ?? 0}. Advance explicitly to apply the
+            backend default custody interest rate.
+          </p>
+        </div>
+      </div>
+
+      <button
+        className="action-button"
+        type="button"
+        disabled={!selectedSessionId || isAdvancing}
+        onClick={onAdvanceRound}
+      >
+        {isAdvancing ? 'Advancing round...' : 'Advance Round'}
+      </button>
+
       <div className="feedback-block">
         {latestRunSummary ? <p>{latestRunSummary}</p> : null}
         {createError ? <p className="error-copy">{createError}</p> : null}
         {runError ? <p className="error-copy">{runError}</p> : null}
+        {advanceError ? <p className="error-copy">{advanceError}</p> : null}
       </div>
     </section>
   );

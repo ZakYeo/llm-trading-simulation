@@ -58,6 +58,21 @@ export function getGameReplay(gameSessionId: string) {
   return request<GameReplayRecord>(`/replay/sessions/${gameSessionId}`);
 }
 
+export function advanceGameRound(
+  gameSessionId: string,
+  interestRateBps?: number,
+) {
+  return request<GameSessionRecord>(
+    `/game/sessions/${gameSessionId}/rounds/advance`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(
+        interestRateBps === undefined ? {} : { interestRateBps },
+      ),
+    },
+  );
+}
+
 export function orchestrateAgentRound(
   gameSessionId: string,
   turnCount: number,

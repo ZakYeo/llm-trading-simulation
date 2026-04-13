@@ -17,8 +17,7 @@ Quality status:
 - real Postgres-backed HTTP integration coverage now exists for create, read, transfer, deposit, and withdraw through the live Nest app boundary
 - round advancement with interest accrual is now implemented and covered through unit, Postgres-backed integration, and HTTP integration tests
 - banker custody interest currently accrues only when the round is explicitly advanced; communication turns alone do not apply interest
-- round advancement currently requires the caller to provide `interestRateBps`; there is not yet a backend-owned default rate or a frontend control for this
-- backend-owned default round interest policy is now being introduced; the remaining gap is frontend round controls
+- round advancement is now exposed in the frontend operator UI and uses the backend-owned default interest policy unless an override is provided by API callers
 - session updates now preserve the `GameSession` row and durable `GameRound` history in Postgres
 - transfer, deposit, and withdrawal actions now persist durable ledger history rows in Postgres
 - replay-oriented read models and API endpoints now exist over stored round and ledger history
@@ -94,14 +93,14 @@ Completed this session:
 - refactored agent payment semantics to canonical payment-request terminology and removed the temporary legacy alias layer
 - reduced custody persistence churn with keyed upserts and targeted deletes instead of full custody-row rewrites
 - tightened agent provider wiring and added provider-graph tests
+- added a backend-owned default round interest policy with optional request overrides
+- added explicit frontend round-advance controls so operators can apply custody interest without leaving the UI
+- documented default round-interest behavior and explicit round advancement in the README
 
 Immediate next steps:
 
-- introduce a backend-owned default round interest rate so economic policy does not depend on the frontend
-- make `interestRateBps` optional on round advancement and fall back to the backend default when omitted
-- add an explicit frontend `Advance Round` control so operators can actually trigger interest accrual from the UI
-- keep round advancement separate from communication-turn orchestration
-- after round controls are in place, continue simplifying the operator surface around banker/trader treasury flows
+- continue simplifying the operator surface around banker/trader treasury flows now that explicit round advancement is in place
+- decide whether the next treasury slice should be negotiated custody products, richer treasury analytics, or automated operator workflows built on top of explicit round settlement
 
 Banker treasury redesign plan
 
@@ -220,7 +219,7 @@ Implementation notes:
 Status:
 
 - replay support for custody placement, redemption, and accrual is implemented
-- frontend treasury visibility exists, but the UI still does not expose round advancement
+- frontend treasury visibility exists, and the UI now exposes explicit round advancement
 
 Step 6a — backend-owned default interest policy
 
@@ -240,7 +239,8 @@ Status:
 
 - backend default-interest support is implemented in the round-advance flow
 - request-level override remains supported
-- remaining work: document the default in the README and wire the frontend to the simpler default path
+- the README documents the default behavior
+- the frontend now uses the simpler default path for normal operator round advancement
 
 Step 6b — explicit round-advance operator controls
 
@@ -258,6 +258,13 @@ Implementation notes:
   3. advance the round
 - after advancing, refresh session state and replay so accrued custody interest is immediately visible
 - label the effect clearly enough that operators understand round advancement is what applies interest
+
+Status:
+
+- the frontend now shows a dedicated `Advance Round` control
+- the control uses the backend default interest policy for the normal path
+- advancing a round refreshes session state and replay
+- round advancement remains separate from communication-turn orchestration
 
 Step 7 — optional later improvements
 

@@ -314,6 +314,109 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
     ]);
   });
 
+  it('advances rounds with the backend default interest rate when the request omits an override', async () => {
+    const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'HTTP Default Interest Table',
+        initialBalance: '100.0000',
+        agents: [
+          { name: 'Banker Bot', role: 'banker' },
+          { name: 'Analyst Bot', role: 'analyst' },
+          { name: 'Lawyer Bot', role: 'lawyer' },
+          { name: 'Influencer Bot', role: 'influencer' },
+          { name: 'Trader Bot', role: 'trader' },
+        ],
+      }),
+    });
+    const createdSession = (await createResponse.json()) as {
+      id: string;
+      agents: Array<{
+        id: string;
+        role: string;
+      }>;
+      bankerCustodyPositions: Array<{
+        bankerAgentId: string;
+        ownerAgentId: string;
+        principal: string;
+        accruedInterest: string;
+        totalBalance: string;
+      }>;
+    };
+
+    const banker = createdSession.agents.find(
+      (agent) => agent.role === 'banker',
+    );
+    const trader = createdSession.agents.find(
+      (agent) => agent.role === 'trader',
+    );
+
+    expect(createResponse.status).toBe(201);
+    expect(banker).toBeDefined();
+    expect(trader).toBeDefined();
+
+    const custodyPlacementResponse = await fetch(
+      `${baseUrl}/api/game/sessions/${createdSession.id}/custody/place`,
+      {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          ownerAgentId: trader!.id,
+          bankerAgentId: banker!.id,
+          amount: '40.0000',
+        }),
+      },
+    );
+
+    expect(custodyPlacementResponse.status).toBe(200);
+
+    const advanceResponse = await fetch(
+      `${baseUrl}/api/game/sessions/${createdSession.id}/rounds/advance`,
+      {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      },
+    );
+    const advancedSession = (await advanceResponse.json()) as {
+      currentRound: number;
+      agents: Array<{
+        id: string;
+        availableBalance: string;
+      }>;
+      bankerCustodyPositions: Array<{
+        bankerAgentId: string;
+        ownerAgentId: string;
+        principal: string;
+        accruedInterest: string;
+        totalBalance: string;
+      }>;
+    };
+    const advancedBanker = advancedSession.agents.find(
+      (agent) => agent.id === banker!.id,
+    );
+
+    expect(advanceResponse.status).toBe(200);
+    expect(advancedSession.currentRound).toBe(1);
+    expect(advancedBanker?.availableBalance).toBe('141.0000');
+    expect(advancedSession.bankerCustodyPositions).toEqual([
+      {
+        bankerAgentId: banker!.id,
+        ownerAgentId: trader!.id,
+        principal: '40.0000',
+        accruedInterest: '1.0000',
+        totalBalance: '41.0000',
+      },
+    ]);
+  });
+
   it('returns 400 for invalid request payloads', async () => {
     const response = await fetch(`${baseUrl}/api/game/sessions`, {
       method: 'POST',
