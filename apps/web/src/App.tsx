@@ -10,6 +10,8 @@ import {
   getGameReplay,
   getGameSession,
   orchestrateAgentRound,
+  placeFundsWithBanker,
+  redeemFundsFromBanker,
 } from './lib/api';
 import { useSessionEvents } from './hooks/use-session-events';
 
@@ -32,6 +34,10 @@ export function App() {
   const [sessionName, setSessionName] = useState('Operator Demo Table');
   const [initialBalance, setInitialBalance] = useState('100.0000');
   const [turnCount, setTurnCount] = useState(2);
+  const [custodyPlacementAmount, setCustodyPlacementAmount] =
+    useState('10.0000');
+  const [custodyRedemptionAmount, setCustodyRedemptionAmount] =
+    useState('5.0000');
   const [latestRunSummary, setLatestRunSummary] = useState('');
   const [agentDrafts, setAgentDrafts] =
     useState<AgentDraft[]>(defaultAgentSetup);
@@ -102,9 +108,87 @@ export function App() {
     },
   });
 
+  const placeCustodyMutation = useMutation({
+    mutationFn: () => {
+      const banker = sessionQuery.data?.agents.find(
+        (agent) => agent.role === 'banker',
+      );
+      const trader = sessionQuery.data?.agents.find(
+        (agent) => agent.role === 'trader',
+      );
+
+      if (!banker || !trader) {
+        throw new Error(
+          'A banker and trader are required for custody actions.',
+        );
+      }
+
+      return placeFundsWithBanker(selectedSessionId, {
+        ownerAgentId: trader.id,
+        bankerAgentId: banker.id,
+        amount: custodyPlacementAmount,
+      });
+    },
+    onSuccess: (session) => {
+      setLatestRunSummary(
+        `Placed ${custodyPlacementAmount} with the banker in round ${session.currentRound}`,
+      );
+      queryClient.setQueryData(['game-session', session.id], session);
+      void queryClient.invalidateQueries({
+        queryKey: ['game-replay', selectedSessionId],
+      });
+    },
+  });
+
+  const redeemCustodyMutation = useMutation({
+    mutationFn: () => {
+      const banker = sessionQuery.data?.agents.find(
+        (agent) => agent.role === 'banker',
+      );
+      const trader = sessionQuery.data?.agents.find(
+        (agent) => agent.role === 'trader',
+      );
+
+      if (!banker || !trader) {
+        throw new Error(
+          'A banker and trader are required for custody actions.',
+        );
+      }
+
+      return redeemFundsFromBanker(selectedSessionId, {
+        ownerAgentId: trader.id,
+        bankerAgentId: banker.id,
+        amount: custodyRedemptionAmount,
+      });
+    },
+    onSuccess: (session) => {
+      setLatestRunSummary(
+        `Redeemed ${custodyRedemptionAmount} from the banker in round ${session.currentRound}`,
+      );
+      queryClient.setQueryData(['game-session', session.id], session);
+      void queryClient.invalidateQueries({
+        queryKey: ['game-replay', selectedSessionId],
+      });
+    },
+  });
+
   const selectedSession = sessionQuery.data;
   const replay = replayQuery.data;
   const canRemoveAgent = agentDrafts.length > 1;
+  const banker = selectedSession?.agents.find(
+    (agent) => agent.role === 'banker',
+  );
+  const trader = selectedSession?.agents.find(
+    (agent) => agent.role === 'trader',
+  );
+  const traderCustodyPosition =
+    banker && trader
+      ? selectedSession?.bankerCustodyPositions.find(
+          (position) =>
+            position.bankerAgentId === banker.id &&
+            position.ownerAgentId === trader.id,
+        )
+      : undefined;
 
   function updateAgentDraft(
     draftId: string,
@@ -158,6 +242,11 @@ export function App() {
         <SessionControls
           selectedSessionId={selectedSessionId}
           currentRound={selectedSession?.currentRound}
+          bankerName={banker?.name}
+          traderName={trader?.name}
+          traderCustodyTotal={traderCustodyPosition?.totalBalance}
+          custodyPlacementAmount={custodyPlacementAmount}
+          custodyRedemptionAmount={custodyRedemptionAmount}
           sessionName={sessionName}
           initialBalance={initialBalance}
           turnCount={turnCount}
@@ -167,19 +256,29 @@ export function App() {
           isCreating={createSessionMutation.isPending}
           isRunning={orchestrateMutation.isPending}
           isAdvancing={advanceRoundMutation.isPending}
+          isPlacingCustody={placeCustodyMutation.isPending}
+          isRedeemingCustody={redeemCustodyMutation.isPending}
           createError={createSessionMutation.error?.message}
           runError={orchestrateMutation.error?.message}
           advanceError={advanceRoundMutation.error?.message}
+          custodyError={
+            placeCustodyMutation.error?.message ??
+            redeemCustodyMutation.error?.message
+          }
           onSessionNameChange={setSessionName}
           onInitialBalanceChange={setInitialBalance}
           onSelectedSessionIdChange={setSelectedSessionId}
           onTurnCountChange={setTurnCount}
+          onCustodyPlacementAmountChange={setCustodyPlacementAmount}
+          onCustodyRedemptionAmountChange={setCustodyRedemptionAmount}
           onAddAgentDraft={addAgentDraft}
           onRemoveAgentDraft={removeAgentDraft}
           onUpdateAgentDraft={updateAgentDraft}
           onCreateSession={() => createSessionMutation.mutate()}
           onRunTurns={() => orchestrateMutation.mutate()}
           onAdvanceRound={() => advanceRoundMutation.mutate()}
+          onPlaceFundsWithBanker={() => placeCustodyMutation.mutate()}
+          onRedeemFundsFromBanker={() => redeemCustodyMutation.mutate()}
         />
 
         <SessionSnapshot

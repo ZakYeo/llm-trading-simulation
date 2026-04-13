@@ -3,7 +3,7 @@ a multi-agent negotiation and treasury simulator where each agent is exposed as 
 Execution tracker
 
 Current phase: Phase 3 — Frontend MVP and operator experience
-Status: in progress
+Status: complete
 
 Quality status:
 
@@ -18,6 +18,7 @@ Quality status:
 - round advancement with interest accrual is now implemented and covered through unit, Postgres-backed integration, and HTTP integration tests
 - banker custody interest currently accrues only when the round is explicitly advanced; communication turns alone do not apply interest
 - round advancement is now exposed in the frontend operator UI and uses the backend-owned default interest policy unless an override is provided by API callers
+- the frontend now exposes direct banker/trader custody placement and redemption controls for the base treasury product
 - session updates now preserve the `GameSession` row and durable `GameRound` history in Postgres
 - transfer, deposit, and withdrawal actions now persist durable ledger history rows in Postgres
 - replay-oriented read models and API endpoints now exist over stored round and ledger history
@@ -96,11 +97,21 @@ Completed this session:
 - added a backend-owned default round interest policy with optional request overrides
 - added explicit frontend round-advance controls so operators can apply custody interest without leaving the UI
 - documented default round-interest behavior and explicit round advancement in the README
+- added direct frontend custody controls so operators can place and redeem trader funds with the banker without manual API calls
 
-Immediate next steps:
+Current phase exit criteria:
 
-- continue simplifying the operator surface around banker/trader treasury flows now that explicit round advancement is in place
-- decide whether the next treasury slice should be negotiated custody products, richer treasury analytics, or automated operator workflows built on top of explicit round settlement
+- create sessions from the frontend
+- run communication turns from the frontend
+- inspect live balances, replay, and treasury state from the frontend
+- advance rounds explicitly from the frontend using the backend default interest policy
+- place and redeem funds with the banker directly from the frontend
+
+Next phase candidates:
+
+- negotiated custody products with explicit backend-owned agreements
+- richer treasury analytics and operator summaries
+- automated operator workflows built on top of explicit round settlement
 
 Banker treasury redesign plan
 
@@ -220,6 +231,7 @@ Status:
 
 - replay support for custody placement, redemption, and accrual is implemented
 - frontend treasury visibility exists, and the UI now exposes explicit round advancement
+- the frontend now also exposes direct custody placement and redemption for the banker/trader baseline flow
 
 Step 6a — backend-owned default interest policy
 

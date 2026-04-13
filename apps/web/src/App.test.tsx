@@ -19,6 +19,9 @@ describe('App', () => {
     expect(html).toContain('Run next 2 turns');
     expect(html).toContain('Round settlement');
     expect(html).toContain('Advance Round');
+    expect(html).toContain('Treasury actions');
+    expect(html).toContain('Place Funds With Banker');
+    expect(html).toContain('Redeem Funds From Banker');
     expect(html).toContain('Roster');
     expect(html).toContain('Add bot');
     expect(html).toContain('Banker Bot');

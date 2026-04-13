@@ -7,6 +7,11 @@ interface AgentDraft {
 interface SessionControlsProps {
   selectedSessionId: string;
   currentRound?: number;
+  bankerName?: string;
+  traderName?: string;
+  traderCustodyTotal?: string;
+  custodyPlacementAmount: string;
+  custodyRedemptionAmount: string;
   sessionName: string;
   initialBalance: string;
   turnCount: number;
@@ -16,13 +21,18 @@ interface SessionControlsProps {
   isCreating: boolean;
   isRunning: boolean;
   isAdvancing: boolean;
+  isPlacingCustody: boolean;
+  isRedeemingCustody: boolean;
   createError?: string;
   runError?: string;
   advanceError?: string;
+  custodyError?: string;
   onSessionNameChange: (value: string) => void;
   onInitialBalanceChange: (value: string) => void;
   onSelectedSessionIdChange: (value: string) => void;
   onTurnCountChange: (value: number) => void;
+  onCustodyPlacementAmountChange: (value: string) => void;
+  onCustodyRedemptionAmountChange: (value: string) => void;
   onAddAgentDraft: () => void;
   onRemoveAgentDraft: (draftId: string) => void;
   onUpdateAgentDraft: (
@@ -32,6 +42,8 @@ interface SessionControlsProps {
   onCreateSession: () => void;
   onRunTurns: () => void;
   onAdvanceRound: () => void;
+  onPlaceFundsWithBanker: () => void;
+  onRedeemFundsFromBanker: () => void;
 }
 
 const agentRoleOptions = ['banker', 'trader'] as const;
@@ -39,6 +51,11 @@ const agentRoleOptions = ['banker', 'trader'] as const;
 export function SessionControls({
   selectedSessionId,
   currentRound,
+  bankerName,
+  traderName,
+  traderCustodyTotal,
+  custodyPlacementAmount,
+  custodyRedemptionAmount,
   sessionName,
   initialBalance,
   turnCount,
@@ -48,19 +65,26 @@ export function SessionControls({
   isCreating,
   isRunning,
   isAdvancing,
+  isPlacingCustody,
+  isRedeemingCustody,
   createError,
   runError,
   advanceError,
+  custodyError,
   onSessionNameChange,
   onInitialBalanceChange,
   onSelectedSessionIdChange,
   onTurnCountChange,
+  onCustodyPlacementAmountChange,
+  onCustodyRedemptionAmountChange,
   onAddAgentDraft,
   onRemoveAgentDraft,
   onUpdateAgentDraft,
   onCreateSession,
   onRunTurns,
   onAdvanceRound,
+  onPlaceFundsWithBanker,
+  onRedeemFundsFromBanker,
 }: SessionControlsProps) {
   const normalizedTurnCount = Number.isNaN(turnCount)
     ? 1
@@ -239,11 +263,63 @@ export function SessionControls({
         {isAdvancing ? 'Advancing round...' : 'Advance Round'}
       </button>
 
+      <div className="turn-planner">
+        <div className="turn-planner-copy">
+          <strong>Treasury actions</strong>
+          <p>
+            Move funds directly between {traderName ?? 'the trader'} and{' '}
+            {bankerName ?? 'the banker'} using the custody ledger. Current
+            trader custody: {traderCustodyTotal ?? '0.0000'}.
+          </p>
+        </div>
+      </div>
+
+      <label className="field">
+        <span>Place with banker</span>
+        <input
+          value={custodyPlacementAmount}
+          onChange={(event) =>
+            onCustodyPlacementAmountChange(event.target.value)
+          }
+          placeholder="10.0000"
+        />
+      </label>
+
+      <button
+        className="action-button"
+        type="button"
+        disabled={!selectedSessionId || isPlacingCustody}
+        onClick={onPlaceFundsWithBanker}
+      >
+        {isPlacingCustody ? 'Placing funds...' : 'Place Funds With Banker'}
+      </button>
+
+      <label className="field">
+        <span>Redeem from banker</span>
+        <input
+          value={custodyRedemptionAmount}
+          onChange={(event) =>
+            onCustodyRedemptionAmountChange(event.target.value)
+          }
+          placeholder="5.0000"
+        />
+      </label>
+
+      <button
+        className="action-button"
+        type="button"
+        disabled={!selectedSessionId || isRedeemingCustody}
+        onClick={onRedeemFundsFromBanker}
+      >
+        {isRedeemingCustody ? 'Redeeming funds...' : 'Redeem Funds From Banker'}
+      </button>
+
       <div className="feedback-block">
         {latestRunSummary ? <p>{latestRunSummary}</p> : null}
         {createError ? <p className="error-copy">{createError}</p> : null}
         {runError ? <p className="error-copy">{runError}</p> : null}
         {advanceError ? <p className="error-copy">{advanceError}</p> : null}
+        {custodyError ? <p className="error-copy">{custodyError}</p> : null}
       </div>
     </section>
   );

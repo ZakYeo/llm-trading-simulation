@@ -73,6 +73,40 @@ export function advanceGameRound(
   );
 }
 
+export function placeFundsWithBanker(
+  gameSessionId: string,
+  input: {
+    ownerAgentId: string;
+    bankerAgentId: string;
+    amount: string;
+  },
+) {
+  return request<GameSessionRecord>(
+    `/game/sessions/${gameSessionId}/custody/place`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function redeemFundsFromBanker(
+  gameSessionId: string,
+  input: {
+    ownerAgentId: string;
+    bankerAgentId: string;
+    amount: string;
+  },
+) {
+  return request<GameSessionRecord>(
+    `/game/sessions/${gameSessionId}/custody/redeem`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
 export function orchestrateAgentRound(
   gameSessionId: string,
   turnCount: number,
