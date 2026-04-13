@@ -197,7 +197,7 @@ select {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
+  grid-template-columns: 380px minmax(0, 1fr);
   gap: 18px;
   align-items: start;
 }
@@ -336,7 +336,7 @@ select {
 
 .agent-editor-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.8fr) minmax(112px, 0.8fr) auto;
+  grid-template-columns: minmax(0, 3fr) minmax(96px, 0.55fr) auto;
   align-items: end;
   gap: 10px;
   padding: 12px;
