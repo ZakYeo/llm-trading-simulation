@@ -4,11 +4,14 @@ import type { GameSessionRepositoryPort } from '../ports/game-session-repository
 
 export interface AdvanceGameRoundInput {
   gameSessionId: string;
-  interestRateBps: number;
+  interestRateBps?: number;
 }
 
 export class AdvanceGameRoundUseCase {
-  constructor(private readonly repository: GameSessionRepositoryPort) {}
+  constructor(
+    private readonly repository: GameSessionRepositoryPort,
+    private readonly defaultInterestRateBps = 250,
+  ) {}
 
   async execute(input: AdvanceGameRoundInput) {
     const session = await this.repository.findById(input.gameSessionId);
@@ -17,12 +20,21 @@ export class AdvanceGameRoundUseCase {
       throw new DomainInvariantError('Game session not found.');
     }
 
-    if (input.interestRateBps < 0) {
+    if (this.defaultInterestRateBps < 0) {
+      throw new DomainInvariantError(
+        'Default interest rate cannot be negative.',
+      );
+    }
+
+    const interestRateBps =
+      input.interestRateBps ?? this.defaultInterestRateBps;
+
+    if (interestRateBps < 0) {
       throw new DomainInvariantError('Interest rate cannot be negative.');
     }
 
     const accruedPositions = session.bankerCustodyPositions.map((position) =>
-      position.accrue(input.interestRateBps),
+      position.accrue(interestRateBps),
     );
     const accrualHistory = session.bankerCustodyPositions.flatMap(
       (position, index) => {

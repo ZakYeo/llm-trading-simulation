@@ -18,6 +18,24 @@ import {
 import { RandomIdGenerator } from '../../shared/infrastructure/id/random-id-generator.js';
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service.js';
 
+function resolveDefaultInterestRateBps() {
+  const configuredValue = process.env.DEFAULT_INTEREST_RATE_BPS;
+
+  if (!configuredValue) {
+    return 250;
+  }
+
+  const parsed = Number.parseInt(configuredValue, 10);
+
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(
+      'DEFAULT_INTEREST_RATE_BPS must be a non-negative integer when provided.',
+    );
+  }
+
+  return parsed;
+}
+
 export function createGameProviders() {
   return [
     PrismaService,
@@ -51,7 +69,10 @@ export function createGameProviders() {
     {
       provide: AdvanceGameRoundUseCase,
       useFactory: (repository: GameSessionRepositoryPort) =>
-        new AdvanceGameRoundUseCase(repository),
+        new AdvanceGameRoundUseCase(
+          repository,
+          resolveDefaultInterestRateBps(),
+        ),
       inject: [GAME_SESSION_REPOSITORY],
     },
     {

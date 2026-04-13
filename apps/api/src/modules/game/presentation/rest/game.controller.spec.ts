@@ -196,6 +196,29 @@ describe('GameController', () => {
     });
   });
 
+  it('allows round advancement requests to omit an explicit interest rate', async () => {
+    const advanceGameRoundUseCase = {
+      execute: vi.fn().mockResolvedValue(createSessionFixture()),
+    };
+    const controller = new GameController(
+      { execute: vi.fn() } as never,
+      { execute: vi.fn() } as never,
+      advanceGameRoundUseCase as never,
+      { execute: vi.fn() } as never,
+      { execute: vi.fn() } as never,
+      { execute: vi.fn() } as never,
+      { execute: vi.fn() } as never,
+      { execute: vi.fn() } as never,
+    );
+
+    await controller.advanceRound('game-1', {});
+
+    expect(advanceGameRoundUseCase.execute).toHaveBeenCalledWith({
+      gameSessionId: 'game-1',
+      interestRateBps: undefined,
+    });
+  });
+
   it('routes deposits, withdrawals, and transfers through validated request payloads', async () => {
     const depositToBankUseCase = {
       execute: vi.fn().mockResolvedValue(createSessionFixture()),

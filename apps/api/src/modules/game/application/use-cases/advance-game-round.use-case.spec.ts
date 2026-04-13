@@ -105,6 +105,52 @@ describe('AdvanceGameRoundUseCase', () => {
     expect(repository.saved).toHaveLength(1);
   });
 
+  it('uses the configured default interest rate when the request omits one', async () => {
+    const repository = new InMemoryGameSessionRepository(
+      new GameSession({
+        id: 'game-1',
+        name: 'Treasury Table',
+        status: 'setup',
+        currentRound: 0,
+        agents: [
+          new GameAgent({
+            id: 'agent-1',
+            name: 'Banker Bot',
+            role: 'banker',
+            balance: AccountBalance.open(Money.fromDecimal('80.0000')),
+            depositAccount: DepositAccount.open(),
+          }),
+          new GameAgent({
+            id: 'agent-2',
+            name: 'Trader Bot',
+            role: 'trader',
+            balance: AccountBalance.open(Money.fromDecimal('75.0000')),
+            depositAccount: DepositAccount.open(),
+          }),
+        ],
+        bankerCustodyPositions: [
+          new BankerCustodyPosition({
+            bankerAgentId: 'agent-1',
+            ownerAgentId: 'agent-2',
+            principal: Money.fromDecimal('30.0000'),
+            accruedInterest: Money.zero(),
+          }),
+        ],
+      }),
+    );
+
+    const useCase = new AdvanceGameRoundUseCase(repository, 300);
+    const session = await useCase.execute({
+      gameSessionId: 'game-1',
+    });
+
+    expect(session.currentRound).toBe(1);
+    expect(session.agents[0]?.balance.available.toDecimal()).toBe('80.9000');
+    expect(session.bankerCustodyPositions[0]?.accruedInterest.toDecimal()).toBe(
+      '0.9000',
+    );
+  });
+
   it('fails when the target game session does not exist', async () => {
     const repository = new InMemoryGameSessionRepository(null);
     const useCase = new AdvanceGameRoundUseCase(repository);
@@ -143,5 +189,32 @@ describe('AdvanceGameRoundUseCase', () => {
         interestRateBps: 250,
       }),
     ).rejects.toThrow(DomainInvariantError);
+  });
+
+  it('fails when the configured default interest rate is negative', async () => {
+    const repository = new InMemoryGameSessionRepository(
+      new GameSession({
+        id: 'game-1',
+        name: 'Treasury Table',
+        status: 'setup',
+        currentRound: 0,
+        agents: [
+          new GameAgent({
+            id: 'agent-1',
+            name: 'Banker Bot',
+            role: 'banker',
+            balance: AccountBalance.open(Money.fromDecimal('100.0000')),
+            depositAccount: DepositAccount.open(),
+          }),
+        ],
+      }),
+    );
+    const useCase = new AdvanceGameRoundUseCase(repository, -1);
+
+    await expect(
+      useCase.execute({
+        gameSessionId: 'game-1',
+      }),
+    ).rejects.toThrow('Default interest rate cannot be negative.');
   });
 });

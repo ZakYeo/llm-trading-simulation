@@ -18,6 +18,7 @@ Quality status:
 - round advancement with interest accrual is now implemented and covered through unit, Postgres-backed integration, and HTTP integration tests
 - banker custody interest currently accrues only when the round is explicitly advanced; communication turns alone do not apply interest
 - round advancement currently requires the caller to provide `interestRateBps`; there is not yet a backend-owned default rate or a frontend control for this
+- backend-owned default round interest policy is now being introduced; the remaining gap is frontend round controls
 - session updates now preserve the `GameSession` row and durable `GameRound` history in Postgres
 - transfer, deposit, and withdrawal actions now persist durable ledger history rows in Postgres
 - replay-oriented read models and API endpoints now exist over stored round and ledger history
@@ -234,6 +235,12 @@ Implementation notes:
 - do not force the frontend to invent or hardcode the default rate
 - validate that the configured default is non-negative and applied consistently in unit and HTTP integration tests
 - document the default behavior in the README once implemented
+
+Status:
+
+- backend default-interest support is implemented in the round-advance flow
+- request-level override remains supported
+- remaining work: document the default in the README and wire the frontend to the simpler default path
 
 Step 6b — explicit round-advance operator controls
 

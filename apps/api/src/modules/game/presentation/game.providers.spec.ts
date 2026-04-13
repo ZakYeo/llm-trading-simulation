@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { AdvanceGameRoundUseCase } from '../application/use-cases/advance-game-round.use-case.js';
 import { CreateGameSessionUseCase } from '../application/use-cases/create-game-session.use-case.js';
@@ -36,6 +36,12 @@ function expectFactoryProvider(provider: unknown): FactoryProvider {
 }
 
 describe('createGameProviders', () => {
+  const originalDefaultInterestRateBps = process.env.DEFAULT_INTEREST_RATE_BPS;
+
+  afterEach(() => {
+    process.env.DEFAULT_INTEREST_RATE_BPS = originalDefaultInterestRateBps;
+  });
+
   it('registers the expected infrastructure and use-case providers', () => {
     const providers = createGameProviders();
 
@@ -85,6 +91,7 @@ describe('createGameProviders', () => {
   });
 
   it('builds the repository and use cases from their factories', () => {
+    delete process.env.DEFAULT_INTEREST_RATE_BPS;
     const providers = createGameProviders();
     const repositoryProvider = expectFactoryProvider(providers[2]);
     const createSessionProvider = expectFactoryProvider(providers[4]);
@@ -126,5 +133,15 @@ describe('createGameProviders', () => {
     expect(
       redeemFundsProvider.useFactory(repository, ledgerService),
     ).toBeInstanceOf(RedeemFundsFromBankerUseCase);
+  });
+
+  it('fails fast when the configured default interest rate is invalid', () => {
+    process.env.DEFAULT_INTEREST_RATE_BPS = '-1';
+    const providers = createGameProviders();
+    const advanceRoundProvider = expectFactoryProvider(providers[6]);
+
+    expect(() => advanceRoundProvider.useFactory({})).toThrow(
+      'DEFAULT_INTEREST_RATE_BPS must be a non-negative integer when provided.',
+    );
   });
 });
