@@ -13,3 +13,4 @@ apps/api/prisma/dev.db-journal
 apps/api/src/generated
 *.py
 *.bundle
+AGENTS.md

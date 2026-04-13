@@ -16,6 +16,8 @@ Quality status:
 - real Postgres-backed integration coverage now exists for repository persistence and the main create-session -> transfer -> deposit -> withdraw -> read-state backend flow
 - real Postgres-backed HTTP integration coverage now exists for create, read, transfer, deposit, and withdraw through the live Nest app boundary
 - round advancement with interest accrual is now implemented and covered through unit, Postgres-backed integration, and HTTP integration tests
+- banker custody interest currently accrues only when the round is explicitly advanced; communication turns alone do not apply interest
+- round advancement currently requires the caller to provide `interestRateBps`; there is not yet a backend-owned default rate or a frontend control for this
 - session updates now preserve the `GameSession` row and durable `GameRound` history in Postgres
 - transfer, deposit, and withdrawal actions now persist durable ledger history rows in Postgres
 - replay-oriented read models and API endpoints now exist over stored round and ledger history
@@ -36,6 +38,7 @@ Readiness assessment:
 - already at the first credible backend agent-communication milestone
 - strong enough to demo backend-only agent interaction through HTTP, replay, and live-provider smoke coverage
 - backend is now strong enough that frontend visibility is the highest-value next multiplier
+- the most obvious missing operator capability is explicit round advancement from the frontend
 - still not yet close to the full MCP multi-agent system with standalone agent servers and generalized negotiated multi-turn resolution
 - OpenAI credentials are now usable through the backend agent gateway, but the current implementation is still an orchestration slice rather than a full agent runtime
 
@@ -86,15 +89,18 @@ Completed this session:
 - refined role-level prompting so banker/trader are the main capital negotiators while analyst/lawyer/influencer bias toward public information leverage
 - added negotiation-state cues so banker/trader know when conversation is still exploratory versus ready for an executable transfer proposal
 - upgraded the live-provider integration from a single-run smoke test to a repeated short-run confidence test
+- added banker-only custody accrual mechanics and kept round advancement separate from communication-turn orchestration
+- refactored agent payment semantics to canonical payment-request terminology and removed the temporary legacy alias layer
+- reduced custody persistence churn with keyed upserts and targeted deletes instead of full custody-row rewrites
+- tightened agent provider wiring and added provider-graph tests
 
 Immediate next steps:
 
-- make the frontend the highest priority and turn the current backend MVP into a visible, operable product surface
-- build the web app in React with Vite and test it with Vitest plus Testing Library
-- wire the frontend to live session, orchestration, and replay endpoints before adding new backend negotiation primitives
-- use a light UI framework/component layer; recommendation: `shadcn/ui` over a heavier all-in-one framework because it fits the repo’s current control/flexibility needs
-- keep deterministic mock tests as the main backend regression suite while the live-provider path remains a targeted confidence check
-- after the frontend MVP is useful, revisit backend turn-state refresh and deeper negotiation behavior
+- introduce a backend-owned default round interest rate so economic policy does not depend on the frontend
+- make `interestRateBps` optional on round advancement and fall back to the backend default when omitted
+- add an explicit frontend `Advance Round` control so operators can actually trigger interest accrual from the UI
+- keep round advancement separate from communication-turn orchestration
+- after round controls are in place, continue simplifying the operator surface around banker/trader treasury flows
 
 Banker treasury redesign plan
 
@@ -210,6 +216,42 @@ Implementation notes:
 - first UI slice should show: current banker-held amount per trader, accrued return, and recent custody/redemption events
 - defer richer treasury analytics until the mechanic is stable
 
+Status:
+
+- replay support for custody placement, redemption, and accrual is implemented
+- frontend treasury visibility exists, but the UI still does not expose round advancement
+
+Step 6a — backend-owned default interest policy
+
+- add a backend configuration value for the default round interest rate, for example `DEFAULT_INTEREST_RATE_BPS`
+- make `interestRateBps` optional on round-advance requests
+- if the request omits the rate, use the configured backend default
+- keep request-level override support for operator testing and experimentation
+
+Implementation notes:
+
+- the backend should remain the source of truth for interest policy
+- do not force the frontend to invent or hardcode the default rate
+- validate that the configured default is non-negative and applied consistently in unit and HTTP integration tests
+- document the default behavior in the README once implemented
+
+Step 6b — explicit round-advance operator controls
+
+- add a visible `Advance Round` control to the frontend session controls
+- show the current round clearly next to the action
+- default the action to the backend-owned interest policy
+- optionally allow an advanced override input for `interestRateBps`, but do not require it for the normal flow
+
+Implementation notes:
+
+- round advancement should stay explicit and separate from turn orchestration
+- the normal operator flow should be:
+  1. run communication turns
+  2. review treasury and replay state
+  3. advance the round
+- after advancing, refresh session state and replay so accrued custody interest is immediately visible
+- label the effect clearly enough that operators understand round advancement is what applies interest
+
 Step 7 — optional later improvements
 
 - banker spread or fee policy
@@ -241,8 +283,9 @@ Recommended delivery order
 3. add direct owner-controlled custody placement and redemption
 4. add treasury-aware agent context and prompt updates
 5. add treasury-aware replay and frontend visibility
-6. only then consider negotiated treasury products such as higher yields and lockups
-7. after negotiated products exist, consider richer banker economics like spreads or solvency
+6. add backend-owned default interest policy and frontend round-advance controls
+7. only then consider negotiated treasury products such as higher yields and lockups
+8. after negotiated products exist, consider richer banker economics like spreads or solvency
 
 What “good” looks like after the first better version
 
