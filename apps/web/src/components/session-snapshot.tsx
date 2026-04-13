@@ -16,6 +16,7 @@ export function SessionSnapshot({
 }: SessionSnapshotProps) {
   const [isWorkspaceExpanded, setIsWorkspaceExpanded] = useState(true);
   const [isBalancesExpanded, setIsBalancesExpanded] = useState(true);
+  const [isTreasuryExpanded, setIsTreasuryExpanded] = useState(true);
   const banker = selectedSession?.agents.find(
     (agent) => agent.role === 'banker',
   );
@@ -154,70 +155,86 @@ export function SessionSnapshot({
                   <p className="panel-kicker">Treasury</p>
                   <h3>Custody Overview</h3>
                 </div>
-                <span className="status-chip">Banker-led custody</span>
-              </div>
-
-              <div className="treasury-layout">
-                <div className="treasury-column full-width">
-                  <div className="treasury-summary-grid">
-                    <article className="treasury-stat-card emphasis">
-                      <span>Total custodied</span>
-                      <strong>
-                        {formatCurrency(totalCustodiedBalance.toFixed(4))}
-                      </strong>
-                    </article>
-                    <article className="treasury-stat-card">
-                      <span>Total principal</span>
-                      <strong>
-                        {formatCurrency(totalCustodiedPrincipal.toFixed(4))}
-                      </strong>
-                    </article>
-                    <article className="treasury-stat-card">
-                      <span>Accrued interest</span>
-                      <strong>
-                        {formatCurrency(totalCustodiedInterest.toFixed(4))}
-                      </strong>
-                    </article>
-                    <article className="treasury-stat-card">
-                      <span>Trader custody</span>
-                      <strong>
-                        {traderCustodyPosition
-                          ? formatCurrency(traderCustodyPosition.totalBalance)
-                          : formatCurrency('0.0000')}
-                      </strong>
-                    </article>
-                  </div>
-
-                  {traderCustodyPosition ? (
-                    <div className="treasury-position-card">
-                      <div>
-                        <span>Trader principal with banker</span>
-                        <strong>
-                          {formatCurrency(traderCustodyPosition.principal)}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>Trader accrued interest</span>
-                        <strong>
-                          {formatCurrency(
-                            traderCustodyPosition.accruedInterest,
-                          )}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>Redeemable total</span>
-                        <strong>
-                          {formatCurrency(traderCustodyPosition.totalBalance)}
-                        </strong>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="empty-copy treasury-empty">
-                      No trader funds are currently placed with the banker.
-                    </p>
-                  )}
+                <div className="panel-header-actions">
+                  <span className="status-chip">Banker-led custody</span>
+                  <button
+                    className="icon-button"
+                    aria-label={
+                      isTreasuryExpanded
+                        ? 'Minimise treasury overview'
+                        : 'Maximise treasury overview'
+                    }
+                    type="button"
+                    onClick={() => setIsTreasuryExpanded((current) => !current)}
+                  >
+                    {isTreasuryExpanded ? '−' : '+'}
+                  </button>
                 </div>
               </div>
+
+              {isTreasuryExpanded ? (
+                <div className="treasury-layout">
+                  <div className="treasury-column full-width">
+                    <div className="treasury-summary-grid">
+                      <article className="treasury-stat-card emphasis">
+                        <span>Total custodied</span>
+                        <strong>
+                          {formatCurrency(totalCustodiedBalance.toFixed(4))}
+                        </strong>
+                      </article>
+                      <article className="treasury-stat-card">
+                        <span>Total principal</span>
+                        <strong>
+                          {formatCurrency(totalCustodiedPrincipal.toFixed(4))}
+                        </strong>
+                      </article>
+                      <article className="treasury-stat-card">
+                        <span>Accrued interest</span>
+                        <strong>
+                          {formatCurrency(totalCustodiedInterest.toFixed(4))}
+                        </strong>
+                      </article>
+                      <article className="treasury-stat-card">
+                        <span>Trader custody</span>
+                        <strong>
+                          {traderCustodyPosition
+                            ? formatCurrency(traderCustodyPosition.totalBalance)
+                            : formatCurrency('0.0000')}
+                        </strong>
+                      </article>
+                    </div>
+
+                    {traderCustodyPosition ? (
+                      <div className="treasury-position-card">
+                        <div>
+                          <span>Trader principal with banker</span>
+                          <strong>
+                            {formatCurrency(traderCustodyPosition.principal)}
+                          </strong>
+                        </div>
+                        <div>
+                          <span>Trader accrued interest</span>
+                          <strong>
+                            {formatCurrency(
+                              traderCustodyPosition.accruedInterest,
+                            )}
+                          </strong>
+                        </div>
+                        <div>
+                          <span>Redeemable total</span>
+                          <strong>
+                            {formatCurrency(traderCustodyPosition.totalBalance)}
+                          </strong>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="empty-copy treasury-empty">
+                        No trader funds are currently placed with the banker.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : null}
             </section>
           </div>
         ) : selectedSession ? (

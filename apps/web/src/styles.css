@@ -224,6 +224,7 @@ select {
   grid-auto-flow: column;
   gap: 10px;
   align-items: center;
+  justify-content: end;
 }
 
 .status-chip {
@@ -250,6 +251,7 @@ select {
 
 .field.compact {
   margin-bottom: 0;
+  min-width: 0;
 }
 
 .field input,
@@ -329,13 +331,17 @@ select {
 
 .agent-editor-row {
   display: grid;
-  grid-template-columns: minmax(0, 2.2fr) minmax(120px, 0.8fr) auto;
+  grid-template-columns: minmax(0, 1.8fr) minmax(112px, 0.8fr) auto;
   align-items: end;
   gap: 10px;
   padding: 12px;
   border-radius: 16px;
   background: rgba(244, 177, 94, 0.08);
   border: 1px solid rgba(244, 177, 94, 0.12);
+}
+
+.agent-editor-row > * {
+  min-width: 0;
 }
 
 .action-button {
@@ -747,6 +753,11 @@ select {
   .filter-row,
   .panel-header-actions {
     grid-template-columns: 1fr;
+  }
+
+  .panel-header-actions {
+    grid-auto-flow: row;
+    justify-content: start;
   }
 
   .replay-toolbar {

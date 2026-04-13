@@ -69,6 +69,7 @@ export function SessionControls({
   onAdvanceRound,
 }: SessionControlsProps) {
   const [isSetupExpanded, setIsSetupExpanded] = useState(true);
+  const [isOperateExpanded, setIsOperateExpanded] = useState(true);
   const normalizedTurnCount = Number.isNaN(turnCount)
     ? 1
     : Math.min(10, Math.max(1, turnCount));
@@ -136,10 +137,6 @@ export function SessionControls({
 
             <div className="section-copy">
               <strong>Agent roster</strong>
-              <p>
-                Define the banker and trader before starting or replacing a
-                session.
-              </p>
             </div>
 
             <div className="agent-stack">
@@ -236,68 +233,97 @@ export function SessionControls({
             <p className="panel-kicker">Operate</p>
             <h2>Run The Session</h2>
           </div>
-          <span className="status-chip muted">Round {currentRound ?? 0}</span>
-        </div>
-
-        <label className="field">
-          <span>Turn count</span>
-          <input
-            type="number"
-            min={1}
-            max={10}
-            value={normalizedTurnCount}
-            onChange={(event) =>
-              onTurnCountChange(Number.parseInt(event.target.value || '1', 10))
-            }
-          />
-        </label>
-
-        <div className="turn-preset-row">
-          {[1, 2, 4, 8].map((preset) => (
+          <div className="panel-header-actions">
+            <span className="status-chip muted">Round {currentRound ?? 0}</span>
             <button
-              key={preset}
-              className={
-                preset === normalizedTurnCount
-                  ? 'turn-preset active'
-                  : 'turn-preset'
+              className="icon-button"
+              aria-label={
+                isOperateExpanded
+                  ? 'Minimise operate section'
+                  : 'Maximise operate section'
               }
               type="button"
-              onClick={() => onTurnCountChange(preset)}
+              onClick={() => setIsOperateExpanded((current) => !current)}
             >
-              {preset} turn{preset === 1 ? '' : 's'}
+              {isOperateExpanded ? '−' : '+'}
             </button>
-          ))}
+          </div>
         </div>
 
-        <div className="action-stack">
-          <button
-            className="action-button primary"
-            type="button"
-            disabled={!selectedSessionId || isRunning}
-            onClick={onRunTurns}
-          >
-            {isRunning
-              ? `Running ${normalizedTurnCount} turn${normalizedTurnCount === 1 ? '' : 's'}...`
-              : `Run next ${normalizedTurnCount} turn${normalizedTurnCount === 1 ? '' : 's'}`}
-          </button>
+        {isOperateExpanded ? (
+          <>
+            <label className="field">
+              <span>Turn count</span>
+              <input
+                type="number"
+                min={1}
+                max={10}
+                value={normalizedTurnCount}
+                onChange={(event) =>
+                  onTurnCountChange(
+                    Number.parseInt(event.target.value || '1', 10),
+                  )
+                }
+              />
+            </label>
 
-          <button
-            className="action-button secondary"
-            type="button"
-            disabled={!selectedSessionId || isAdvancing}
-            onClick={onAdvanceRound}
-          >
-            {isAdvancing ? 'Advancing round...' : 'Advance round settlement'}
-          </button>
-        </div>
+            <div className="turn-preset-row">
+              {[1, 2, 4, 8].map((preset) => (
+                <button
+                  key={preset}
+                  className={
+                    preset === normalizedTurnCount
+                      ? 'turn-preset active'
+                      : 'turn-preset'
+                  }
+                  type="button"
+                  onClick={() => onTurnCountChange(preset)}
+                >
+                  {preset} turn{preset === 1 ? '' : 's'}
+                </button>
+              ))}
+            </div>
 
-        <div className="activity-note">
-          <span>Latest activity</span>
-          <strong>{latestRunSummary || 'No actions yet.'}</strong>
-        </div>
+            <div className="action-stack">
+              <button
+                className="action-button primary"
+                type="button"
+                disabled={!selectedSessionId || isRunning}
+                onClick={onRunTurns}
+              >
+                {isRunning
+                  ? `Running ${normalizedTurnCount} turn${normalizedTurnCount === 1 ? '' : 's'}...`
+                  : `Run next ${normalizedTurnCount} turn${normalizedTurnCount === 1 ? '' : 's'}`}
+              </button>
 
-        {runError ? <p className="error-copy">{runError}</p> : null}
-        {advanceError ? <p className="error-copy">{advanceError}</p> : null}
+              <button
+                className="action-button secondary"
+                type="button"
+                disabled={!selectedSessionId || isAdvancing}
+                onClick={onAdvanceRound}
+              >
+                {isAdvancing
+                  ? 'Advancing round...'
+                  : 'Advance round settlement'}
+              </button>
+            </div>
+
+            <div className="activity-note">
+              <span>Latest activity</span>
+              <strong>{latestRunSummary || 'No actions yet.'}</strong>
+            </div>
+
+            {runError ? <p className="error-copy">{runError}</p> : null}
+            {advanceError ? <p className="error-copy">{advanceError}</p> : null}
+          </>
+        ) : (
+          <div className="collapsed-setup-copy">
+            <p>
+              Session operation is hidden. Expand it to run turns or settle
+              rounds.
+            </p>
+          </div>
+        )}
       </section>
     </aside>
   );
