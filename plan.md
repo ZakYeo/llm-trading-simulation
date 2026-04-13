@@ -1,68 +1,131 @@
-# Frontend UI Refresh Plan
+# Frontend Card Refactor Plan
 
 ## Objective
 
-Keep simplifying the operator console so the main workflow stays visible while long-running session data remains manageable.
+Refactor the operator dashboard so each visible section maps directly to its own card component.
 
-This plan covers the next UI pass only.
+The current UI is working, but some parts are still composite components that contain multiple page sections. Splitting those into standalone cards will make layout changes safer, reduce style drift, and make the page structure easier to understand in code.
 
-## Completed
+## Why This Refactor
 
-These changes are already done:
+Current problems:
 
-- persistent top bar with session, round, status, latest activity, and help entry point
-- split left rail with separate setup and operate cards
-- treasury overview integrated into the main workspace
-- manual custody actions removed from the frontend
-- replay moved into the main workspace column below treasury
-- replay filtering by event type
-- fixed-height replay panel with internal scrolling
-- replay window selector for recent event counts
-- help modal for onboarding and feature explanation
+- some components still own multiple visual sections
+- collapse behavior is repeated across different areas
+- card headers and card body spacing are not yet standardized
+- styling changes are harder than they should be because section boundaries in code do not fully match the rendered page
 
-## Current Slice
+Target outcome:
 
-Implement the following changes in this pass:
+- one card component per visible dashboard section
+- shared card shell and header patterns
+- cleaner styling rules
+- easier future redesigns and layout tuning
 
-1. Extend audit trail windowing beyond event count.
-   - Keep the existing recent-event selector.
-   - Add a round-based selector so the operator can view only the last few rounds.
+## Proposed Component Structure
 
-2. Remove low-value summary copy from the main workspace.
-   - Remove the `Readiness` box under `Session Workspace`.
-   - Remove the `Recommended loop` block under `Run The Session`.
+### Shared primitives
 
-3. Replace text collapse controls with icon-style controls.
-   - Update the `Session Setup` collapse toggle to use an icon-only button.
-   - Add matching collapse controls to the main `Live State` section.
-   - Add matching collapse controls to the `Balances` section.
+- `CardShell`
+- `CardHeader`
+- `CardBody`
+- `CardCollapseButton`
 
-4. Add treasury interest control to session setup.
-   - Add a frontend input for round interest override under `Session Setup`.
-   - Wire it into the round-advance action so the operator can control the interest applied per round from the UI.
+These should standardize:
 
-5. Improve roster editing ergonomics.
-   - Make bot name fields wider so names are readable while editing.
+- border radius
+- padding
+- header spacing
+- title and kicker layout
+- action alignment
+- collapsed-state treatment
+
+### Left rail cards
+
+- `SessionSetupCard`
+- `OperateCard`
+
+`SessionSetupCard` should own:
+
+- session name
+- initial balance
+- treasury interest per round
+- agent roster
+- create session
+- connect to session id
+
+`OperateCard` should own:
+
+- turn count
+- turn presets
+- run turns
+- advance round
+- latest activity
+
+### Main workspace cards
+
+- `SessionOverviewCard`
+- `BalancesCard`
+- `TreasuryCard`
+- `AuditTrailCard`
+
+`SessionOverviewCard` should own:
+
+- session name
+- status
+- current round
+- session id
+
+`BalancesCard` should own:
+
+- agent balance grid
+- its own collapse control
+
+`TreasuryCard` should own:
+
+- custody overview
+- custody summary metrics
+- trader custody details
+- its own collapse control
+
+`AuditTrailCard` should own:
+
+- replay filters
+- event-window selector
+- round-window selector
+- scrollable replay list
+- its own collapse control
+
+## Refactor Rules
+
+- each card should render one clear section of the page
+- card-level collapse behavior should be handled consistently
+- card header markup should follow one shared pattern
+- empty states should be owned by the card that needs them
+- section-specific styles should be minimized in favor of shared card primitives
 
 ## Out Of Scope
 
-Do not add back manual custody placement or redemption controls in this pass.
+This pass should not:
 
-## Remaining Later Polish
+- change backend behavior
+- reintroduce manual custody controls on the frontend
+- redesign the app’s information architecture again
 
-After this slice, remaining polish work is:
+## Implementation Order
 
-- improve inline success and error feedback near the triggered action
-- refine empty states for no session, no treasury exposure, and no replay results
-- consider a more guided session picker than raw pasted session id
-- tune spacing and responsive behavior after a browser pass
+1. Introduce shared card primitives without changing behavior.
+2. Extract `SessionSetupCard` from the current setup portion.
+3. Extract `OperateCard` from the current operate portion.
+4. Split the workspace into `SessionOverviewCard`, `BalancesCard`, and `TreasuryCard`.
+5. Extract `AuditTrailCard` from the replay component.
+6. Reduce page-level CSS by moving repeated patterns into shared card styles.
 
 ## Success Criteria
 
-This pass is successful when:
+The refactor is successful when:
 
-- replay can be scoped by recent events and recent rounds
-- collapsible sections use lighter-weight icon controls
-- the workspace loses low-signal explanatory boxes
-- interest per round can be controlled from the setup rail
-- roster editing is less cramped
+- every visible dashboard section has a matching card component
+- repeated card layout code is reduced
+- collapse controls are standardized
+- styling changes can be made card-by-card without unexpected layout regressions

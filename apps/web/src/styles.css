@@ -51,6 +51,11 @@ select {
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
 }
 
+.card-shell {
+  display: grid;
+  gap: 18px;
+}
+
 .topbar {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(360px, 0.9fr);

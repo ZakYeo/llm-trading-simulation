@@ -1,9 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { startTransition, useState } from 'react';
 
-import { ReplayTimeline } from './components/replay-timeline';
-import { SessionControls } from './components/session-controls';
-import { SessionSnapshot } from './components/session-snapshot';
+import { AuditTrailCard } from './components/audit-trail-card';
+import { BalancesCard } from './components/balances-card';
+import { OperateCard } from './components/operate-card';
+import { SessionOverviewCard } from './components/session-overview-card';
+import { SessionSetupCard } from './components/session-setup-card';
+import { TreasuryCard } from './components/treasury-card';
 import {
   advanceGameRound,
   createGameSession,
@@ -197,43 +200,50 @@ export function App() {
       </section>
 
       <section className="dashboard-grid">
-        <SessionControls
-          selectedSessionId={selectedSessionId}
-          currentRound={selectedSession?.currentRound}
-          sessionName={sessionName}
-          initialBalance={initialBalance}
-          turnCount={turnCount}
-          interestRateBps={interestRateBps}
-          latestRunSummary={latestRunSummary}
-          agentDrafts={agentDrafts}
-          canRemoveAgent={canRemoveAgent}
-          isCreating={createSessionMutation.isPending}
-          isRunning={orchestrateMutation.isPending}
-          isAdvancing={advanceRoundMutation.isPending}
-          createError={createSessionMutation.error?.message}
-          runError={orchestrateMutation.error?.message}
-          advanceError={advanceRoundMutation.error?.message}
-          onSessionNameChange={setSessionName}
-          onInitialBalanceChange={setInitialBalance}
-          onSelectedSessionIdChange={setSelectedSessionId}
-          onTurnCountChange={setTurnCount}
-          onInterestRateBpsChange={setInterestRateBps}
-          onAddAgentDraft={addAgentDraft}
-          onRemoveAgentDraft={removeAgentDraft}
-          onUpdateAgentDraft={updateAgentDraft}
-          onCreateSession={() => createSessionMutation.mutate()}
-          onRunTurns={() => orchestrateMutation.mutate()}
-          onAdvanceRound={() => advanceRoundMutation.mutate()}
-        />
+        <aside className="control-rail">
+          <SessionSetupCard
+            selectedSessionId={selectedSessionId}
+            sessionName={sessionName}
+            initialBalance={initialBalance}
+            interestRateBps={interestRateBps}
+            agentDrafts={agentDrafts}
+            canRemoveAgent={canRemoveAgent}
+            isCreating={createSessionMutation.isPending}
+            createError={createSessionMutation.error?.message}
+            onSessionNameChange={setSessionName}
+            onInitialBalanceChange={setInitialBalance}
+            onInterestRateBpsChange={setInterestRateBps}
+            onSelectedSessionIdChange={setSelectedSessionId}
+            onAddAgentDraft={addAgentDraft}
+            onRemoveAgentDraft={removeAgentDraft}
+            onUpdateAgentDraft={updateAgentDraft}
+            onCreateSession={() => createSessionMutation.mutate()}
+          />
+
+          <OperateCard
+            selectedSessionId={selectedSessionId}
+            currentRound={selectedSession?.currentRound}
+            turnCount={turnCount}
+            latestRunSummary={latestRunSummary}
+            isRunning={orchestrateMutation.isPending}
+            isAdvancing={advanceRoundMutation.isPending}
+            runError={orchestrateMutation.error?.message}
+            advanceError={advanceRoundMutation.error?.message}
+            onTurnCountChange={setTurnCount}
+            onRunTurns={() => orchestrateMutation.mutate()}
+            onAdvanceRound={() => advanceRoundMutation.mutate()}
+          />
+        </aside>
 
         <div className="workspace-column">
-          <SessionSnapshot
+          <SessionOverviewCard
             selectedSessionId={selectedSessionId}
             selectedSession={selectedSession}
             isFetching={sessionQuery.isFetching}
           />
-
-          <ReplayTimeline
+          <BalancesCard selectedSession={selectedSession} />
+          <TreasuryCard selectedSession={selectedSession} />
+          <AuditTrailCard
             replay={replay}
             selectedRound={selectedSession?.currentRound}
             isFetching={replayQuery.isFetching}

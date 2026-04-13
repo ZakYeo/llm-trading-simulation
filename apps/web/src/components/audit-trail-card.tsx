@@ -7,7 +7,9 @@ import {
   getReplayEventLabel,
 } from '../lib/formatters';
 
-interface ReplayTimelineProps {
+import { CardCollapseButton, CardHeader, CardShell } from './card-shell';
+
+interface AuditTrailCardProps {
   replay?: GameReplayRecord;
   selectedRound?: number;
   isFetching: boolean;
@@ -56,12 +58,12 @@ function matchesFilter(
   );
 }
 
-export function ReplayTimeline({
+export function AuditTrailCard({
   replay,
   selectedRound,
   isFetching,
-}: ReplayTimelineProps) {
-  const [isReplayExpanded, setIsReplayExpanded] = useState(true);
+}: AuditTrailCardProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
   const [activeFilter, setActiveFilter] = useState<ReplayFilter>('all');
   const [activeWindow, setActiveWindow] = useState<ReplayWindow>('10');
   const [activeRoundWindow, setActiveRoundWindow] =
@@ -78,6 +80,7 @@ export function ReplayTimeline({
       ? matchingEvents
       : matchingEvents.filter((event) => {
           const roundNumber = event.roundNumber ?? 0;
+
           return (
             roundNumber >=
             latestRoundNumber - Number.parseInt(activeRoundWindow, 10) + 1
@@ -108,32 +111,28 @@ export function ReplayTimeline({
   }, []);
 
   return (
-    <section className="panel replay-panel">
-      <div className="panel-header">
-        <div>
-          <p className="panel-kicker">Replay</p>
-          <h2>Audit Trail</h2>
-        </div>
-        <div className="panel-header-actions">
-          {replay ? (
-            <span className="status-chip muted">
-              {visibleEvents.length} / {replay.events.length} events
-            </span>
-          ) : null}
-          <button
-            className="icon-button"
-            aria-label={
-              isReplayExpanded ? 'Minimise audit trail' : 'Maximise audit trail'
-            }
-            type="button"
-            onClick={() => setIsReplayExpanded((current) => !current)}
-          >
-            {isReplayExpanded ? '−' : '+'}
-          </button>
-        </div>
-      </div>
+    <CardShell className="replay-panel">
+      <CardHeader
+        kicker="Replay"
+        title="Audit Trail"
+        actions={
+          <>
+            {replay ? (
+              <span className="status-chip muted">
+                {visibleEvents.length} / {replay.events.length} events
+              </span>
+            ) : null}
+            <CardCollapseButton
+              isExpanded={isExpanded}
+              expandLabel="Maximise audit trail"
+              collapseLabel="Minimise audit trail"
+              onToggle={() => setIsExpanded((current) => !current)}
+            />
+          </>
+        }
+      />
 
-      {isReplayExpanded ? (
+      {isExpanded ? (
         <>
           <div className="replay-toolbar">
             <div className="filter-row">
@@ -244,6 +243,6 @@ export function ReplayTimeline({
           <p>Audit trail is hidden. Expand it to inspect replay history.</p>
         </div>
       )}
-    </section>
+    </CardShell>
   );
 }
