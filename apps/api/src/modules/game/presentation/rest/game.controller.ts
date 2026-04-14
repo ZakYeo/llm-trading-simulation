@@ -13,6 +13,7 @@ import { AdvanceGameRoundUseCase } from '../../application/use-cases/advance-gam
 import { CreateGameSessionUseCase } from '../../application/use-cases/create-game-session.use-case.js';
 import { DepositToBankUseCase } from '../../application/use-cases/deposit-to-bank.use-case.js';
 import { GetGameSessionUseCase } from '../../application/use-cases/get-game-session.use-case.js';
+import { ListGameSessionsUseCase } from '../../application/use-cases/list-game-sessions.use-case.js';
 import { OpenMarketPositionUseCase } from '../../application/use-cases/open-market-position.use-case.js';
 import { PlaceFundsWithBankerUseCase } from '../../application/use-cases/place-funds-with-banker.use-case.js';
 import { RedeemFundsFromBankerUseCase } from '../../application/use-cases/redeem-funds-from-banker.use-case.js';
@@ -35,6 +36,8 @@ export class GameController {
     private readonly createGameSessionUseCase: CreateGameSessionUseCase,
     @Inject(GetGameSessionUseCase)
     private readonly getGameSessionUseCase: GetGameSessionUseCase,
+    @Inject(ListGameSessionsUseCase)
+    private readonly listGameSessionsUseCase: ListGameSessionsUseCase,
     @Inject(AdvanceGameRoundUseCase)
     private readonly advanceGameRoundUseCase: AdvanceGameRoundUseCase,
     @Inject(DepositToBankUseCase)
@@ -78,6 +81,11 @@ export class GameController {
     const session = await this.getGameSessionUseCase.execute({ gameSessionId });
 
     return GameSessionResponseMapper.toResponse(session);
+  }
+
+  @Get('sessions')
+  async listSessions() {
+    return this.listGameSessionsUseCase.execute();
   }
 
   @Patch('sessions/:gameSessionId/deposit')

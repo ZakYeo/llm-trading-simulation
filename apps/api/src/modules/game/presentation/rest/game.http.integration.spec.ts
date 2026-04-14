@@ -176,6 +176,59 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
     ]);
   });
 
+  it('lists saved sessions in reverse creation order through the HTTP boundary', async () => {
+    const firstCreateResponse = await fetch(`${baseUrl}/api/game/sessions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'First Listed Table',
+        initialBalance: '100.0000',
+        agents: [
+          { name: 'Banker Bot', role: 'banker' },
+          { name: 'Trader Bot', role: 'trader' },
+        ],
+      }),
+    });
+    const secondCreateResponse = await fetch(`${baseUrl}/api/game/sessions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'Second Listed Table',
+        initialBalance: '100.0000',
+        agents: [
+          { name: 'Banker Bot', role: 'banker' },
+          { name: 'Trader Bot', role: 'trader' },
+        ],
+      }),
+    });
+
+    expect(firstCreateResponse.status).toBe(201);
+    expect(secondCreateResponse.status).toBe(201);
+
+    const listResponse = await fetch(`${baseUrl}/api/game/sessions`);
+    const listedSessions = (await listResponse.json()) as Array<{
+      id: string;
+      name: string;
+      status: string;
+      currentRound: number;
+    }>;
+
+    expect(listResponse.status).toBe(200);
+    expect(listedSessions).toHaveLength(2);
+    expect(listedSessions.map((session) => session.name)).toEqual([
+      'Second Listed Table',
+      'First Listed Table',
+    ]);
+    expect(listedSessions[0]).toMatchObject({
+      status: 'setup',
+      currentRound: 0,
+    });
+  });
+
   it('responds to CORS preflight requests for session creation', async () => {
     const response = await fetch(`${baseUrl}/api/game/sessions`, {
       method: 'OPTIONS',

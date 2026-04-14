@@ -1,3 +1,5 @@
+import type { GameSessionSummary } from '@llm-sim/shared-types';
+
 import type { GameSession } from '../../domain/entities/game-session.js';
 
 export interface TransferHistoryRecord {
@@ -86,4 +88,5 @@ export interface GameSessionRepositoryPort {
     history?: GameSessionHistoryRecord[],
   ): Promise<void>;
   findById(id: string): Promise<GameSession | null>;
+  list(): Promise<GameSessionSummary[]>;
 }

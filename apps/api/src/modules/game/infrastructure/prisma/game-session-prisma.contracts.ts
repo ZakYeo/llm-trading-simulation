@@ -54,6 +54,24 @@ export interface PrismaGameSessionDelegate {
       currentRound?: true;
     };
   }): Promise<PersistedGameSessionRecord | null>;
+  findMany(args: {
+    orderBy: {
+      createdAt: 'asc' | 'desc';
+    };
+    select: {
+      id: true;
+      name: true;
+      status: true;
+      currentRound: true;
+    };
+  }): Promise<
+    Array<{
+      id: string;
+      name: string;
+      status: PersistedGameSessionRecord['status'];
+      currentRound: number;
+    }>
+  >;
 }
 
 export interface PrismaAgentDelegate {

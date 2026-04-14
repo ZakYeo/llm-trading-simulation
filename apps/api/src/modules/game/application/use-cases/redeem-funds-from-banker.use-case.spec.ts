@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { GameSessionSummary } from '@llm-sim/shared-types';
 
 import { DepositAccount } from '../../../bank/domain/entities/deposit-account.js';
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
@@ -30,6 +31,19 @@ class InMemoryGameSessionRepository implements GameSessionRepositoryPort {
 
   async findById(id: string): Promise<GameSession | null> {
     return this.session?.id === id ? this.session : null;
+  }
+
+  async list(): Promise<GameSessionSummary[]> {
+    return this.session
+      ? [
+          {
+            id: this.session.id,
+            name: this.session.name,
+            status: this.session.status,
+            currentRound: this.session.currentRound,
+          },
+        ]
+      : [];
   }
 }
 

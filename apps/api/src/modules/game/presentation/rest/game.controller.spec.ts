@@ -61,6 +61,7 @@ describe('GameController', () => {
       createGameSessionUseCase as never,
       getGameSessionUseCase as never,
       { execute: vi.fn() } as never,
+      { execute: vi.fn() } as never,
       depositToBankUseCase as never,
       withdrawFromBankUseCase as never,
       transferFundsUseCase as never,
@@ -137,6 +138,7 @@ describe('GameController', () => {
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
+      { execute: vi.fn() } as never,
     );
 
     await expect(
@@ -162,6 +164,7 @@ describe('GameController', () => {
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
+      { execute: vi.fn() } as never,
     );
 
     const result = await controller.getSession('game-1');
@@ -178,6 +181,7 @@ describe('GameController', () => {
       execute: vi.fn().mockResolvedValue(createSessionFixture()),
     };
     const controller = new GameController(
+      { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       advanceGameRoundUseCase as never,
@@ -203,6 +207,7 @@ describe('GameController', () => {
       execute: vi.fn().mockResolvedValue(createSessionFixture()),
     };
     const controller = new GameController(
+      { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       advanceGameRoundUseCase as never,
@@ -238,6 +243,7 @@ describe('GameController', () => {
       execute: vi.fn().mockResolvedValue(createSessionFixture()),
     };
     const controller = new GameController(
+      { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
@@ -310,6 +316,7 @@ describe('GameController', () => {
     const placeFundsWithBankerUseCase = { execute: vi.fn() };
     const redeemFundsFromBankerUseCase = { execute: vi.fn() };
     const controller = new GameController(
+      { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       { execute: vi.fn() } as never,
       advanceGameRoundUseCase as never,

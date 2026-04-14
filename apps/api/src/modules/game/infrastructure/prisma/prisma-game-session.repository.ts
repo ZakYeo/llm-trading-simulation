@@ -1,3 +1,5 @@
+import type { GameSessionSummary } from '@llm-sim/shared-types';
+
 import type {
   GameSessionHistoryRecord,
   GameSessionRepositoryPort,
@@ -156,6 +158,25 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
     }
 
     return GameSessionPrismaMapper.toDomain(record);
+  }
+
+  async list(): Promise<GameSessionSummary[]> {
+    const sessions = await this.prisma.gameSession.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        currentRound: true,
+      },
+    });
+
+    return sessions.map((session) => ({
+      id: session.id,
+      name: session.name,
+      status: session.status.toLowerCase() as GameSessionSummary['status'],
+      currentRound: session.currentRound,
+    }));
   }
 
   private async persistSession(

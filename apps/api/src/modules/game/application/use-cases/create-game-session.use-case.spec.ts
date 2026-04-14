@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { AgentRole } from '@llm-sim/shared-types';
+import type { GameSessionSummary } from '@llm-sim/shared-types';
 
 import type { IdGeneratorPort } from '../../../shared/application/ports/id-generator.port.js';
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
@@ -24,6 +25,15 @@ class InMemoryGameSessionRepository implements GameSessionRepositoryPort {
 
   async findById(id: string): Promise<GameSession | null> {
     return this.saved.find((session) => session.id === id) ?? null;
+  }
+
+  async list(): Promise<GameSessionSummary[]> {
+    return this.saved.map((session) => ({
+      id: session.id,
+      name: session.name,
+      status: session.status,
+      currentRound: session.currentRound,
+    }));
   }
 }
 

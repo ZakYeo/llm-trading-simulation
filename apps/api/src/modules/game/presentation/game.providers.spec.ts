@@ -4,6 +4,7 @@ import { AdvanceGameRoundUseCase } from '../application/use-cases/advance-game-r
 import { CreateGameSessionUseCase } from '../application/use-cases/create-game-session.use-case.js';
 import { DepositToBankUseCase } from '../application/use-cases/deposit-to-bank.use-case.js';
 import { GetGameSessionUseCase } from '../application/use-cases/get-game-session.use-case.js';
+import { ListGameSessionsUseCase } from '../application/use-cases/list-game-sessions.use-case.js';
 import { OpenMarketPositionUseCase } from '../application/use-cases/open-market-position.use-case.js';
 import { PlaceFundsWithBankerUseCase } from '../application/use-cases/place-funds-with-banker.use-case.js';
 import { RedeemFundsFromBankerUseCase } from '../application/use-cases/redeem-funds-from-banker.use-case.js';
@@ -46,7 +47,7 @@ describe('createGameProviders', () => {
   it('registers the expected infrastructure and use-case providers', () => {
     const providers = createGameProviders();
 
-    expect(providers).toHaveLength(13);
+    expect(providers).toHaveLength(14);
     expect(providers[0]).toBe(PrismaService);
     expect(providers[1]).toBe(LedgerService);
     expect(providers[2]).toMatchObject({
@@ -66,30 +67,34 @@ describe('createGameProviders', () => {
       inject: [GAME_SESSION_REPOSITORY],
     });
     expect(providers[6]).toMatchObject({
-      provide: AdvanceGameRoundUseCase,
+      provide: ListGameSessionsUseCase,
       inject: [GAME_SESSION_REPOSITORY],
     });
     expect(providers[7]).toMatchObject({
+      provide: AdvanceGameRoundUseCase,
+      inject: [GAME_SESSION_REPOSITORY],
+    });
+    expect(providers[8]).toMatchObject({
       provide: DepositToBankUseCase,
       inject: [GAME_SESSION_REPOSITORY, LedgerService],
     });
-    expect(providers[8]).toMatchObject({
+    expect(providers[9]).toMatchObject({
       provide: WithdrawFromBankUseCase,
       inject: [GAME_SESSION_REPOSITORY, LedgerService],
     });
-    expect(providers[9]).toMatchObject({
+    expect(providers[10]).toMatchObject({
       provide: TransferFundsUseCase,
       inject: [GAME_SESSION_REPOSITORY, LedgerService],
     });
-    expect(providers[10]).toMatchObject({
+    expect(providers[11]).toMatchObject({
       provide: PlaceFundsWithBankerUseCase,
       inject: [GAME_SESSION_REPOSITORY, LedgerService],
     });
-    expect(providers[11]).toMatchObject({
+    expect(providers[12]).toMatchObject({
       provide: RedeemFundsFromBankerUseCase,
       inject: [GAME_SESSION_REPOSITORY, LedgerService],
     });
-    expect(providers[12]).toMatchObject({
+    expect(providers[13]).toMatchObject({
       provide: OpenMarketPositionUseCase,
       inject: [GAME_SESSION_REPOSITORY],
     });
@@ -101,13 +106,14 @@ describe('createGameProviders', () => {
     const repositoryProvider = expectFactoryProvider(providers[2]);
     const createSessionProvider = expectFactoryProvider(providers[4]);
     const getSessionProvider = expectFactoryProvider(providers[5]);
-    const advanceRoundProvider = expectFactoryProvider(providers[6]);
-    const depositProvider = expectFactoryProvider(providers[7]);
-    const withdrawProvider = expectFactoryProvider(providers[8]);
-    const transferProvider = expectFactoryProvider(providers[9]);
-    const placeFundsProvider = expectFactoryProvider(providers[10]);
-    const redeemFundsProvider = expectFactoryProvider(providers[11]);
-    const openMarketProvider = expectFactoryProvider(providers[12]);
+    const listSessionsProvider = expectFactoryProvider(providers[6]);
+    const advanceRoundProvider = expectFactoryProvider(providers[7]);
+    const depositProvider = expectFactoryProvider(providers[8]);
+    const withdrawProvider = expectFactoryProvider(providers[9]);
+    const transferProvider = expectFactoryProvider(providers[10]);
+    const placeFundsProvider = expectFactoryProvider(providers[11]);
+    const redeemFundsProvider = expectFactoryProvider(providers[12]);
+    const openMarketProvider = expectFactoryProvider(providers[13]);
 
     const prismaService = {} as PrismaService;
     const repository = repositoryProvider.useFactory(prismaService);
@@ -120,6 +126,9 @@ describe('createGameProviders', () => {
     ).toBeInstanceOf(CreateGameSessionUseCase);
     expect(getSessionProvider.useFactory(repository)).toBeInstanceOf(
       GetGameSessionUseCase,
+    );
+    expect(listSessionsProvider.useFactory(repository)).toBeInstanceOf(
+      ListGameSessionsUseCase,
     );
     expect(advanceRoundProvider.useFactory(repository)).toBeInstanceOf(
       AdvanceGameRoundUseCase,
@@ -147,7 +156,7 @@ describe('createGameProviders', () => {
   it('fails fast when the configured default interest rate is invalid', () => {
     process.env.DEFAULT_INTEREST_RATE_BPS = '-1';
     const providers = createGameProviders();
-    const advanceRoundProvider = expectFactoryProvider(providers[6]);
+    const advanceRoundProvider = expectFactoryProvider(providers[7]);
 
     expect(() => advanceRoundProvider.useFactory({})).toThrow(
       'DEFAULT_INTEREST_RATE_BPS must be a non-negative integer when provided.',

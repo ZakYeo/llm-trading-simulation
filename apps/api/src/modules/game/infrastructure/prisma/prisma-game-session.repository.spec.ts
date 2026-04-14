@@ -50,6 +50,9 @@ describe('PrismaGameSessionRepository', () => {
         async create(args) {
           receivedArgs.push(args);
         },
+        async findMany() {
+          return [];
+        },
         async findUnique() {
           return null;
         },
@@ -170,6 +173,9 @@ describe('PrismaGameSessionRepository', () => {
         },
       },
       gameSession: {
+        async findMany() {
+          return [];
+        },
         async findUnique() {
           return { id: 'game-1', currentRound: 0 } as never;
         },
@@ -327,6 +333,9 @@ describe('PrismaGameSessionRepository', () => {
         },
       },
       gameSession: {
+        async findMany() {
+          return [];
+        },
         async findUnique() {
           return { id: 'game-1', currentRound: 1 } as never;
         },
@@ -421,6 +430,9 @@ describe('PrismaGameSessionRepository', () => {
         },
       },
       gameSession: {
+        async findMany() {
+          return [];
+        },
         async findUnique() {
           return { id: 'game-1', currentRound: 0 } as never;
         },
@@ -542,6 +554,9 @@ describe('PrismaGameSessionRepository', () => {
       },
       gameSession: {
         async create() {},
+        async findMany() {
+          return [];
+        },
         async findUnique() {
           return {
             id: 'game-1',
@@ -622,6 +637,9 @@ describe('PrismaGameSessionRepository', () => {
         },
       },
       gameSession: {
+        async findMany() {
+          return [];
+        },
         async findUnique() {
           return { id: 'game-1', currentRound: 0 } as never;
         },
