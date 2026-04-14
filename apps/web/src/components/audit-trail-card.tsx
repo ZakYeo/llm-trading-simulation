@@ -240,9 +240,9 @@ export function AuditTrailCard({
 
           {isFetching ? <p>Loading replay...</p> : null}
 
-          {replay ? (
-            visibleEvents.length > 0 ? (
-              <div ref={timelineScrollRef} className="timeline-scroll">
+          <div ref={timelineScrollRef} className="timeline-scroll">
+            {replay ? (
+              visibleEvents.length > 0 ? (
                 <div className="timeline">
                   {eventsByRound.map((group) => (
                     <section key={group.roundNumber} className="round-group">
@@ -287,18 +287,22 @@ export function AuditTrailCard({
                     </section>
                   ))}
                 </div>
-              </div>
+              ) : (
+                <div className="timeline-empty-state">
+                  <p className="empty-copy">
+                    No replay events match the current filter yet.
+                  </p>
+                </div>
+              )
             ) : (
-              <p className="empty-copy">
-                No replay events match the current filter yet.
-              </p>
-            )
-          ) : (
-            <p className="empty-copy">
-              Replay events will appear here after the selected session has
-              activity.
-            </p>
-          )}
+              <div className="timeline-empty-state">
+                <p className="empty-copy">
+                  Replay events will appear here after the selected session has
+                  activity.
+                </p>
+              </div>
+            )}
+          </div>
         </>
       ) : null}
     </CardShell>
