@@ -7,9 +7,13 @@ import { CardCollapseButton, CardHeader, CardShell } from './card-shell';
 
 interface TreasuryCardProps {
   selectedSession?: GameSessionRecord;
+  variant?: 'default' | 'compact';
 }
 
-export function TreasuryCard({ selectedSession }: TreasuryCardProps) {
+export function TreasuryCard({
+  selectedSession,
+  variant = 'default',
+}: TreasuryCardProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
   if (!selectedSession) {
@@ -42,6 +46,71 @@ export function TreasuryCard({ selectedSession }: TreasuryCardProps) {
     (total, position) => total + Number.parseFloat(position.principal),
     0,
   );
+
+  if (variant === 'compact') {
+    return (
+      <CardShell className="treasury-shell summary-shell">
+        <CardHeader
+          kicker="Treasury"
+          title="Custody Overview"
+          compact
+          actions={<span className="status-chip">Banker-led custody</span>}
+        />
+
+        <div className="summary-stat-grid">
+          <article className="treasury-stat-card emphasis">
+            <span>Total custodied</span>
+            <strong>{formatCurrency(totalCustodiedBalance.toFixed(4))}</strong>
+          </article>
+          <article className="treasury-stat-card">
+            <span>Accrued interest</span>
+            <strong>{formatCurrency(totalCustodiedInterest.toFixed(4))}</strong>
+          </article>
+          <article className="treasury-stat-card">
+            <span>Trader custody</span>
+            <strong>
+              {traderCustodyPosition
+                ? formatCurrency(traderCustodyPosition.totalBalance)
+                : formatCurrency('0.0000')}
+            </strong>
+          </article>
+        </div>
+
+        <div className="treasury-position-card summary-position-card">
+          {traderCustodyPosition ? (
+            <>
+              <span>Trader principal / total</span>
+              <div>
+                <span>Trader principal with banker</span>
+                <strong>
+                  {formatCurrency(traderCustodyPosition.principal)}
+                </strong>
+              </div>
+              <div>
+                <span>Trader accrued interest</span>
+                <strong>
+                  {formatCurrency(traderCustodyPosition.accruedInterest)}
+                </strong>
+              </div>
+              <div>
+                <span>Redeemable total</span>
+                <strong>
+                  {formatCurrency(traderCustodyPosition.totalBalance)}
+                </strong>
+              </div>
+            </>
+          ) : (
+            <>
+              <span>Status</span>
+              <strong>
+                No trader funds are currently placed with the banker.
+              </strong>
+            </>
+          )}
+        </div>
+      </CardShell>
+    );
+  }
 
   return (
     <CardShell className="treasury-shell">

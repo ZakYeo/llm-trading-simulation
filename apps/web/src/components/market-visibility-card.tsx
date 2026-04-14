@@ -7,6 +7,7 @@ import { CardCollapseButton, CardHeader, CardShell } from './card-shell';
 
 interface MarketVisibilityCardProps {
   selectedSession?: GameSessionRecord;
+  variant?: 'default' | 'compact';
 }
 
 function getPositionStatusLabel(
@@ -18,8 +19,106 @@ function getPositionStatusLabel(
 
 export function MarketVisibilityCard({
   selectedSession,
+  variant = 'default',
 }: MarketVisibilityCardProps) {
   const [isExpanded, setIsExpanded] = useState(true);
+
+  if (selectedSession && variant === 'compact') {
+    const featuredOpportunity = selectedSession.marketOpportunities[0];
+    const opportunityTitles = selectedSession.marketOpportunities
+      .map((opportunity) => opportunity.title)
+      .join(' · ');
+    const openPositions = selectedSession.marketPositions.filter(
+      (position) =>
+        getPositionStatusLabel(
+          selectedSession.currentRound,
+          position.settlementRound,
+        ) === 'Open',
+    );
+    const settledPositions = selectedSession.marketPositions.filter(
+      (position) =>
+        getPositionStatusLabel(
+          selectedSession.currentRound,
+          position.settlementRound,
+        ) === 'Settled',
+    );
+    const firstOpenPosition = openPositions[0];
+    const featuredPosition = firstOpenPosition ?? settledPositions[0];
+    const featuredPositionOwner = featuredPosition
+      ? selectedSession.agents.find(
+          (agent) => agent.id === featuredPosition.ownerAgentId,
+        )
+      : undefined;
+    const featuredPositionStatus = featuredPosition
+      ? getPositionStatusLabel(
+          selectedSession.currentRound,
+          featuredPosition.settlementRound,
+        )
+      : null;
+
+    return (
+      <CardShell className="market-shell summary-shell">
+        <CardHeader
+          kicker="Market"
+          title="Market Visibility"
+          compact
+          actions={
+            <span className="status-chip muted">
+              {selectedSession.marketOpportunities.length} opportunit
+              {selectedSession.marketOpportunities.length === 1 ? 'y' : 'ies'}
+              {' / '}
+              {selectedSession.marketPositions.length} position
+              {selectedSession.marketPositions.length === 1 ? '' : 's'}
+            </span>
+          }
+        />
+
+        <div className="summary-stat-grid">
+          <article className="treasury-stat-card">
+            <span>Opportunities</span>
+            <strong>{selectedSession.marketOpportunities.length}</strong>
+          </article>
+          <article className="treasury-stat-card">
+            <span>Open positions</span>
+            <strong>{openPositions.length}</strong>
+          </article>
+          <article className="treasury-stat-card">
+            <span>Round</span>
+            <strong>{selectedSession.currentRound}</strong>
+          </article>
+        </div>
+
+        <div className="summary-stack">
+          <article className="summary-callout">
+            <span>Featured opportunity</span>
+            <strong>{featuredOpportunity?.title ?? 'No live listings'}</strong>
+            <p className="summary-copy">
+              {featuredOpportunity
+                ? `${formatCurrency(featuredOpportunity.minCommitment)} to ${formatCurrency(featuredOpportunity.maxCommitment)} · ${formatBasisPoints(featuredOpportunity.estimatedNetReturnBps)}`
+                : 'No live market opportunities are available in this session.'}
+            </p>
+            {opportunityTitles ? (
+              <p className="summary-copy">{opportunityTitles}</p>
+            ) : null}
+          </article>
+
+          <article className="summary-callout">
+            <span>Trader exposure</span>
+            <strong>
+              {featuredPosition
+                ? `${featuredPosition.opportunityTitle} · ${formatCurrency(featuredPosition.principal)}`
+                : 'No market positions opened yet.'}
+            </strong>
+            <p className="summary-copy">
+              {featuredPosition
+                ? `${featuredPositionOwner?.name ?? featuredPosition.ownerAgentId} · ${featuredPositionStatus} · Round ${featuredPosition.settlementRound}`
+                : 'Exposure appears here once a trader opens a position.'}
+            </p>
+          </article>
+        </div>
+      </CardShell>
+    );
+  }
 
   return (
     <CardShell className="market-shell">

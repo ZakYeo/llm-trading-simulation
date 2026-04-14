@@ -43,51 +43,36 @@ test('@smoke connects to a seeded session and renders the expected numbers', asy
   );
 });
 
-test('@smoke keeps collapsed cards compact before a session is connected and expands help content', async ({
+test('@smoke shows only session startup on first load and collapses it after connection', async ({
   page,
+  request,
 }) => {
+  const session = await createBankerTraderSession(
+    request,
+    'Playwright Startup Session',
+  );
+
   await page.goto('/');
 
-  await expect(page.locator('.workspace-column')).toContainText(
-    'Create a new session or connect to a saved session to inspect live workspace state.',
-  );
-  await expect(page.locator('.workspace-column')).toContainText(
-    'Create a new session or connect to a saved session to inspect live market opportunities and trader positions.',
-  );
+  await expect(
+    page.getByRole('heading', { name: 'Session Startup' }),
+  ).toHaveCount(1);
+  await expect(page.getByText('Run The Session')).toHaveCount(0);
+  await expect(page.getByText('Audit Trail')).toHaveCount(0);
+  await expect(page.getByText('Session Workspace')).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Minimise live state' }).click();
-  await page
-    .getByRole('button', { name: 'Minimise market visibility' })
-    .click();
-  await page.getByRole('button', { name: 'Minimise audit trail' }).click();
-  await page.getByRole('button', { name: 'Minimise session setup' }).click();
-  await page.getByRole('button', { name: 'Minimise operate section' }).click();
+  await page.getByLabel('Connect to session').selectOption(session.id);
 
+  await expect(page.locator('.startup-strip')).toContainText(
+    'Connected to Playwright Startup Session',
+  );
+  await expect(page.locator('.startup-strip')).toContainText(session.id);
   await expect(
-    page.getByText(
-      'Create a new session or connect to a saved session to inspect live workspace state.',
-    ),
-  ).toHaveCount(0);
-  await expect(
-    page.getByText(
-      'Create a new session or connect to a saved session to inspect live market opportunities and trader positions.',
-    ),
-  ).toHaveCount(0);
-  await expect(
-    page.getByText(
-      'Audit trail is hidden. Expand it to inspect replay history.',
-    ),
-  ).toHaveCount(0);
-  await expect(
-    page.getByText(
-      'Session setup is hidden. Expand it to create a new session or edit the roster.',
-    ),
-  ).toHaveCount(0);
-  await expect(
-    page.getByText(
-      'Session operation is hidden. Expand it to run turns or settle rounds.',
-    ),
-  ).toHaveCount(0);
+    page.getByRole('button', { name: 'Change session' }),
+  ).toBeVisible();
+  await expect(page.getByText('Run The Session')).toHaveCount(1);
+  await expect(page.getByText('Audit Trail')).toHaveCount(1);
+  await expect(page.getByText('Session Workspace')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Help' }).click();
   await expect(page.getByRole('dialog')).toContainText('Custody Overview');

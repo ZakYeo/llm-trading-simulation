@@ -24,22 +24,18 @@ describe('App', () => {
     );
 
     expect(html).toContain('LLM Trading Simulator');
-    expect(html).toContain('Session Setup');
-    expect(html).toContain('Audit Trail');
-    expect(html).toContain('Market Visibility');
+    expect(html).toContain('Session Startup');
     expect(html).toContain('Connect to session');
-    expect(html).toContain('Run The Session');
-    expect(html).toContain('Run next 2 turns');
-    expect(html).toContain('Advance round settlement');
     expect(html).toContain('Add bot');
     expect(html).toContain('Banker Bot');
     expect(html).toContain('Trader Bot');
     expect(html).toContain(
-      'Create a new session or connect to a saved session to inspect live workspace state.',
+      'The rest of the workspace stays out of the way until a session is active.',
     );
-    expect(html).toContain(
-      'Create a new session or connect to a saved session to inspect live market opportunities and trader positions.',
-    );
+    expect(html).not.toContain('Audit Trail');
+    expect(html).not.toContain('Market Visibility');
+    expect(html).not.toContain('Run The Session');
+    expect(html).not.toContain('Advance round settlement');
     expect(html).not.toContain('Analyst Bot');
     expect(html).not.toContain('Lawyer Bot');
     expect(html).not.toContain('Influencer Bot');

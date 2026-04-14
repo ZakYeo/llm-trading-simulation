@@ -6,7 +6,6 @@ import { AuditTrailCard } from './components/audit-trail-card';
 import { BalancesCard } from './components/balances-card';
 import { MarketVisibilityCard } from './components/market-visibility-card';
 import { OperateCard } from './components/operate-card';
-import { SessionOverviewCard } from './components/session-overview-card';
 import { SessionSetupCard } from './components/session-setup-card';
 import { TreasuryCard } from './components/treasury-card';
 import {
@@ -46,6 +45,7 @@ export function App() {
   const [nextAgentDraftId, setNextAgentDraftId] = useState(
     defaultAgentSetup.length + 1,
   );
+  const [isStartupVisible, setIsStartupVisible] = useState(true);
   const [revealedSessionId, setRevealedSessionId] = useState<string | null>(
     null,
   );
@@ -80,6 +80,7 @@ export function App() {
       startTransition(() => {
         setSelectedSessionId(session.id);
         setLatestRunSummary(`Created session ${session.name}`);
+        setIsStartupVisible(false);
       });
       queryClient.setQueryData(
         ['game-sessions'],
@@ -149,6 +150,7 @@ export function App() {
 
   const selectedSession = sessionQuery.data;
   const replay = replayQuery.data;
+  const hasSelectedSession = selectedSessionId.length > 0;
   const canRemoveAgent = agentDrafts.length > 1;
   const isTurnFlowInProgress =
     orchestrateMutation.isPending || advanceRoundMutation.isPending;
@@ -158,6 +160,24 @@ export function App() {
       ? 'Applying round settlement...'
       : '';
   const shouldAnimateSessionCards = selectedSession?.id === revealedSessionId;
+
+  function handleSelectedSessionIdChange(value: string) {
+    setSelectedSessionId(value);
+    setIsStartupVisible(value.length === 0);
+  }
+
+  function showStartupForm() {
+    setIsStartupVisible(true);
+  }
+
+  function hideStartupForm() {
+    setIsStartupVisible(false);
+  }
+
+  function startNewSessionFlow() {
+    setSelectedSessionId('');
+    setIsStartupVisible(true);
+  }
 
   useEffect(() => {
     if (!selectedSession) {
@@ -223,15 +243,20 @@ export function App() {
 
   return (
     <main className="app-shell">
-      <section className="topbar panel">
+      <section
+        className={
+          hasSelectedSession ? 'topbar panel topbar-connected' : 'topbar panel'
+        }
+      >
         <div className="topbar-copy">
           <p className="eyebrow">Operator Console</p>
           <h1>LLM Trading Simulator</h1>
-          <p className="lede">
-            A browser-based control room for creating simulated agent sessions,
-            running negotiation rounds, tracking balances, and reviewing replay
-            history in one place.
-          </p>
+          {!hasSelectedSession ? (
+            <p className="lede">
+              Create a session or reconnect to an existing one, then open the
+              operator workspace once the simulation is live.
+            </p>
+          ) : null}
         </div>
 
         <div className="topbar-side">
@@ -266,10 +291,13 @@ export function App() {
         </div>
       </section>
 
-      <section className="dashboard-grid">
-        <aside className="control-rail">
+      {!hasSelectedSession ? (
+        <section className="startup-shell">
           <SessionSetupCard
+            mode="expanded"
+            hasActiveSession={false}
             selectedSessionId={selectedSessionId}
+            selectedSessionName={selectedSession?.name}
             availableSessions={sessionsQuery.data ?? []}
             sessionName={sessionName}
             initialBalance={initialBalance}
@@ -281,91 +309,131 @@ export function App() {
             onSessionNameChange={setSessionName}
             onInitialBalanceChange={setInitialBalance}
             onInterestRateBpsChange={setInterestRateBps}
-            onSelectedSessionIdChange={setSelectedSessionId}
+            onSelectedSessionIdChange={handleSelectedSessionIdChange}
             onAddAgentDraft={addAgentDraft}
             onRemoveAgentDraft={removeAgentDraft}
             onUpdateAgentDraft={updateAgentDraft}
             onCreateSession={() => createSessionMutation.mutate()}
+            onShowStartupForm={showStartupForm}
+            onHideStartupForm={hideStartupForm}
+            onStartNewSession={startNewSessionFlow}
           />
-
-          <OperateCard
+        </section>
+      ) : (
+        <section className="connected-shell">
+          <SessionSetupCard
+            mode={isStartupVisible ? 'expanded' : 'collapsed'}
+            hasActiveSession
             selectedSessionId={selectedSessionId}
-            currentRound={selectedSession?.currentRound}
-            turnCount={turnCount}
-            latestRunSummary={latestRunSummary}
-            isRunning={orchestrateMutation.isPending}
-            isAdvancing={advanceRoundMutation.isPending}
-            runError={orchestrateMutation.error?.message}
-            advanceError={advanceRoundMutation.error?.message}
-            onTurnCountChange={setTurnCount}
-            onRunTurns={() => orchestrateMutation.mutate()}
-            onAdvanceRound={() => advanceRoundMutation.mutate()}
+            selectedSessionName={selectedSession?.name}
+            availableSessions={sessionsQuery.data ?? []}
+            sessionName={sessionName}
+            initialBalance={initialBalance}
+            interestRateBps={interestRateBps}
+            agentDrafts={agentDrafts}
+            canRemoveAgent={canRemoveAgent}
+            isCreating={createSessionMutation.isPending}
+            createError={createSessionMutation.error?.message}
+            onSessionNameChange={setSessionName}
+            onInitialBalanceChange={setInitialBalance}
+            onInterestRateBpsChange={setInterestRateBps}
+            onSelectedSessionIdChange={handleSelectedSessionIdChange}
+            onAddAgentDraft={addAgentDraft}
+            onRemoveAgentDraft={removeAgentDraft}
+            onUpdateAgentDraft={updateAgentDraft}
+            onCreateSession={() => createSessionMutation.mutate()}
+            onShowStartupForm={showStartupForm}
+            onHideStartupForm={hideStartupForm}
+            onStartNewSession={startNewSessionFlow}
           />
-        </aside>
 
-        <div className="workspace-column">
-          <div
-            className={
-              shouldAnimateSessionCards
-                ? 'dashboard-card session-card-enter'
-                : 'dashboard-card'
-            }
-            style={{ '--card-enter-delay': '0ms' } as CSSProperties}
-          >
-            <SessionOverviewCard
-              selectedSession={selectedSession}
-              isFetching={sessionQuery.isFetching}
-            />
+          <div className="connected-workspace">
+            <div className="workspace-main-lane">
+              <div
+                className={
+                  shouldAnimateSessionCards
+                    ? 'dashboard-card session-card-enter'
+                    : 'dashboard-card'
+                }
+                style={{ '--card-enter-delay': '0ms' } as CSSProperties}
+              >
+                <OperateCard
+                  selectedSessionId={selectedSessionId}
+                  currentRound={selectedSession?.currentRound}
+                  turnCount={turnCount}
+                  latestRunSummary={latestRunSummary}
+                  isRunning={orchestrateMutation.isPending}
+                  isAdvancing={advanceRoundMutation.isPending}
+                  runError={orchestrateMutation.error?.message}
+                  advanceError={advanceRoundMutation.error?.message}
+                  onTurnCountChange={setTurnCount}
+                  onRunTurns={() => orchestrateMutation.mutate()}
+                  onAdvanceRound={() => advanceRoundMutation.mutate()}
+                />
+              </div>
+              <div
+                className={
+                  shouldAnimateSessionCards
+                    ? 'dashboard-card session-card-enter'
+                    : 'dashboard-card'
+                }
+                style={{ '--card-enter-delay': '80ms' } as CSSProperties}
+              >
+                <AuditTrailCard
+                  replay={replay}
+                  selectedRound={selectedSession?.currentRound}
+                  isFetching={replayQuery.isFetching}
+                  isTurnFlowInProgress={isTurnFlowInProgress}
+                  inProgressLabel={inProgressLabel}
+                  latestRunSummary={latestRunSummary}
+                />
+              </div>
+            </div>
+
+            <aside className="workspace-side-lane">
+              <div
+                className={
+                  shouldAnimateSessionCards
+                    ? 'dashboard-card session-card-enter'
+                    : 'dashboard-card'
+                }
+                style={{ '--card-enter-delay': '160ms' } as CSSProperties}
+              >
+                <BalancesCard
+                  selectedSession={selectedSession}
+                  variant="compact"
+                />
+              </div>
+              <div
+                className={
+                  shouldAnimateSessionCards
+                    ? 'dashboard-card session-card-enter'
+                    : 'dashboard-card'
+                }
+                style={{ '--card-enter-delay': '240ms' } as CSSProperties}
+              >
+                <TreasuryCard
+                  selectedSession={selectedSession}
+                  variant="compact"
+                />
+              </div>
+              <div
+                className={
+                  shouldAnimateSessionCards
+                    ? 'dashboard-card session-card-enter'
+                    : 'dashboard-card'
+                }
+                style={{ '--card-enter-delay': '320ms' } as CSSProperties}
+              >
+                <MarketVisibilityCard
+                  selectedSession={selectedSession}
+                  variant="compact"
+                />
+              </div>
+            </aside>
           </div>
-          <div
-            className={
-              shouldAnimateSessionCards
-                ? 'dashboard-card session-card-enter'
-                : 'dashboard-card'
-            }
-            style={{ '--card-enter-delay': '80ms' } as CSSProperties}
-          >
-            <BalancesCard selectedSession={selectedSession} />
-          </div>
-          <div
-            className={
-              shouldAnimateSessionCards
-                ? 'dashboard-card session-card-enter'
-                : 'dashboard-card'
-            }
-            style={{ '--card-enter-delay': '160ms' } as CSSProperties}
-          >
-            <TreasuryCard selectedSession={selectedSession} />
-          </div>
-          <div
-            className={
-              shouldAnimateSessionCards
-                ? 'dashboard-card session-card-enter'
-                : 'dashboard-card'
-            }
-            style={{ '--card-enter-delay': '240ms' } as CSSProperties}
-          >
-            <MarketVisibilityCard selectedSession={selectedSession} />
-          </div>
-          <div
-            className={
-              shouldAnimateSessionCards
-                ? 'dashboard-card session-card-enter'
-                : 'dashboard-card'
-            }
-            style={{ '--card-enter-delay': '320ms' } as CSSProperties}
-          >
-            <AuditTrailCard
-              replay={replay}
-              selectedRound={selectedSession?.currentRound}
-              isFetching={replayQuery.isFetching}
-              isTurnFlowInProgress={isTurnFlowInProgress}
-              inProgressLabel={inProgressLabel}
-              latestRunSummary={latestRunSummary}
-            />
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {isHelpOpen ? (
         <div
@@ -398,7 +466,7 @@ export function App() {
               <article className="help-card">
                 <strong>1. Create or connect</strong>
                 <p>
-                  Use Session Setup to create a new simulation or connect to a
+                  Use Session Startup to create a new simulation or connect to a
                   saved session from the dropdown list.
                 </p>
               </article>
@@ -419,8 +487,8 @@ export function App() {
               <article className="help-card">
                 <strong>4. Inspect state</strong>
                 <p>
-                  Use the workspace to review session state, agent balances, and
-                  treasury exposure at a glance.
+                  Use the connected workspace to review balances, custody,
+                  market exposure, and the audit trail in one place.
                 </p>
               </article>
               <article className="help-card">

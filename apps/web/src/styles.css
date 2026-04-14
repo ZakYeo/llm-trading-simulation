@@ -75,10 +75,16 @@ select {
   overflow: hidden;
 }
 
+.topbar-connected {
+  grid-template-columns: minmax(0, 1fr) minmax(380px, 0.95fr);
+}
+
 .topbar-side,
 .topbar-actions,
-.workspace-column,
 .setup-section-body,
+.startup-shell,
+.connected-shell,
+.connected-workspace,
 .panel-header-actions,
 .filter-row,
 .timeline-scroll,
@@ -167,8 +173,7 @@ select {
   background: rgba(255, 255, 255, 0.08);
 }
 
-.topbar-metric,
-.overview-card {
+.topbar-metric {
   display: grid;
   gap: 6px;
   padding: 16px;
@@ -178,7 +183,6 @@ select {
 }
 
 .topbar-metric span,
-.overview-card span,
 .field span,
 .session-meta span,
 .balance-card header span,
@@ -188,7 +192,6 @@ select {
 }
 
 .topbar-metric strong,
-.overview-card strong,
 .activity-note strong,
 .treasury-stat-card strong,
 .treasury-position-card strong,
@@ -206,23 +209,46 @@ select {
     rgba(12, 27, 39, 0.88);
 }
 
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: 380px minmax(0, 1fr);
-  gap: 18px;
-  align-items: start;
+.startup-shell {
+  width: min(960px, 100%);
+  margin: 0 auto;
 }
 
-.control-rail,
-.workspace-panel,
-.workspace-column,
+.connected-shell,
 .workspace-stack,
-.rail-card,
+.connected-workspace,
 .action-stack,
 .timeline,
 .round-group {
   display: grid;
   gap: 18px;
+}
+
+.connected-shell {
+  align-items: start;
+}
+
+.connected-workspace {
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.8fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.workspace-main-lane,
+.workspace-side-lane,
+.summary-stack,
+.summary-stat-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.workspace-main-lane {
+  min-width: 0;
+}
+
+.workspace-side-lane {
+  position: sticky;
+  top: 20px;
 }
 
 .panel-header {
@@ -258,6 +284,16 @@ select {
   border-color: rgba(152, 193, 255, 0.24);
   background: rgba(152, 193, 255, 0.11);
   color: #b8d4ff;
+}
+
+.summary-shell {
+  gap: 14px;
+  padding: 18px;
+  border-radius: 20px;
+}
+
+.session-startup-card {
+  gap: 16px;
 }
 
 .field {
@@ -300,21 +336,79 @@ select {
 }
 
 .setup-section-body {
-  gap: 18px;
-  margin-top: 18px;
+  gap: 16px;
+  margin-top: 8px;
 }
 
-.collapsed-setup-copy {
-  margin-top: 16px;
-  padding: 14px;
-  border-radius: 16px;
-  background: rgba(152, 193, 255, 0.08);
-  border: 1px solid rgba(152, 193, 255, 0.14);
+.startup-intro {
+  max-width: 56ch;
 }
 
-.collapsed-setup-copy p {
+.startup-lede,
+.startup-support-copy,
+.startup-strip-copy p {
   margin: 0;
   color: rgba(244, 239, 230, 0.8);
+}
+
+.startup-form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.85fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.startup-panel {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(6, 16, 24, 0.48);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.startup-panel-connect {
+  align-content: start;
+}
+
+.startup-strip {
+  gap: 0;
+  padding: 18px 20px;
+  border-radius: 20px;
+  background: rgba(8, 20, 30, 0.56);
+}
+
+.startup-strip-row,
+.startup-strip-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.startup-strip-row {
+  justify-content: space-between;
+}
+
+.startup-strip-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.startup-strip-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.startup-strip-copy .panel-kicker {
+  margin-bottom: 2px;
+}
+
+.startup-strip-copy h2 {
+  font-size: 1.15rem;
+}
+
+.startup-strip-copy strong {
+  color: #f4efe6;
 }
 
 .agent-stack {
@@ -497,6 +591,15 @@ select {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.summary-balance-card {
+  padding: 14px;
+  gap: 10px;
+}
+
+.summary-balance-card header {
+  margin-bottom: 10px;
+}
+
 .balance-card header {
   display: flex;
   justify-content: space-between;
@@ -558,6 +661,10 @@ select {
   gap: 12px;
 }
 
+.summary-stat-grid {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
 .treasury-stat-card,
 .treasury-position-card {
   border-radius: 18px;
@@ -593,6 +700,29 @@ select {
 .treasury-position-card div {
   display: grid;
   gap: 8px;
+}
+
+.summary-callout {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(7, 18, 26, 0.76);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.summary-callout span,
+.summary-copy {
+  color: rgba(244, 239, 230, 0.72);
+  font-size: 0.82rem;
+}
+
+.summary-callout strong {
+  font-family: 'IBM Plex Mono', 'SFMono-Regular', monospace;
+}
+
+.summary-copy {
+  margin: 0;
 }
 
 .treasury-empty {
@@ -717,7 +847,7 @@ select {
 }
 
 .timeline-scroll {
-  height: 680px;
+  height: min(64vh, 680px);
   overflow-y: auto;
   padding-right: 4px;
   scroll-behavior: smooth;
@@ -929,12 +1059,13 @@ select {
 
 @media (max-width: 1120px) {
   .topbar,
-  .dashboard-grid {
+  .startup-form-grid,
+  .connected-workspace {
     grid-template-columns: 1fr;
   }
 
-  .overview-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .workspace-side-lane {
+    position: static;
   }
 }
 
@@ -955,7 +1086,6 @@ select {
   }
 
   .topbar-metrics,
-  .overview-grid,
   .agent-editor-row,
   .timeline-event,
   .event-topline,
@@ -963,6 +1093,12 @@ select {
   .filter-row,
   .panel-header-actions {
     grid-template-columns: 1fr;
+  }
+
+  .startup-strip-row,
+  .startup-strip-actions {
+    display: grid;
+    justify-content: start;
   }
 
   .panel-header-actions {
