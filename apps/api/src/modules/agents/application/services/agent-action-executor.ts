@@ -82,58 +82,72 @@ export class AgentActionExecutor {
     });
 
     let updatedSession = input.session;
-
-    if (input.action.type === 'place_funds_with_banker') {
-      updatedSession = await this.placeFundsWithBankerUseCase.execute({
-        gameSessionId: input.session.id,
-        ownerAgentId: input.agentId,
-        bankerAgentId: input.recipientAgentId!,
-        amount: input.action.amount,
-      });
-    }
-
-    if (input.action.type === 'redeem_funds_from_banker') {
-      updatedSession = await this.redeemFundsFromBankerUseCase.execute({
-        gameSessionId: input.session.id,
-        ownerAgentId: input.agentId,
-        bankerAgentId: input.recipientAgentId!,
-        amount: input.action.amount,
-      });
-    }
-
-    if (input.action.type === 'open_market_position') {
-      updatedSession = await this.openMarketPositionUseCase.execute({
-        gameSessionId: input.session.id,
-        ownerAgentId: input.agentId,
-        opportunityId: input.action.opportunityId,
-        amount: input.action.amount,
-      });
-    }
-
     let savedMessage: AgentMessageRecord | undefined;
+    try {
+      if (input.action.type === 'place_funds_with_banker') {
+        updatedSession = await this.placeFundsWithBankerUseCase.execute({
+          gameSessionId: input.session.id,
+          ownerAgentId: input.agentId,
+          bankerAgentId: input.recipientAgentId!,
+          amount: input.action.amount,
+        });
+      }
 
-    if (input.action.type === 'send_private_message') {
-      savedMessage = await this.agentMessageRepository.save({
-        gameSessionId: updatedSession.id,
-        roundNumber: updatedSession.currentRound,
-        turnNumber: input.turnNumber,
-        senderAgentId: input.agentId,
-        recipientAgentId: input.recipientAgentId,
-        visibility: 'private',
-        content: input.action.content,
-      });
-    }
+      if (input.action.type === 'redeem_funds_from_banker') {
+        updatedSession = await this.redeemFundsFromBankerUseCase.execute({
+          gameSessionId: input.session.id,
+          ownerAgentId: input.agentId,
+          bankerAgentId: input.recipientAgentId!,
+          amount: input.action.amount,
+        });
+      }
 
-    if (input.action.type === 'send_public_message') {
-      savedMessage = await this.agentMessageRepository.save({
-        gameSessionId: updatedSession.id,
-        roundNumber: updatedSession.currentRound,
-        turnNumber: input.turnNumber,
-        senderAgentId: input.agentId,
-        recipientAgentId: null,
-        visibility: 'public',
-        content: input.action.content,
-      });
+      if (input.action.type === 'open_market_position') {
+        updatedSession = await this.openMarketPositionUseCase.execute({
+          gameSessionId: input.session.id,
+          ownerAgentId: input.agentId,
+          opportunityId: input.action.opportunityId,
+          amount: input.action.amount,
+        });
+      }
+
+      if (input.action.type === 'send_private_message') {
+        savedMessage = await this.agentMessageRepository.save({
+          gameSessionId: updatedSession.id,
+          roundNumber: updatedSession.currentRound,
+          turnNumber: input.turnNumber,
+          senderAgentId: input.agentId,
+          recipientAgentId: input.recipientAgentId,
+          visibility: 'private',
+          content: input.action.content,
+        });
+      }
+
+      if (input.action.type === 'send_public_message') {
+        savedMessage = await this.agentMessageRepository.save({
+          gameSessionId: updatedSession.id,
+          roundNumber: updatedSession.currentRound,
+          turnNumber: input.turnNumber,
+          senderAgentId: input.agentId,
+          recipientAgentId: null,
+          visibility: 'public',
+          content: input.action.content,
+        });
+      }
+    } catch (error) {
+      if (savedMessage?.id) {
+        await this.agentMessageRepository
+          .deleteById(savedMessage.id)
+          .catch(() => undefined);
+      }
+
+      if (savedAction.id) {
+        await this.agentActionRepository
+          .deleteById(savedAction.id)
+          .catch(() => undefined);
+      }
+
+      throw error;
     }
 
     return {

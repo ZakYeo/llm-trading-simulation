@@ -93,60 +93,78 @@ export class RunAgentCommunicationTurnUseCase {
     let currentSession = session;
 
     for (const agent of currentSession.agents) {
-      const context = this.agentTurnContextFactory.build(
-        currentSession,
-        agent.id,
-        turnNumber,
-        recentMessages,
-        recentActions,
-      );
-
-      const action = await this.agentGateway.decideNextAction(context);
-      const { recipientAgentId, relatedProposalActionId } =
-        this.agentActionValidator.validate(
+      try {
+        const context = this.agentTurnContextFactory.build(
           currentSession,
           agent.id,
-          action,
+          turnNumber,
+          recentMessages,
           recentActions,
         );
-      const execution = await this.agentActionExecutor.execute({
-        session: currentSession,
-        agentId: agent.id,
-        turnNumber,
-        action,
-        recipientAgentId,
-        relatedProposalActionId,
-      });
+        const action = await this.agentGateway.decideNextAction(context);
+        const { recipientAgentId, relatedProposalActionId } =
+          this.agentActionValidator.validate(
+            currentSession,
+            agent.id,
+            action,
+            recentActions,
+          );
+        const execution = await this.agentActionExecutor.execute({
+          session: currentSession,
+          agentId: agent.id,
+          turnNumber,
+          action,
+          recipientAgentId,
+          relatedProposalActionId,
+        });
 
-      currentSession = execution.updatedSession;
-      recentActions.push(execution.savedAction);
-      savedActions.push(execution.savedAction);
+        currentSession = execution.updatedSession;
+        recentActions.push(execution.savedAction);
+        savedActions.push(execution.savedAction);
 
-      if (execution.savedMessage) {
-        recentMessages.push(execution.savedMessage);
-        savedMessages.push(execution.savedMessage);
-      }
+        if (execution.savedMessage) {
+          recentMessages.push(execution.savedMessage);
+          savedMessages.push(execution.savedMessage);
+        }
 
-      if (action.type !== 'finalize_turn') {
-        this.agentSessionEventStreamService.publish({
-          type: 'action_progressed',
+        if (action.type !== 'finalize_turn') {
+          this.agentSessionEventStreamService.publish({
+            type: 'action_progressed',
+            gameSessionId: currentSession.id,
+            roundNumber: currentSession.currentRound,
+            turnNumber,
+            agentId: agent.id,
+            agentName: agent.name,
+            actionType: action.type,
+            messageId: execution.savedMessage?.id,
+            messageVisibility: execution.savedMessage?.visibility,
+            occurredAt: new Date().toISOString(),
+          });
+        }
+
+        actions.push({
+          agentId: agent.id,
+          agentName: agent.name,
+          action,
+        });
+      } catch (error) {
+        console.error('run_agent_communication_turn_failed', {
           gameSessionId: currentSession.id,
           roundNumber: currentSession.currentRound,
           turnNumber,
           agentId: agent.id,
           agentName: agent.name,
-          actionType: action.type,
-          messageId: execution.savedMessage?.id,
-          messageVisibility: execution.savedMessage?.visibility,
-          occurredAt: new Date().toISOString(),
+          error:
+            error instanceof Error
+              ? {
+                  name: error.name,
+                  message: error.message,
+                  stack: error.stack,
+                }
+              : error,
         });
+        throw error;
       }
-
-      actions.push({
-        agentId: agent.id,
-        agentName: agent.name,
-        action,
-      });
     }
 
     return {

@@ -69,4 +69,10 @@ export class PrismaAgentMessageRepository implements AgentMessageRepositoryPort 
       createdAt: record.createdAt.toISOString(),
     }));
   }
+
+  async deleteById(messageId: string): Promise<void> {
+    await this.prisma.agentMessage.delete({
+      where: { id: messageId },
+    });
+  }
 }

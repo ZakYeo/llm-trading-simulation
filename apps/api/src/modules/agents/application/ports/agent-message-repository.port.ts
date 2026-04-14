@@ -12,6 +12,7 @@ export interface AgentMessageRecord {
 
 export interface AgentMessageRepositoryPort {
   save(message: AgentMessageRecord): Promise<AgentMessageRecord>;
+  deleteById(messageId: string): Promise<void>;
   findRecentByGameSessionId(
     gameSessionId: string,
     limit: number,

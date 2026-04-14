@@ -161,4 +161,18 @@ export class PrismaAgentActionRepository implements AgentActionRepositoryPort {
       createdAt: record.createdAt.toISOString(),
     }));
   }
+
+  async deleteById(actionId: string): Promise<void> {
+    const delegate = (
+      this.prisma as unknown as {
+        agentTurnAction: {
+          delete(args: { where: { id: string } }): Promise<void>;
+        };
+      }
+    ).agentTurnAction;
+
+    await delegate.delete({
+      where: { id: actionId },
+    });
+  }
 }

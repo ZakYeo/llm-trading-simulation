@@ -34,6 +34,10 @@ class InMemoryAgentMessageRepository implements AgentMessageRepositoryPort {
   async findRecentByGameSessionId(): Promise<AgentMessageRecord[]> {
     return [...this.saved];
   }
+
+  async deleteById(messageId: string): Promise<void> {
+    this.saved = this.saved.filter((message) => message.id !== messageId);
+  }
 }
 
 class InMemoryAgentActionRepository implements AgentActionRepositoryPort {
@@ -53,6 +57,10 @@ class InMemoryAgentActionRepository implements AgentActionRepositoryPort {
 
   async findRecentByGameSessionId(): Promise<AgentActionRecord[]> {
     return [...this.saved];
+  }
+
+  async deleteById(actionId: string): Promise<void> {
+    this.saved = this.saved.filter((action) => action.id !== actionId);
   }
 }
 
@@ -110,6 +118,12 @@ class RecordingOpenMarketPositionUseCase {
   }) {
     this.calls.push(input);
     return createSession();
+  }
+}
+
+class FailingOpenMarketPositionUseCase {
+  async execute(): Promise<never> {
+    throw new Error('database write failed');
   }
 }
 
@@ -295,5 +309,34 @@ describe('AgentActionExecutor', () => {
       amount: '5.0000',
       content: 'opp-risky',
     });
+  });
+
+  it('rolls back persisted action state when market execution fails', async () => {
+    const actionRepository = new InMemoryAgentActionRepository();
+    const messageRepository = new InMemoryAgentMessageRepository();
+    const executor = new AgentActionExecutor(
+      messageRepository,
+      actionRepository,
+      new RecordingPlaceFundsWithBankerUseCase() as never,
+      new RecordingRedeemFundsFromBankerUseCase() as never,
+      new FailingOpenMarketPositionUseCase() as never,
+    );
+
+    await expect(
+      executor.execute({
+        session: createSession(),
+        agentId: 'agent-2',
+        turnNumber: 1,
+        action: {
+          type: 'open_market_position',
+          opportunityId: 'opp-risky',
+          amount: '5.0000',
+        },
+        recipientAgentId: null,
+      }),
+    ).rejects.toThrow('database write failed');
+
+    expect(actionRepository.saved).toEqual([]);
+    expect(messageRepository.saved).toEqual([]);
   });
 });

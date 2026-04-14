@@ -16,6 +16,7 @@ export interface AgentActionRecord {
 
 export interface AgentActionRepositoryPort {
   save(action: AgentActionRecord): Promise<AgentActionRecord>;
+  deleteById(actionId: string): Promise<void>;
   findRecentByGameSessionId(
     gameSessionId: string,
     limit: number,
