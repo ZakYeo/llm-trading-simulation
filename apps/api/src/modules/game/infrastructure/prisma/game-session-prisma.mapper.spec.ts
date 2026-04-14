@@ -44,6 +44,8 @@ describe('GameSessionPrismaMapper', () => {
       marketOpportunities: [
         new MarketOpportunity({
           id: 'opp-1',
+          templateId: 'event-binary-01',
+          category: 'event',
           title: 'Binary Event Volatility',
           summary: 'High variance one-round event trade.',
           riskLevel: 'high',
@@ -109,6 +111,8 @@ describe('GameSessionPrismaMapper', () => {
         create: [
           {
             id: 'opp-1',
+            templateId: 'event-binary-01',
+            category: 'EVENT',
             title: 'Binary Event Volatility',
             summary: 'High variance one-round event trade.',
             riskLevel: 'HIGH',
@@ -170,6 +174,8 @@ describe('GameSessionPrismaMapper', () => {
       marketOpportunities: [
         {
           id: 'opp-1',
+          templateId: 'carry-trap-01',
+          category: 'CARRY',
           title: 'Crowded Carry Trap',
           summary: 'Weak expected value and hidden drag.',
           riskLevel: 'LOW',

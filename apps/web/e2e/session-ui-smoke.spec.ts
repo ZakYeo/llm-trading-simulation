@@ -110,14 +110,16 @@ test('@smoke runs one turn and updates balances, positions, and replay after com
   await expect(page.locator('.activity-note strong')).toContainText(
     `Ran 1 turn for session ${session.id}`,
   );
-  await expect(page.locator('.balance-card').nth(1)).toContainText('95.00');
-  await expect(page.locator('.balance-card').nth(1)).toContainText('5.00');
+  await expect(page.locator('.balance-card').nth(1)).toContainText(
+    /Available(?!100\.00)\d+\.\d{2}/,
+  );
+  await expect(page.locator('.balance-card').nth(1)).toContainText(
+    /Reserved(?!0\.00)\d+\.\d{2}/,
+  );
   await expect(page.locator('.market-shell')).toContainText(
     '2 opportunities / 1 position',
   );
-  await expect(page.locator('.market-shell')).toContainText(
-    'Binary Event Volatility',
-  );
+  await expect(page.locator('.market-shell')).toContainText('Trader exposure');
   await expect(page.locator('.replay-panel')).toContainText(
     'Trader Bot / open market position',
   );

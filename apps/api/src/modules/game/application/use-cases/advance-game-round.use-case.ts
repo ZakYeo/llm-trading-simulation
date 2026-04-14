@@ -1,7 +1,8 @@
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import type { GameSessionRepositoryPort } from '../ports/game-session-repository.port.js';
-import { DefaultMarketOpportunityFactory } from '../services/default-market-opportunity.factory.js';
+import { MarketOpportunityBoardFactory } from '../services/market-opportunity-board.factory.js';
+import { MarketOpportunityResolutionService } from '../services/market-opportunity-resolution.service.js';
 
 export interface AdvanceGameRoundInput {
   gameSessionId: string;
@@ -12,7 +13,8 @@ export class AdvanceGameRoundUseCase {
   constructor(
     private readonly repository: GameSessionRepositoryPort,
     private readonly defaultInterestRateBps = 250,
-    private readonly marketOpportunityFactory = new DefaultMarketOpportunityFactory(),
+    private readonly marketOpportunityBoardFactory = new MarketOpportunityBoardFactory(),
+    private readonly marketOpportunityResolutionService = new MarketOpportunityResolutionService(),
   ) {}
 
   async execute(input: AdvanceGameRoundInput) {
@@ -129,11 +131,15 @@ export class AdvanceGameRoundUseCase {
         );
       }
 
+      const resolutionReturnBps =
+        this.marketOpportunityResolutionService.getResolutionReturnBps(
+          opportunity,
+        );
       const absoluteProfitOrLoss = position.principal.multiplyBps(
-        Math.abs(opportunity.resolutionReturnBps),
+        Math.abs(resolutionReturnBps),
       );
       const profitOrLoss =
-        opportunity.resolutionReturnBps >= 0
+        resolutionReturnBps >= 0
           ? absoluteProfitOrLoss
           : Money.zero().subtract(absoluteProfitOrLoss);
       const releasedBalance = ownerAgent.balance.release(position.principal);
@@ -163,19 +169,27 @@ export class AdvanceGameRoundUseCase {
       ];
     });
 
-    updatedSession = updatedSession
-      .withMarketPositions(
-        session.marketPositions.filter(
-          (position) => position.settlementRound !== session.currentRound + 1,
-        ),
-      )
-      .advanceRound()
-      .withMarketOpportunities(
-        this.marketOpportunityFactory.createForRound(
-          session.id,
-          session.currentRound + 1,
-        ),
+    const nextRound = session.currentRound + 1;
+    const remainingMarketPositions = session.marketPositions.filter(
+      (position) => position.settlementRound !== nextRound,
+    );
+    const remainingMarketOpportunities = session.marketOpportunities.filter(
+      (opportunity) => opportunity.settlementRound > nextRound,
+    );
+    const marketOpportunityAdditions =
+      this.marketOpportunityBoardFactory.createRoundAdvanceAdditions(
+        session.id,
+        nextRound,
+        remainingMarketOpportunities,
       );
+
+    updatedSession = updatedSession
+      .withMarketPositions(remainingMarketPositions)
+      .withMarketOpportunities([
+        ...remainingMarketOpportunities,
+        ...marketOpportunityAdditions,
+      ])
+      .advanceRound();
 
     await this.repository.save(updatedSession, [
       ...accrualHistory.map((record) => ({

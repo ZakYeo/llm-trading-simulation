@@ -27,6 +27,8 @@ export class GameSessionResponseMapper {
       ),
       marketOpportunities: session.marketOpportunities.map((opportunity) => ({
         id: opportunity.id,
+        templateId: opportunity.templateId,
+        category: opportunity.category,
         title: opportunity.title,
         summary: opportunity.summary,
         riskLevel: opportunity.riskLevel,

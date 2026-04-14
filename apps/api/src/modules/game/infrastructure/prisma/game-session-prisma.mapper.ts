@@ -33,6 +33,14 @@ export interface PersistedGameSessionRecord {
   }>;
   marketOpportunities?: Array<{
     id: string;
+    templateId: string;
+    category:
+      | 'CARRY'
+      | 'EVENT'
+      | 'TREND'
+      | 'ARBITRAGE'
+      | 'LIQUIDITY_STRESS'
+      | 'SPECIAL_SITUATION';
     title: string;
     summary: string;
     riskLevel: 'LOW' | 'HIGH';
@@ -97,6 +105,24 @@ const marketRiskFromPersistence = {
   HIGH: 'high',
 } as const;
 
+const marketCategoryToPersistence = {
+  carry: 'CARRY',
+  event: 'EVENT',
+  trend: 'TREND',
+  arbitrage: 'ARBITRAGE',
+  liquidity_stress: 'LIQUIDITY_STRESS',
+  special_situation: 'SPECIAL_SITUATION',
+} as const;
+
+const marketCategoryFromPersistence = {
+  CARRY: 'carry',
+  EVENT: 'event',
+  TREND: 'trend',
+  ARBITRAGE: 'arbitrage',
+  LIQUIDITY_STRESS: 'liquidity_stress',
+  SPECIAL_SITUATION: 'special_situation',
+} as const;
+
 function decimalLikeToString(
   value: string | { toString(): string } | undefined,
 ): string {
@@ -126,6 +152,8 @@ export class GameSessionPrismaMapper {
       marketOpportunities: {
         create: session.marketOpportunities.map((opportunity) => ({
           id: opportunity.id,
+          templateId: opportunity.templateId,
+          category: marketCategoryToPersistence[opportunity.category],
           title: opportunity.title,
           summary: opportunity.summary,
           riskLevel: marketRiskToPersistence[opportunity.riskLevel],
@@ -254,6 +282,8 @@ export class GameSessionPrismaMapper {
     return session.marketOpportunities.map((opportunity) => ({
       id: opportunity.id,
       gameSessionId: session.id,
+      templateId: opportunity.templateId,
+      category: marketCategoryToPersistence[opportunity.category],
       title: opportunity.title,
       summary: opportunity.summary,
       riskLevel: marketRiskToPersistence[opportunity.riskLevel],
@@ -341,6 +371,8 @@ export class GameSessionPrismaMapper {
         (opportunity) =>
           new MarketOpportunity({
             id: opportunity.id,
+            templateId: opportunity.templateId,
+            category: marketCategoryFromPersistence[opportunity.category],
             title: opportunity.title,
             summary: opportunity.summary,
             riskLevel: marketRiskFromPersistence[opportunity.riskLevel],

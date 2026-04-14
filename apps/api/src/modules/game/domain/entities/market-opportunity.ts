@@ -1,9 +1,18 @@
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 
 export type MarketOpportunityRiskLevel = 'low' | 'high';
+export type MarketOpportunityCategory =
+  | 'carry'
+  | 'event'
+  | 'trend'
+  | 'arbitrage'
+  | 'liquidity_stress'
+  | 'special_situation';
 
 export interface MarketOpportunityProps {
   id: string;
+  templateId: string;
+  category: MarketOpportunityCategory;
   title: string;
   summary: string;
   riskLevel: MarketOpportunityRiskLevel;
@@ -19,6 +28,8 @@ export interface MarketOpportunityProps {
 
 export class MarketOpportunity {
   readonly id: string;
+  readonly templateId: string;
+  readonly category: MarketOpportunityCategory;
   readonly title: string;
   readonly summary: string;
   readonly riskLevel: MarketOpportunityRiskLevel;
@@ -36,6 +47,12 @@ export class MarketOpportunity {
       throw new DomainInvariantError('Market opportunity id is required.');
     }
 
+    if (props.templateId.trim().length === 0) {
+      throw new DomainInvariantError(
+        'Market opportunity template id is required.',
+      );
+    }
+
     if (props.title.trim().length === 0) {
       throw new DomainInvariantError('Market opportunity title is required.');
     }
@@ -50,7 +67,18 @@ export class MarketOpportunity {
       );
     }
 
+    if (
+      Number.parseFloat(props.maxCommitment) <
+      Number.parseFloat(props.minCommitment)
+    ) {
+      throw new DomainInvariantError(
+        'Market opportunity max commitment must be greater than or equal to the minimum commitment.',
+      );
+    }
+
     this.id = props.id;
+    this.templateId = props.templateId;
+    this.category = props.category;
     this.title = props.title;
     this.summary = props.summary;
     this.riskLevel = props.riskLevel;

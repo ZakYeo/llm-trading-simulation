@@ -52,6 +52,8 @@ function createSession() {
     marketOpportunities: [
       new MarketOpportunity({
         id: 'opp-bad',
+        templateId: 'carry-trap-01',
+        category: 'carry',
         title: 'Crowded Carry Trap',
         summary: 'A poor low-return trade with capital drag.',
         riskLevel: 'low',
@@ -66,6 +68,8 @@ function createSession() {
       }),
       new MarketOpportunity({
         id: 'opp-risky',
+        templateId: 'event-binary-01',
+        category: 'event',
         title: 'Binary Event Volatility',
         summary: 'High variance one-round event trade.',
         riskLevel: 'high',

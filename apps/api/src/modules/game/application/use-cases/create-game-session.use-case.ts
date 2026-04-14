@@ -8,7 +8,7 @@ import { AccountBalance } from '../../domain/entities/account-balance.js';
 import { GameAgent } from '../../domain/entities/game-agent.js';
 import { GameSession } from '../../domain/entities/game-session.js';
 import type { GameSessionRepositoryPort } from '../ports/game-session-repository.port.js';
-import { DefaultMarketOpportunityFactory } from '../services/default-market-opportunity.factory.js';
+import { MarketOpportunityBoardFactory } from '../services/market-opportunity-board.factory.js';
 
 export interface CreateGameSessionAgentInput {
   name: string;
@@ -25,7 +25,7 @@ export class CreateGameSessionUseCase {
   constructor(
     private readonly repository: GameSessionRepositoryPort,
     private readonly idGenerator: IdGeneratorPort,
-    private readonly marketOpportunityFactory = new DefaultMarketOpportunityFactory(),
+    private readonly marketOpportunityBoardFactory = new MarketOpportunityBoardFactory(),
   ) {}
 
   async execute(input: CreateGameSessionInput): Promise<GameSession> {
@@ -62,10 +62,8 @@ export class CreateGameSessionUseCase {
       status: 'setup',
       currentRound: 0,
       agents,
-      marketOpportunities: this.marketOpportunityFactory.createForRound(
-        sessionId,
-        0,
-      ),
+      marketOpportunities:
+        this.marketOpportunityBoardFactory.createInitialBoard(sessionId, 0),
     });
 
     await this.repository.save(session);

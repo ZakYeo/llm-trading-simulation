@@ -94,19 +94,25 @@ describe('CreateGameSessionUseCase', () => {
     expect(
       session.marketOpportunities.map((opportunity) => ({
         id: opportunity.id,
+        templateId: opportunity.templateId,
+        category: opportunity.category,
         riskLevel: opportunity.riskLevel,
         listedRound: opportunity.listedRound,
         settlementRound: opportunity.settlementRound,
       })),
     ).toEqual([
       {
-        id: 'game-1-bad-opportunity-r0',
+        id: 'game-1-carry-stable-01-r0-n1',
+        templateId: 'carry-stable-01',
+        category: 'carry',
         riskLevel: 'low',
         listedRound: 0,
         settlementRound: 1,
       },
       {
-        id: 'game-1-risky-opportunity-r0',
+        id: 'game-1-liquidity-crunch-01-r0-n2',
+        templateId: 'liquidity-crunch-01',
+        category: 'liquidity_stress',
         riskLevel: 'high',
         listedRound: 0,
         settlementRound: 1,
@@ -200,6 +206,16 @@ describe('CreateGameSessionUseCase', () => {
     ]);
     expect(session.agents).toHaveLength(5);
     expect(session.marketOpportunities).toHaveLength(2);
+    expect(
+      session.marketOpportunities.some(
+        (opportunity) => opportunity.riskLevel === 'low',
+      ),
+    ).toBe(true);
+    expect(
+      session.marketOpportunities.some(
+        (opportunity) => opportunity.riskLevel === 'high',
+      ),
+    ).toBe(true);
   });
 
   it('rejects empty agent rosters', async () => {

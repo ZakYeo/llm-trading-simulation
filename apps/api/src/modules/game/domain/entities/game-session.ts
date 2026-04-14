@@ -75,6 +75,12 @@ export class GameSession {
       );
     }
 
+    if (marketOpportunities.length > 4) {
+      throw new DomainInvariantError(
+        'Game session cannot contain more than four active market opportunities.',
+      );
+    }
+
     if (
       new Set(
         marketPositions.map(

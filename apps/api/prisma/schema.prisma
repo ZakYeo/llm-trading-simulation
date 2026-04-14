@@ -46,6 +46,15 @@ enum MarketOpportunityRiskLevel {
   HIGH
 }
 
+enum MarketOpportunityCategory {
+  CARRY
+  EVENT
+  TREND
+  ARBITRAGE
+  LIQUIDITY_STRESS
+  SPECIAL_SITUATION
+}
+
 model GameSession {
   id           String       @id @default(uuid())
   name         String
@@ -247,6 +256,8 @@ model CustodyAccrual {
 model MarketOpportunity {
   id                   String   @id
   gameSessionId        String
+  templateId           String
+  category             MarketOpportunityCategory
   title                String
   summary              String
   riskLevel            MarketOpportunityRiskLevel

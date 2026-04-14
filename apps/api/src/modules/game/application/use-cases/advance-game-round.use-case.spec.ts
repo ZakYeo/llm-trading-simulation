@@ -119,8 +119,13 @@ describe('AdvanceGameRoundUseCase', () => {
     expect(session.bankerCustodyPositions[0]?.accruedInterest.toDecimal()).toBe(
       '0.7500',
     );
-    expect(session.marketOpportunities).toHaveLength(2);
-    expect(session.marketOpportunities[0]?.listedRound).toBe(1);
+    expect(session.marketOpportunities.length).toBeGreaterThanOrEqual(2);
+    expect(session.marketOpportunities.length).toBeLessThanOrEqual(4);
+    expect(
+      session.marketOpportunities.every(
+        (opportunity) => opportunity.listedRound === 1,
+      ),
+    ).toBe(true);
     expect(repository.saved).toHaveLength(1);
   });
 
@@ -153,6 +158,8 @@ describe('AdvanceGameRoundUseCase', () => {
         marketOpportunities: [
           new MarketOpportunity({
             id: 'opp-risky',
+            templateId: 'event-binary-01',
+            category: 'event',
             title: 'Binary Event Volatility',
             summary: 'High variance one-round event trade.',
             riskLevel: 'high',
@@ -189,8 +196,13 @@ describe('AdvanceGameRoundUseCase', () => {
     expect(session.agents[1]?.balance.available.toDecimal()).toBe('100.6000');
     expect(session.agents[1]?.balance.reserved.toDecimal()).toBe('0.0000');
     expect(session.marketPositions).toEqual([]);
-    expect(session.marketOpportunities).toHaveLength(2);
-    expect(session.marketOpportunities[0]?.id).toContain('-r1');
+    expect(session.marketOpportunities.length).toBeGreaterThanOrEqual(2);
+    expect(session.marketOpportunities.length).toBeLessThanOrEqual(4);
+    expect(
+      session.marketOpportunities.every((opportunity) =>
+        opportunity.id.includes('-r1-'),
+      ),
+    ).toBe(true);
     expect(repository.history).toContainEqual({
       type: 'market_position_settled',
       gameSessionId: 'game-1',

@@ -49,6 +49,14 @@ export interface BankerCustodyPositionRecord {
 
 export interface MarketOpportunityRecord {
   id: string;
+  templateId: string;
+  category:
+    | 'carry'
+    | 'event'
+    | 'trend'
+    | 'arbitrage'
+    | 'liquidity_stress'
+    | 'special_situation';
   title: string;
   summary: string;
   riskLevel: 'low' | 'high';

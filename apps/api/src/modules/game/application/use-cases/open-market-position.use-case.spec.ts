@@ -71,6 +71,8 @@ function createSession() {
     marketOpportunities: [
       new MarketOpportunity({
         id: 'opp-risky',
+        templateId: 'event-binary-01',
+        category: 'event',
         title: 'Binary Event Volatility',
         summary: 'High variance one-round event trade.',
         riskLevel: 'high',

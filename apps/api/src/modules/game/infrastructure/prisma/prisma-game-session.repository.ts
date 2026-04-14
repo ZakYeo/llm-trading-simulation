@@ -311,6 +311,8 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
         },
         create: opportunity,
         update: {
+          templateId: opportunity.templateId,
+          category: opportunity.category,
           title: opportunity.title,
           summary: opportunity.summary,
           riskLevel: opportunity.riskLevel,
