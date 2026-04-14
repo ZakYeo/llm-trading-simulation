@@ -81,6 +81,17 @@ function toRecentAction(
   };
 }
 
+function isVisibleToAgent(
+  message: AgentMessageRecord,
+  agentId: string,
+): boolean {
+  return (
+    message.visibility === 'public' ||
+    message.senderAgentId === agentId ||
+    message.recipientAgentId === agentId
+  );
+}
+
 function findActionableProposalsForAgent(
   agentId: string,
   session: NonNullable<
@@ -298,6 +309,9 @@ export class AgentTurnContextFactory {
       availableBalance: agent.balance.available.toDecimal(),
       depositPrincipal: agent.depositAccount.principal.toDecimal(),
     } satisfies AgentTurnContext['self'];
+    const visibleRecentMessages = recentMessages.filter((message) =>
+      isVisibleToAgent(message, agent.id),
+    );
 
     return {
       gameId: session.id,
@@ -312,7 +326,7 @@ export class AgentTurnContextFactory {
           name: peer.name,
           role: peer.role,
         })),
-      recentMessages: recentMessages.map((message) => {
+      recentMessages: visibleRecentMessages.map((message) => {
         const senderName =
           session.agents.find(
             (candidate) => candidate.id === message.senderAgentId,
@@ -335,7 +349,7 @@ export class AgentTurnContextFactory {
       negotiationState: buildNegotiationState(
         session,
         self,
-        recentMessages,
+        visibleRecentMessages,
         recentActions,
       ),
       treasuryContext: buildTreasuryContext(session, agent.id),

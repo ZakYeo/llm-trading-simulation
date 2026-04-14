@@ -31,6 +31,13 @@ function createSession() {
         balance: AccountBalance.open(Money.fromDecimal('100.0000')),
         depositAccount: DepositAccount.open(),
       }),
+      new GameAgent({
+        id: 'agent-3',
+        name: 'Analyst Bot',
+        role: 'analyst',
+        balance: AccountBalance.open(Money.fromDecimal('100.0000')),
+        depositAccount: DepositAccount.open(),
+      }),
     ],
     bankerCustodyPositions: [
       new BankerCustodyPosition({
@@ -110,6 +117,11 @@ describe('AgentTurnContextFactory', () => {
         agentId: 'agent-2',
         name: 'Trader Bot',
         role: 'trader',
+      },
+      {
+        agentId: 'agent-3',
+        name: 'Analyst Bot',
+        role: 'analyst',
       },
     ]);
     expect(context.actionableProposalsForSelf).toEqual([
@@ -213,6 +225,45 @@ describe('AgentTurnContextFactory', () => {
     expect(context.negotiationState.guidance).toContain(
       'executable transfer proposal may now be higher value',
     );
+  });
+
+  it('does not expose unrelated private messages to third-party agents', () => {
+    const factory = new AgentTurnContextFactory();
+    const recentMessages = [
+      ...createRecentMessages(),
+      {
+        id: 'message-3',
+        gameSessionId: 'game-1',
+        roundNumber: 1,
+        turnNumber: 2,
+        senderAgentId: 'agent-1',
+        recipientAgentId: 'agent-3',
+        visibility: 'private' as const,
+        content: 'Analyst-only note.',
+        createdAt: new Date(Date.UTC(2026, 3, 8, 10, 0, 3)).toISOString(),
+      },
+    ];
+
+    const context = factory.build(
+      createSession(),
+      'agent-3',
+      3,
+      recentMessages,
+      createRecentActions(),
+    );
+
+    expect(context.recentMessages).toEqual([
+      {
+        senderAgentId: 'agent-1',
+        senderName: 'Banker Bot',
+        recipientAgentId: 'agent-3',
+        visibility: 'private',
+        content: 'Analyst-only note.',
+      },
+    ]);
+    expect(context.negotiationState).toMatchObject({
+      privateMessageExchangeCountWithPrimaryCounterparty: 0,
+    });
   });
 
   it('throws when asked to build context for an agent outside the session', () => {
