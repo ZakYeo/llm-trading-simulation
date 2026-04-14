@@ -40,6 +40,13 @@ export function SessionOverviewCard({
 
       {isFetching ? <p>Loading session...</p> : null}
 
+      {!selectedSession && isExpanded ? (
+        <p className="empty-copy">
+          Create a new session or connect to a saved session to inspect live
+          workspace state.
+        </p>
+      ) : null}
+
       {selectedSession && isExpanded ? (
         <div className="overview-grid">
           <article className="overview-card">

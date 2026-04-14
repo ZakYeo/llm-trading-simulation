@@ -48,6 +48,13 @@ test('@smoke keeps collapsed cards compact before a session is connected and exp
 }) => {
   await page.goto('/');
 
+  await expect(page.locator('.workspace-column')).toContainText(
+    'Create a new session or connect to a saved session to inspect live workspace state.',
+  );
+  await expect(page.locator('.workspace-column')).toContainText(
+    'Create a new session or connect to a saved session to inspect live market opportunities and trader positions.',
+  );
+
   await page.getByRole('button', { name: 'Minimise live state' }).click();
   await page
     .getByRole('button', { name: 'Minimise market visibility' })
@@ -58,12 +65,12 @@ test('@smoke keeps collapsed cards compact before a session is connected and exp
 
   await expect(
     page.getByText(
-      'Start by creating a session or connecting to an existing one.',
+      'Create a new session or connect to a saved session to inspect live workspace state.',
     ),
   ).toHaveCount(0);
   await expect(
     page.getByText(
-      'Connect to a session to inspect live market opportunities and trader positions.',
+      'Create a new session or connect to a saved session to inspect live market opportunities and trader positions.',
     ),
   ).toHaveCount(0);
   await expect(

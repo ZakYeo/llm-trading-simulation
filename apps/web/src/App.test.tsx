@@ -34,11 +34,11 @@ describe('App', () => {
     expect(html).toContain('Add bot');
     expect(html).toContain('Banker Bot');
     expect(html).toContain('Trader Bot');
-    expect(html).not.toContain(
-      'Connect to a session to inspect live market opportunities and trader positions.',
+    expect(html).toContain(
+      'Create a new session or connect to a saved session to inspect live workspace state.',
     );
-    expect(html).not.toContain(
-      'Start by creating a session or connecting to an existing one.',
+    expect(html).toContain(
+      'Create a new session or connect to a saved session to inspect live market opportunities and trader positions.',
     );
     expect(html).not.toContain('Analyst Bot');
     expect(html).not.toContain('Lawyer Bot');
