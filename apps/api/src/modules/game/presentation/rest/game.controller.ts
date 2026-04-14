@@ -8,10 +8,12 @@ import {
   Post,
 } from '@nestjs/common';
 
+import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import { AdvanceGameRoundUseCase } from '../../application/use-cases/advance-game-round.use-case.js';
 import { CreateGameSessionUseCase } from '../../application/use-cases/create-game-session.use-case.js';
 import { DepositToBankUseCase } from '../../application/use-cases/deposit-to-bank.use-case.js';
 import { GetGameSessionUseCase } from '../../application/use-cases/get-game-session.use-case.js';
+import { OpenMarketPositionUseCase } from '../../application/use-cases/open-market-position.use-case.js';
 import { PlaceFundsWithBankerUseCase } from '../../application/use-cases/place-funds-with-banker.use-case.js';
 import { RedeemFundsFromBankerUseCase } from '../../application/use-cases/redeem-funds-from-banker.use-case.js';
 import { TransferFundsUseCase } from '../../application/use-cases/transfer-funds.use-case.js';
@@ -20,6 +22,7 @@ import { GameSessionResponseMapper } from './mappers/game-session-response.mappe
 import { advanceGameRoundRequestSchema } from './schemas/advance-game-round.request.js';
 import { createGameSessionRequestSchema } from './schemas/create-game-session.request.js';
 import { depositToBankRequestSchema } from './schemas/deposit-to-bank.request.js';
+import { openMarketPositionRequestSchema } from './schemas/open-market-position.request.js';
 import { placeFundsWithBankerRequestSchema } from './schemas/place-funds-with-banker.request.js';
 import { redeemFundsFromBankerRequestSchema } from './schemas/redeem-funds-from-banker.request.js';
 import { transferFundsRequestSchema } from './schemas/transfer-funds.request.js';
@@ -44,6 +47,14 @@ export class GameController {
     private readonly placeFundsWithBankerUseCase: PlaceFundsWithBankerUseCase,
     @Inject(RedeemFundsFromBankerUseCase)
     private readonly redeemFundsFromBankerUseCase: RedeemFundsFromBankerUseCase,
+    @Inject(OpenMarketPositionUseCase)
+    private readonly openMarketPositionUseCase: OpenMarketPositionUseCase = {
+      execute: async () => {
+        throw new DomainInvariantError(
+          'Open market position use case is not configured.',
+        );
+      },
+    } as unknown as OpenMarketPositionUseCase,
   ) {}
 
   @Get('health')
@@ -139,6 +150,22 @@ export class GameController {
       gameSessionId,
       ownerAgentId: request.ownerAgentId,
       bankerAgentId: request.bankerAgentId,
+      amount: request.amount,
+    });
+
+    return GameSessionResponseMapper.toResponse(session);
+  }
+
+  @Patch('sessions/:gameSessionId/market/open')
+  async openMarketPosition(
+    @Param('gameSessionId') gameSessionId: string,
+    @Body() body: unknown,
+  ) {
+    const request = openMarketPositionRequestSchema.parse(body);
+    const session = await this.openMarketPositionUseCase.execute({
+      gameSessionId,
+      ownerAgentId: request.ownerAgentId,
+      opportunityId: request.opportunityId,
       amount: request.amount,
     });
 

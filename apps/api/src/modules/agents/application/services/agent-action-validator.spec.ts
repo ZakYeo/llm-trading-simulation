@@ -5,6 +5,7 @@ import { AccountBalance } from '../../../game/domain/entities/account-balance.js
 import { BankerCustodyPosition } from '../../../game/domain/entities/banker-custody-position.js';
 import { GameAgent } from '../../../game/domain/entities/game-agent.js';
 import { GameSession } from '../../../game/domain/entities/game-session.js';
+import { MarketOpportunity } from '../../../game/domain/entities/market-opportunity.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import { AgentActionValidator } from './agent-action-validator.js';
 
@@ -36,6 +37,22 @@ function createSession() {
         ownerAgentId: 'agent-2',
         principal: Money.fromDecimal('12.5000'),
         accruedInterest: Money.fromDecimal('0.5000'),
+      }),
+    ],
+    marketOpportunities: [
+      new MarketOpportunity({
+        id: 'opp-risky',
+        title: 'Binary Event Volatility',
+        summary: 'High variance one-round event trade.',
+        riskLevel: 'high',
+        listedRound: 1,
+        settlementRound: 2,
+        minCommitment: '5.0000',
+        maxCommitment: '25.0000',
+        estimatedNetReturnBps: 300,
+        worstCaseReturnBps: -800,
+        bestCaseReturnBps: 1200,
+        resolutionReturnBps: 1200,
       }),
     ],
   });
@@ -151,5 +168,40 @@ describe('AgentActionValidator', () => {
         ],
       ),
     ).toThrow('Transfer proposal has already been resolved.');
+  });
+
+  it('accepts valid market opportunity actions and rejects unknown ones', () => {
+    const validator = new AgentActionValidator();
+
+    expect(
+      validator.validate(
+        createSession(),
+        'agent-2',
+        {
+          type: 'open_market_position',
+          opportunityId: 'opp-risky',
+          amount: '5.0000',
+        },
+        [],
+      ),
+    ).toEqual({
+      recipientAgentId: null,
+      relatedProposalActionId: undefined,
+    });
+
+    expect(() =>
+      validator.validate(
+        createSession(),
+        'agent-2',
+        {
+          type: 'open_market_position',
+          opportunityId: 'missing',
+          amount: '5.0000',
+        },
+        [],
+      ),
+    ).toThrow(
+      'Market actions must reference an opportunity in the same game session.',
+    );
   });
 });

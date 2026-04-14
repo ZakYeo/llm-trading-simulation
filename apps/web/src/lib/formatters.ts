@@ -34,6 +34,14 @@ export function getReplayEventLabel(event: GameReplayRecord['events'][number]) {
     return `${event.ownerAgentName} accrued custody interest`;
   }
 
+  if (event.type === 'market_position_opened') {
+    return `${event.ownerAgentName} opened ${event.opportunityTitle}`;
+  }
+
+  if (event.type === 'market_position_settled') {
+    return `${event.ownerAgentName} settled ${event.opportunityTitle}`;
+  }
+
   if (event.type === 'message') {
     return event.visibility === 'private'
       ? `${event.senderAgentName} -> ${event.recipientAgentName ?? 'Unknown'}`
@@ -65,6 +73,10 @@ export function getReplayEventLabel(event: GameReplayRecord['events'][number]) {
       return `${event.agentName} / redeem funds from banker`;
     }
 
+    if (event.actionType === 'open_market_position') {
+      return `${event.agentName} / open market position`;
+    }
+
     return `${event.agentName} / ${event.actionType}`;
   }
 
@@ -84,6 +96,16 @@ export function getReplayEventDetail(
     event.type === 'custody_accrual'
   ) {
     return event.amount ? `Amount ${formatCurrency(event.amount)}` : null;
+  }
+
+  if (event.type === 'market_position_opened') {
+    return event.amount ? `Principal ${formatCurrency(event.amount)}` : null;
+  }
+
+  if (event.type === 'market_position_settled') {
+    return event.profitOrLoss
+      ? `PnL ${formatCurrency(event.profitOrLoss)}`
+      : null;
   }
 
   if (event.type === 'action') {

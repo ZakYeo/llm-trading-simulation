@@ -64,6 +64,24 @@ function createContext(
         },
       ],
     },
+    marketContext: {
+      visibleOpportunities: [
+        {
+          opportunityId: 'opp-risky',
+          title: 'Binary Event Volatility',
+          summary: 'High variance one-round event trade.',
+          riskLevel: 'high',
+          listedRound: 0,
+          settlementRound: 1,
+          minCommitment: '5.0000',
+          maxCommitment: '25.0000',
+          estimatedNetReturnBps: 300,
+          worstCaseReturnBps: -800,
+          bestCaseReturnBps: 1200,
+        },
+      ],
+      selfOpenPositions: [],
+    },
     economicContext: {
       objective: 'Maximize expected fake-money outcome.',
       messagesDoNotMoveMoney: true,
@@ -88,6 +106,8 @@ function createContext(
         'Moves the owner agent balance into banker custody while preserving beneficial ownership.',
       redeemFundsFromBanker:
         'Returns previously custodied funds from the banker back to the owner.',
+      openMarketPosition:
+        'Commits balance to a listed market opportunity until settlement.',
       finalizeTurn: 'Ends the turn without moving money.',
     },
     ...overrides,
@@ -101,6 +121,7 @@ describe('OpenAiAgentSystemContextBuilder', () => {
       .addPeerSummary()
       .addEconomicContextSummary()
       .addTreasuryContextSummary()
+      .addMarketContextSummary()
       .addActionSemanticsSummary()
       .addActionableProposalSummary()
       .addNegotiationStateSummary()
@@ -117,6 +138,9 @@ describe('OpenAiAgentSystemContextBuilder', () => {
     );
     expect(prompt).toContain(
       'banker obligations visible to you: [owner=Trader Bot ownerId=trader-1 principal=12.5000 accrued=0.5000 total=13.0000]',
+    );
+    expect(prompt).toContain(
+      'Market context: visible market opportunities: [id=opp-risky title=Binary Event Volatility',
     );
     expect(prompt).toContain(
       "Role economics: as the banker, you improve your outcome by attracting and retaining trader trader-1's custodial funds",
@@ -163,7 +187,7 @@ describe('OpenAiAgentSystemContextBuilder', () => {
       'Role economics: as the trader, you improve your outcome by deciding whether to place funds with banker banker-1',
     );
     expect(prompt).toContain(
-      'Current opportunity: banker banker-1 has already opened a private channel with you',
+      'Current opportunity: at least one listed market opportunity is available.',
     );
   });
 });

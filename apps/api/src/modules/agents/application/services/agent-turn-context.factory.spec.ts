@@ -5,6 +5,7 @@ import { AccountBalance } from '../../../game/domain/entities/account-balance.js
 import { BankerCustodyPosition } from '../../../game/domain/entities/banker-custody-position.js';
 import { GameAgent } from '../../../game/domain/entities/game-agent.js';
 import { GameSession } from '../../../game/domain/entities/game-session.js';
+import { MarketOpportunity } from '../../../game/domain/entities/market-opportunity.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import type { AgentActionRecord } from '../ports/agent-action-repository.port.js';
 import type { AgentMessageRecord } from '../ports/agent-message-repository.port.js';
@@ -45,6 +46,36 @@ function createSession() {
         ownerAgentId: 'agent-2',
         principal: Money.fromDecimal('12.5000'),
         accruedInterest: Money.fromDecimal('0.5000'),
+      }),
+    ],
+    marketOpportunities: [
+      new MarketOpportunity({
+        id: 'opp-bad',
+        title: 'Crowded Carry Trap',
+        summary: 'A poor low-return trade with capital drag.',
+        riskLevel: 'low',
+        listedRound: 1,
+        settlementRound: 2,
+        minCommitment: '5.0000',
+        maxCommitment: '20.0000',
+        estimatedNetReturnBps: -75,
+        worstCaseReturnBps: -150,
+        bestCaseReturnBps: 25,
+        resolutionReturnBps: -100,
+      }),
+      new MarketOpportunity({
+        id: 'opp-risky',
+        title: 'Binary Event Volatility',
+        summary: 'High variance one-round event trade.',
+        riskLevel: 'high',
+        listedRound: 1,
+        settlementRound: 2,
+        minCommitment: '5.0000',
+        maxCommitment: '25.0000',
+        estimatedNetReturnBps: 300,
+        worstCaseReturnBps: -800,
+        bestCaseReturnBps: 1200,
+        resolutionReturnBps: 1200,
       }),
     ],
   });
@@ -160,6 +191,8 @@ describe('AgentTurnContextFactory', () => {
       unresolvedIncomingProposalCount: 1,
       unresolvedOutgoingProposalCount: 0,
     });
+    expect(context.marketContext.visibleOpportunities).toHaveLength(2);
+    expect(context.marketContext.selfOpenPositions).toEqual([]);
   });
 
   it('builds trader context with self custody position and no banker obligations', () => {
@@ -202,6 +235,11 @@ describe('AgentTurnContextFactory', () => {
     expect(context.economicContext).toMatchObject({
       unresolvedIncomingProposalCount: 0,
       unresolvedOutgoingProposalCount: 1,
+    });
+    expect(context.marketContext.visibleOpportunities[1]).toMatchObject({
+      opportunityId: 'opp-risky',
+      riskLevel: 'high',
+      estimatedNetReturnBps: 300,
     });
   });
 

@@ -4,6 +4,7 @@ import { AdvanceGameRoundUseCase } from '../application/use-cases/advance-game-r
 import { CreateGameSessionUseCase } from '../application/use-cases/create-game-session.use-case.js';
 import { DepositToBankUseCase } from '../application/use-cases/deposit-to-bank.use-case.js';
 import { GetGameSessionUseCase } from '../application/use-cases/get-game-session.use-case.js';
+import { OpenMarketPositionUseCase } from '../application/use-cases/open-market-position.use-case.js';
 import { PlaceFundsWithBankerUseCase } from '../application/use-cases/place-funds-with-banker.use-case.js';
 import { RedeemFundsFromBankerUseCase } from '../application/use-cases/redeem-funds-from-banker.use-case.js';
 import { TransferFundsUseCase } from '../application/use-cases/transfer-funds.use-case.js';
@@ -45,7 +46,7 @@ describe('createGameProviders', () => {
   it('registers the expected infrastructure and use-case providers', () => {
     const providers = createGameProviders();
 
-    expect(providers).toHaveLength(12);
+    expect(providers).toHaveLength(13);
     expect(providers[0]).toBe(PrismaService);
     expect(providers[1]).toBe(LedgerService);
     expect(providers[2]).toMatchObject({
@@ -88,6 +89,10 @@ describe('createGameProviders', () => {
       provide: RedeemFundsFromBankerUseCase,
       inject: [GAME_SESSION_REPOSITORY, LedgerService],
     });
+    expect(providers[12]).toMatchObject({
+      provide: OpenMarketPositionUseCase,
+      inject: [GAME_SESSION_REPOSITORY],
+    });
   });
 
   it('builds the repository and use cases from their factories', () => {
@@ -102,6 +107,7 @@ describe('createGameProviders', () => {
     const transferProvider = expectFactoryProvider(providers[9]);
     const placeFundsProvider = expectFactoryProvider(providers[10]);
     const redeemFundsProvider = expectFactoryProvider(providers[11]);
+    const openMarketProvider = expectFactoryProvider(providers[12]);
 
     const prismaService = {} as PrismaService;
     const repository = repositoryProvider.useFactory(prismaService);
@@ -133,6 +139,9 @@ describe('createGameProviders', () => {
     expect(
       redeemFundsProvider.useFactory(repository, ledgerService),
     ).toBeInstanceOf(RedeemFundsFromBankerUseCase);
+    expect(openMarketProvider.useFactory(repository)).toBeInstanceOf(
+      OpenMarketPositionUseCase,
+    );
   });
 
   it('fails fast when the configured default interest rate is invalid', () => {

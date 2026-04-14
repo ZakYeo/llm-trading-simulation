@@ -1,6 +1,8 @@
 import type { AgentAction } from '@llm-sim/mcp-contracts';
 
+import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import type { GameSessionRepositoryPort } from '../../../game/application/ports/game-session-repository.port.js';
+import type { OpenMarketPositionUseCase } from '../../../game/application/use-cases/open-market-position.use-case.js';
 import type { PlaceFundsWithBankerUseCase } from '../../../game/application/use-cases/place-funds-with-banker.use-case.js';
 import type { RedeemFundsFromBankerUseCase } from '../../../game/application/use-cases/redeem-funds-from-banker.use-case.js';
 import type {
@@ -37,6 +39,13 @@ export class AgentActionExecutor {
     private readonly agentActionRepository: AgentActionRepositoryPort,
     private readonly placeFundsWithBankerUseCase: PlaceFundsWithBankerUseCase,
     private readonly redeemFundsFromBankerUseCase: RedeemFundsFromBankerUseCase,
+    private readonly openMarketPositionUseCase: OpenMarketPositionUseCase = {
+      execute: async () => {
+        throw new DomainInvariantError(
+          'Open market position use case is not configured.',
+        );
+      },
+    } as unknown as OpenMarketPositionUseCase,
   ) {}
 
   async execute(
@@ -54,7 +63,8 @@ export class AgentActionExecutor {
         input.action.type === 'request_payment' ||
         input.action.type === 'counter_payment_request' ||
         input.action.type === 'place_funds_with_banker' ||
-        input.action.type === 'redeem_funds_from_banker'
+        input.action.type === 'redeem_funds_from_banker' ||
+        input.action.type === 'open_market_position'
           ? input.action.amount
           : undefined,
       content:
@@ -66,7 +76,9 @@ export class AgentActionExecutor {
             ? input.action.rationale
             : input.action.type === 'reject_payment_request'
               ? input.action.rationale
-              : undefined,
+              : input.action.type === 'open_market_position'
+                ? input.action.opportunityId
+                : undefined,
     });
 
     let updatedSession = input.session;
@@ -85,6 +97,15 @@ export class AgentActionExecutor {
         gameSessionId: input.session.id,
         ownerAgentId: input.agentId,
         bankerAgentId: input.recipientAgentId!,
+        amount: input.action.amount,
+      });
+    }
+
+    if (input.action.type === 'open_market_position') {
+      updatedSession = await this.openMarketPositionUseCase.execute({
+        gameSessionId: input.session.id,
+        ownerAgentId: input.agentId,
+        opportunityId: input.action.opportunityId,
         amount: input.action.amount,
       });
     }

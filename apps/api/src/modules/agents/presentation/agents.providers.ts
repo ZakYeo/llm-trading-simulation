@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 
 import { GAME_SESSION_REPOSITORY } from '../../shared/application/tokens.js';
+import { OpenMarketPositionUseCase } from '../../game/application/use-cases/open-market-position.use-case.js';
 import { PlaceFundsWithBankerUseCase } from '../../game/application/use-cases/place-funds-with-banker.use-case.js';
 import { RedeemFundsFromBankerUseCase } from '../../game/application/use-cases/redeem-funds-from-banker.use-case.js';
 import { TransferFundsUseCase } from '../../game/application/use-cases/transfer-funds.use-case.js';
@@ -85,18 +86,21 @@ export function createAgentsProviders() {
         agentActionRepository: AgentActionRepositoryPort,
         placeFundsWithBankerUseCase: PlaceFundsWithBankerUseCase,
         redeemFundsFromBankerUseCase: RedeemFundsFromBankerUseCase,
+        openMarketPositionUseCase: OpenMarketPositionUseCase,
       ) =>
         new AgentActionExecutor(
           agentMessageRepository,
           agentActionRepository,
           placeFundsWithBankerUseCase,
           redeemFundsFromBankerUseCase,
+          openMarketPositionUseCase,
         ),
       inject: [
         AGENT_MESSAGE_REPOSITORY,
         AGENT_ACTION_REPOSITORY,
         PlaceFundsWithBankerUseCase,
         RedeemFundsFromBankerUseCase,
+        OpenMarketPositionUseCase,
       ],
     },
     {
@@ -109,6 +113,7 @@ export function createAgentsProviders() {
         agentSessionEventStreamService: AgentSessionEventStreamService,
         placeFundsWithBankerUseCase: PlaceFundsWithBankerUseCase,
         redeemFundsFromBankerUseCase: RedeemFundsFromBankerUseCase,
+        openMarketPositionUseCase: OpenMarketPositionUseCase,
         agentTurnContextFactory: AgentTurnContextFactory,
         agentActionValidator: AgentActionValidator,
         agentActionExecutor: AgentActionExecutor,
@@ -121,6 +126,7 @@ export function createAgentsProviders() {
           agentSessionEventStreamService,
           placeFundsWithBankerUseCase,
           redeemFundsFromBankerUseCase,
+          openMarketPositionUseCase,
           agentTurnContextFactory,
           agentActionValidator,
           agentActionExecutor,
@@ -133,6 +139,7 @@ export function createAgentsProviders() {
         AgentSessionEventStreamService,
         PlaceFundsWithBankerUseCase,
         RedeemFundsFromBankerUseCase,
+        OpenMarketPositionUseCase,
         AgentTurnContextFactory,
         AgentActionValidator,
         AgentActionExecutor,

@@ -8,6 +8,11 @@ export class MockAgentGateway implements AgentGatewayPort {
     const banker = context.peers.find((peer) => peer.role === 'banker');
     const trader = context.peers.find((peer) => peer.role === 'trader');
     const analyst = context.peers.find((peer) => peer.role === 'analyst');
+    const riskyOpportunity = context.marketContext.visibleOpportunities.find(
+      (opportunity) =>
+        opportunity.riskLevel === 'high' &&
+        opportunity.estimatedNetReturnBps > 0,
+    );
     const ownCustodyPosition = context.treasuryContext.selfCustodyPosition;
     const pendingProposal = context.recentActions.find((action) => {
       if (
@@ -38,6 +43,20 @@ export class MockAgentGateway implements AgentGatewayPort {
         type: 'send_private_message',
         recipientAgentId: trader.agentId,
         content: 'Share your strongest signal and I can review terms.',
+      };
+    }
+
+    if (
+      context.self.role === 'trader' &&
+      scenario === 'market_opportunity' &&
+      riskyOpportunity &&
+      context.marketContext.selfOpenPositions.length === 0 &&
+      context.turnNumber === 1
+    ) {
+      return {
+        type: 'open_market_position',
+        opportunityId: riskyOpportunity.opportunityId,
+        amount: riskyOpportunity.minCommitment,
       };
     }
 

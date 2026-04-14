@@ -286,6 +286,38 @@ function buildTreasuryContext(
   };
 }
 
+function buildMarketContext(
+  session: NonNullable<
+    Awaited<ReturnType<GameSessionRepositoryPort['findById']>>
+  >,
+  agentId: string,
+) {
+  return {
+    visibleOpportunities: session.marketOpportunities.map((opportunity) => ({
+      opportunityId: opportunity.id,
+      title: opportunity.title,
+      summary: opportunity.summary,
+      riskLevel: opportunity.riskLevel,
+      listedRound: opportunity.listedRound,
+      settlementRound: opportunity.settlementRound,
+      minCommitment: opportunity.minCommitment,
+      maxCommitment: opportunity.maxCommitment,
+      estimatedNetReturnBps: opportunity.estimatedNetReturnBps,
+      worstCaseReturnBps: opportunity.worstCaseReturnBps,
+      bestCaseReturnBps: opportunity.bestCaseReturnBps,
+    })),
+    selfOpenPositions: session.marketPositions
+      .filter((position) => position.ownerAgentId === agentId)
+      .map((position) => ({
+        opportunityId: position.opportunityId,
+        opportunityTitle: position.opportunityTitle,
+        principal: position.principal.toDecimal(),
+        entryRound: position.entryRound,
+        settlementRound: position.settlementRound,
+      })),
+  };
+}
+
 export class AgentTurnContextFactory {
   build(
     session: NonNullable<
@@ -353,6 +385,7 @@ export class AgentTurnContextFactory {
         recentActions,
       ),
       treasuryContext: buildTreasuryContext(session, agent.id),
+      marketContext: buildMarketContext(session, agent.id),
       economicContext: {
         objective:
           'Maximize your own expected fake-money outcome. Use communication, proposals, and responses when they improve your expected position.',
@@ -392,6 +425,8 @@ export class AgentTurnContextFactory {
           'Moves your own available balance into banker custody with the targeted banker agent. Use recipientAgentId as the banker id.',
         redeemFundsFromBanker:
           'Redeems your own custodial balance back from the targeted banker agent. Use recipientAgentId as the banker id.',
+        openMarketPosition:
+          'Commits part of your own available balance into a listed market opportunity. Use opportunityId and amount. This reserves capital until settlement.',
         finalizeTurn:
           'Take no further action this turn. This does not move money or improve information by itself.',
       },

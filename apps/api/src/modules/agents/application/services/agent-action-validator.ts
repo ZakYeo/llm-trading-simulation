@@ -80,7 +80,8 @@ export class AgentActionValidator {
       action.type === 'request_payment' ||
       action.type === 'counter_payment_request' ||
       action.type === 'place_funds_with_banker' ||
-      action.type === 'redeem_funds_from_banker'
+      action.type === 'redeem_funds_from_banker' ||
+      action.type === 'open_market_position'
     ) {
       Money.fromDecimal(action.amount);
     }
@@ -107,6 +108,18 @@ export class AgentActionValidator {
       if (!bankerAgent || bankerAgent.role !== 'banker') {
         throw new DomainInvariantError(
           'Custody actions must target a banker in the same game session.',
+        );
+      }
+    }
+
+    if (action.type === 'open_market_position') {
+      const opportunity = session.marketOpportunities.find(
+        (candidate) => candidate.id === action.opportunityId,
+      );
+
+      if (!opportunity) {
+        throw new DomainInvariantError(
+          'Market actions must reference an opportunity in the same game session.',
         );
       }
     }

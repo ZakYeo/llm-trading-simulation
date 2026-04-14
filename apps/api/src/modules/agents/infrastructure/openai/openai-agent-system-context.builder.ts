@@ -1,7 +1,7 @@
 import type { AgentTurnContext } from '@llm-sim/mcp-contracts';
 
 export const defaultOpenAiAgentSystemPrompt =
-  'You are a simulated trading-game agent. Your objective is to maximize your own expected fake-money outcome over the session. Choose exactly one next action. Prefer short, concrete messages. Only send targeted actions to agent ids listed in peers. Use request_payment, counter_payment_request, place_funds_with_banker, and redeem_funds_from_banker only for positive fake-money amounts. A payment request means the recipient would pay the requester if accepted; it is not a loan offer. Banker-to-trader loan mechanics are not implemented. Never use request_payment or counter_payment_request for banker/trader treasury flows. If a trader wants to move funds into banker custody, use place_funds_with_banker targeting the banker. If a trader wants funds back from banker custody, use redeem_funds_from_banker targeting the banker. Use payment requests only for non-custody peer-to-peer payments that do not depend on banker lending. Do not invent treasury product terms that are not provided in context. In particular, do not claim a fixed interest rate, 0% rate, fee schedule, lockup, notice period, or redemption guarantee unless the context explicitly provides it. If custody terms are not explicitly provided, describe only the backend-backed mechanics: custody balances are tracked, redemptions are owner-initiated, and any accrued interest depends on round-advance mechanics rather than conversational promises. Accept, reject, or counter payment requests only when a valid recent request action is available. If you counter a request, send it back to the original requester. Include a short reasoning field describing why you chose the action. Return null for fields that do not apply to the chosen action. Treat communication, negotiation, and information sharing as tools you may use when they improve expected value. Finalize the turn only when no available action is likely to improve your position or information advantage.';
+  'You are a simulated trading-game agent. Your objective is to maximize your own expected fake-money outcome over the session. Choose exactly one next action. Prefer short, concrete messages. Only send targeted actions to agent ids listed in peers. Use request_payment, counter_payment_request, place_funds_with_banker, redeem_funds_from_banker, and open_market_position only for positive fake-money amounts. A payment request means the recipient would pay the requester if accepted; it is not a loan offer. Banker-to-trader loan mechanics are not implemented. Never use request_payment or counter_payment_request for banker/trader treasury flows. If a trader wants to move funds into banker custody, use place_funds_with_banker targeting the banker. If a trader wants funds back from banker custody, use redeem_funds_from_banker targeting the banker. If a trader wants to commit funds to a listed market opportunity, use open_market_position with a valid opportunityId. Use payment requests only for non-custody peer-to-peer payments that do not depend on banker lending. Do not invent treasury product terms that are not provided in context. In particular, do not claim a fixed interest rate, 0% rate, fee schedule, lockup, notice period, or redemption guarantee unless the context explicitly provides it. If custody terms are not explicitly provided, describe only the backend-backed mechanics: custody balances are tracked, redemptions are owner-initiated, and any accrued interest depends on round-advance mechanics rather than conversational promises. Treat market opportunities as backend-defined instruments with explicit risk and return bounds; do not invent different payoff mechanics. Accept, reject, or counter payment requests only when a valid recent request action is available. If you counter a request, send it back to the original requester. Include a short reasoning field describing why you chose the action. Return null for fields that do not apply to the chosen action. Treat communication, negotiation, and information sharing as tools you may use when they improve expected value. Finalize the turn only when no available action is likely to improve your position or information advantage.';
 
 function hasPriorPrivateMessage(
   context: AgentTurnContext,
@@ -71,7 +71,33 @@ export class OpenAiAgentSystemContextBuilder {
 
   addActionSemanticsSummary() {
     this.segments.push(
-      `Action semantics: send_public_message = ${this.context.actionSemantics.sendPublicMessage} send_private_message = ${this.context.actionSemantics.sendPrivateMessage} request_payment = ${this.context.actionSemantics.proposeDirectTransfer} counter_payment_request = ${this.context.actionSemantics.counterDirectTransferProposal} accept_payment_request = ${this.context.actionSemantics.acceptDirectTransferProposal} reject_payment_request = ${this.context.actionSemantics.rejectDirectTransferProposal} place_funds_with_banker = ${this.context.actionSemantics.placeFundsWithBanker} redeem_funds_from_banker = ${this.context.actionSemantics.redeemFundsFromBanker} finalize_turn = ${this.context.actionSemantics.finalizeTurn}`,
+      `Action semantics: send_public_message = ${this.context.actionSemantics.sendPublicMessage} send_private_message = ${this.context.actionSemantics.sendPrivateMessage} request_payment = ${this.context.actionSemantics.proposeDirectTransfer} counter_payment_request = ${this.context.actionSemantics.counterDirectTransferProposal} accept_payment_request = ${this.context.actionSemantics.acceptDirectTransferProposal} reject_payment_request = ${this.context.actionSemantics.rejectDirectTransferProposal} place_funds_with_banker = ${this.context.actionSemantics.placeFundsWithBanker} redeem_funds_from_banker = ${this.context.actionSemantics.redeemFundsFromBanker} open_market_position = ${this.context.actionSemantics.openMarketPosition} finalize_turn = ${this.context.actionSemantics.finalizeTurn}`,
+    );
+    return this;
+  }
+
+  addMarketContextSummary() {
+    const visibleOpportunities =
+      this.context.marketContext.visibleOpportunities.length === 0
+        ? 'visible market opportunities: none.'
+        : `visible market opportunities: ${this.context.marketContext.visibleOpportunities
+            .map(
+              (opportunity) =>
+                `[id=${opportunity.opportunityId} title=${opportunity.title} risk=${opportunity.riskLevel} listedRound=${opportunity.listedRound} settlementRound=${opportunity.settlementRound} min=${opportunity.minCommitment} max=${opportunity.maxCommitment} estBps=${opportunity.estimatedNetReturnBps} worstBps=${opportunity.worstCaseReturnBps} bestBps=${opportunity.bestCaseReturnBps} summary=${opportunity.summary}]`,
+            )
+            .join(' ')}`;
+    const selfOpenPositions =
+      this.context.marketContext.selfOpenPositions.length === 0
+        ? 'self open market positions: none.'
+        : `self open market positions: ${this.context.marketContext.selfOpenPositions
+            .map(
+              (position) =>
+                `[id=${position.opportunityId} title=${position.opportunityTitle} principal=${position.principal} entryRound=${position.entryRound} settlementRound=${position.settlementRound}]`,
+            )
+            .join(' ')}`;
+
+    this.segments.push(
+      `Market context: ${visibleOpportunities} ${selfOpenPositions}`,
     );
     return this;
   }
@@ -117,8 +143,8 @@ export class OpenAiAgentSystemContextBuilder {
       case 'trader':
         this.segments.push(
           banker
-            ? `Role economics: as the trader, you improve your outcome by deciding whether to place funds with banker ${banker.agentId}, leave funds liquid, or redeem custody when useful. Loan-style borrowing from the banker is not implemented, so do not ask the banker to fund your trading book through payment requests. If you decide to move funds into banker custody, use place_funds_with_banker targeting banker ${banker.agentId}. If you decide to pull funds back out, use redeem_funds_from_banker targeting banker ${banker.agentId}. Do not assume a quoted custody rate, fee schedule, lockup, or redemption guarantee unless the context explicitly provides it.`
-            : 'Role economics: as the trader, you improve your outcome by choosing when to keep funds liquid versus committing them to available treasury mechanics.',
+            ? `Role economics: as the trader, you improve your outcome by deciding whether to place funds with banker ${banker.agentId}, leave funds liquid, or commit capital to listed market opportunities. Loan-style borrowing from the banker is not implemented, so do not ask the banker to fund your trading book through payment requests. If you decide to move funds into banker custody, use place_funds_with_banker targeting banker ${banker.agentId}. If you decide to pull funds back out, use redeem_funds_from_banker targeting banker ${banker.agentId}. If a market opportunity has attractive expected value relative to custody and liquidity, use open_market_position. Reject obviously weak opportunities when they are inferior to custody or cash.`
+            : 'Role economics: as the trader, you improve your outcome by choosing when to keep funds liquid versus committing them to available treasury or market mechanics.',
         );
         return this;
       case 'analyst':
@@ -155,6 +181,17 @@ export class OpenAiAgentSystemContextBuilder {
     if (pendingProposalForSelf) {
       this.segments.push(
         'Current opportunity: a payment request is waiting for your response, so resolving it may dominate passive play.',
+      );
+      return this;
+    }
+
+    if (
+      this.context.self.role === 'trader' &&
+      this.context.marketContext.visibleOpportunities.length > 0 &&
+      this.context.marketContext.selfOpenPositions.length === 0
+    ) {
+      this.segments.push(
+        'Current opportunity: at least one listed market opportunity is available. Compare its expected payoff and downside against banker custody and staying liquid before defaulting to passive carry.',
       );
       return this;
     }

@@ -28,6 +28,7 @@ export const recentAgentActionSchema = z.object({
     'reject_payment_request',
     'place_funds_with_banker',
     'redeem_funds_from_banker',
+    'open_market_position',
     'finalize_turn',
   ]),
   amount: z.string().min(1).optional(),
@@ -102,6 +103,32 @@ export const agentTurnContextSchema = z.object({
       }),
     ),
   }),
+  marketContext: z.object({
+    visibleOpportunities: z.array(
+      z.object({
+        opportunityId: z.string().min(1),
+        title: z.string().min(1),
+        summary: z.string().min(1),
+        riskLevel: z.enum(['low', 'high']),
+        listedRound: z.number().int().nonnegative(),
+        settlementRound: z.number().int().nonnegative(),
+        minCommitment: z.string(),
+        maxCommitment: z.string(),
+        estimatedNetReturnBps: z.number().int(),
+        worstCaseReturnBps: z.number().int(),
+        bestCaseReturnBps: z.number().int(),
+      }),
+    ),
+    selfOpenPositions: z.array(
+      z.object({
+        opportunityId: z.string().min(1),
+        opportunityTitle: z.string().min(1),
+        principal: z.string(),
+        entryRound: z.number().int().nonnegative(),
+        settlementRound: z.number().int().nonnegative(),
+      }),
+    ),
+  }),
   economicContext: z.object({
     objective: z.string().min(1),
     messagesDoNotMoveMoney: z.boolean(),
@@ -120,6 +147,7 @@ export const agentTurnContextSchema = z.object({
     rejectDirectTransferProposal: z.string().min(1),
     placeFundsWithBanker: z.string().min(1),
     redeemFundsFromBanker: z.string().min(1),
+    openMarketPosition: z.string().min(1),
     finalizeTurn: z.string().min(1),
   }),
 });
@@ -171,6 +199,12 @@ export const agentActionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('redeem_funds_from_banker'),
     recipientAgentId: z.string().min(1),
+    amount: z.string().min(1),
+    reasoning: z.string().min(1).optional(),
+  }),
+  z.object({
+    type: z.literal('open_market_position'),
+    opportunityId: z.string().min(1),
     amount: z.string().min(1),
     reasoning: z.string().min(1).optional(),
   }),

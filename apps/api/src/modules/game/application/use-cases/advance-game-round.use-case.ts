@@ -1,6 +1,7 @@
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import type { GameSessionRepositoryPort } from '../ports/game-session-repository.port.js';
+import { DefaultMarketOpportunityFactory } from '../services/default-market-opportunity.factory.js';
 
 export interface AdvanceGameRoundInput {
   gameSessionId: string;
@@ -11,6 +12,7 @@ export class AdvanceGameRoundUseCase {
   constructor(
     private readonly repository: GameSessionRepositoryPort,
     private readonly defaultInterestRateBps = 250,
+    private readonly marketOpportunityFactory = new DefaultMarketOpportunityFactory(),
   ) {}
 
   async execute(input: AdvanceGameRoundInput) {
@@ -87,7 +89,7 @@ export class AdvanceGameRoundUseCase {
       );
     });
 
-    const updatedSession = session
+    let updatedSession = session
       .withAgents(
         session.agents.map((agent) => {
           const accruedInterest = interestByBanker.get(agent.id);
@@ -100,16 +102,88 @@ export class AdvanceGameRoundUseCase {
           );
         }),
       )
-      .withBankerCustodyPositions(accruedPositions)
-      .advanceRound();
+      .withBankerCustodyPositions(accruedPositions);
 
-    await this.repository.save(
-      updatedSession,
-      accrualHistory.map((record) => ({
+    const settledMarketHistory = session.marketPositions.flatMap((position) => {
+      if (position.settlementRound !== session.currentRound + 1) {
+        return [];
+      }
+
+      const opportunity = session.marketOpportunities.find(
+        (candidate) => candidate.id === position.opportunityId,
+      );
+
+      if (!opportunity) {
+        throw new DomainInvariantError(
+          'Market position must reference an existing opportunity at settlement.',
+        );
+      }
+
+      const ownerAgent = updatedSession.agents.find(
+        (agent) => agent.id === position.ownerAgentId,
+      );
+
+      if (!ownerAgent) {
+        throw new DomainInvariantError(
+          'Market position owner must exist at settlement.',
+        );
+      }
+
+      const absoluteProfitOrLoss = position.principal.multiplyBps(
+        Math.abs(opportunity.resolutionReturnBps),
+      );
+      const profitOrLoss =
+        opportunity.resolutionReturnBps >= 0
+          ? absoluteProfitOrLoss
+          : Money.zero().subtract(absoluteProfitOrLoss);
+      const releasedBalance = ownerAgent.balance.release(position.principal);
+      const settledBalance = profitOrLoss.isNegative()
+        ? releasedBalance.debit(Money.zero().subtract(profitOrLoss))
+        : releasedBalance.credit(profitOrLoss);
+
+      updatedSession = updatedSession.withAgents(
+        updatedSession.agents.map((agent) =>
+          agent.id === ownerAgent.id
+            ? agent.withAccounts(settledBalance, agent.depositAccount)
+            : agent,
+        ),
+      );
+
+      return [
+        {
+          type: 'market_position_settled' as const,
+          gameSessionId: session.id,
+          roundNumber: session.currentRound + 1,
+          opportunityId: position.opportunityId,
+          opportunityTitle: position.opportunityTitle,
+          ownerAgentId: position.ownerAgentId,
+          principal: position.principal.toDecimal(),
+          profitOrLoss: profitOrLoss.toDecimal(),
+        },
+      ];
+    });
+
+    updatedSession = updatedSession
+      .withMarketPositions(
+        session.marketPositions.filter(
+          (position) => position.settlementRound !== session.currentRound + 1,
+        ),
+      )
+      .advanceRound()
+      .withMarketOpportunities(
+        this.marketOpportunityFactory.createForRound(
+          session.id,
+          session.currentRound + 1,
+        ),
+      );
+
+    await this.repository.save(updatedSession, [
+      ...accrualHistory.map((record) => ({
         type: 'custody_accrual' as const,
         ...record,
       })),
-    );
+      ...settledMarketHistory,
+    ]);
 
     return updatedSession;
   }

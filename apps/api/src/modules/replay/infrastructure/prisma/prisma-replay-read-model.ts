@@ -64,6 +64,22 @@ const replaySessionInclude = {
       createdAt: 'asc',
     },
   },
+  marketPositionOpens: {
+    include: {
+      ownerAgent: true,
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+  },
+  marketPositionSettlements: {
+    include: {
+      ownerAgent: true,
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+  },
   agentMessages: {
     include: {
       senderAgent: true,
@@ -176,6 +192,39 @@ function mapCustodyAccrualEvents(
   }));
 }
 
+function mapMarketPositionOpenEvents(
+  session: ReplaySessionRecord,
+): ReplayEventRecord[] {
+  return (session.marketPositionOpens ?? []).map((marketOpen) => ({
+    id: marketOpen.id,
+    type: 'market_position_opened',
+    createdAt: marketOpen.createdAt.toISOString(),
+    roundNumber: marketOpen.roundNumber,
+    amount: toAmountString(marketOpen.amount),
+    opportunityId: marketOpen.opportunityId,
+    opportunityTitle: marketOpen.opportunityTitle,
+    ownerAgentId: marketOpen.ownerAgentId,
+    ownerAgentName: marketOpen.ownerAgent.name,
+  }));
+}
+
+function mapMarketPositionSettlementEvents(
+  session: ReplaySessionRecord,
+): ReplayEventRecord[] {
+  return (session.marketPositionSettlements ?? []).map((settlement) => ({
+    id: settlement.id,
+    type: 'market_position_settled',
+    createdAt: settlement.createdAt.toISOString(),
+    roundNumber: settlement.roundNumber,
+    opportunityId: settlement.opportunityId,
+    opportunityTitle: settlement.opportunityTitle,
+    ownerAgentId: settlement.ownerAgentId,
+    ownerAgentName: settlement.ownerAgent.name,
+    amount: toAmountString(settlement.principal),
+    profitOrLoss: toAmountString(settlement.profitOrLoss),
+  }));
+}
+
 function mapMessageEvents(session: ReplaySessionRecord): ReplayEventRecord[] {
   return session.agentMessages.map((message) => ({
     id: message.id,
@@ -212,6 +261,8 @@ function toReplayActionType(
       return 'place_funds_with_banker';
     case 'REDEEM_FUNDS_FROM_BANKER':
       return 'redeem_funds_from_banker';
+    case 'OPEN_MARKET_POSITION':
+      return 'open_market_position';
     case 'FINALIZE_TURN':
       return 'finalize_turn';
   }
@@ -244,6 +295,8 @@ function mapReplayEvents(session: ReplaySessionRecord): ReplayEventRecord[] {
     ...mapCustodyPlacementEvents(session),
     ...mapCustodyRedemptionEvents(session),
     ...mapCustodyAccrualEvents(session),
+    ...mapMarketPositionOpenEvents(session),
+    ...mapMarketPositionSettlementEvents(session),
     ...mapMessageEvents(session),
     ...mapActionEvents(session),
   ].sort((left, right) => {

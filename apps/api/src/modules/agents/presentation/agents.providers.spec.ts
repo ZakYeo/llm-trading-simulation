@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { OpenMarketPositionUseCase } from '../../game/application/use-cases/open-market-position.use-case.js';
 import { PlaceFundsWithBankerUseCase } from '../../game/application/use-cases/place-funds-with-banker.use-case.js';
 import { RedeemFundsFromBankerUseCase } from '../../game/application/use-cases/redeem-funds-from-banker.use-case.js';
 import { TransferFundsUseCase } from '../../game/application/use-cases/transfer-funds.use-case.js';
@@ -87,6 +88,7 @@ describe('createAgentsProviders', () => {
         AGENT_ACTION_REPOSITORY,
         PlaceFundsWithBankerUseCase,
         RedeemFundsFromBankerUseCase,
+        OpenMarketPositionUseCase,
       ],
     });
     expect(providers[6]).toMatchObject({
@@ -99,6 +101,7 @@ describe('createAgentsProviders', () => {
         AgentSessionEventStreamService,
         PlaceFundsWithBankerUseCase,
         RedeemFundsFromBankerUseCase,
+        OpenMarketPositionUseCase,
         AgentTurnContextFactory,
         AgentActionValidator,
         AgentActionExecutor,

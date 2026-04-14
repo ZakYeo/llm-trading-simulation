@@ -2,6 +2,7 @@ import type { AgentAction } from '@llm-sim/mcp-contracts';
 
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import type { GameSessionRepositoryPort } from '../../../game/application/ports/game-session-repository.port.js';
+import type { OpenMarketPositionUseCase } from '../../../game/application/use-cases/open-market-position.use-case.js';
 import type { PlaceFundsWithBankerUseCase } from '../../../game/application/use-cases/place-funds-with-banker.use-case.js';
 import type { RedeemFundsFromBankerUseCase } from '../../../game/application/use-cases/redeem-funds-from-banker.use-case.js';
 import type { AgentGatewayPort } from '../ports/agent-gateway.port.js';
@@ -45,6 +46,13 @@ export class RunAgentCommunicationTurnUseCase {
     private readonly agentSessionEventStreamService: AgentSessionEventStreamService,
     private readonly placeFundsWithBankerUseCase: PlaceFundsWithBankerUseCase,
     private readonly redeemFundsFromBankerUseCase: RedeemFundsFromBankerUseCase,
+    private readonly openMarketPositionUseCase: OpenMarketPositionUseCase = {
+      execute: async () => {
+        throw new DomainInvariantError(
+          'Open market position use case is not configured.',
+        );
+      },
+    } as unknown as OpenMarketPositionUseCase,
     private readonly agentTurnContextFactory = new AgentTurnContextFactory(),
     private readonly agentActionValidator = new AgentActionValidator(),
     private readonly agentActionExecutor = new AgentActionExecutor(
@@ -52,6 +60,7 @@ export class RunAgentCommunicationTurnUseCase {
       agentActionRepository,
       placeFundsWithBankerUseCase,
       redeemFundsFromBankerUseCase,
+      openMarketPositionUseCase,
     ),
   ) {}
 

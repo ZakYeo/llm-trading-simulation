@@ -21,6 +21,7 @@ const agentDecisionJsonSchema = {
       'amount',
       'rationale',
       'proposalActionId',
+      'opportunityId',
       'reasoning',
     ],
     properties: {
@@ -35,6 +36,7 @@ const agentDecisionJsonSchema = {
           'reject_payment_request',
           'place_funds_with_banker',
           'redeem_funds_from_banker',
+          'open_market_position',
           'finalize_turn',
         ],
       },
@@ -53,6 +55,9 @@ const agentDecisionJsonSchema = {
       proposalActionId: {
         type: ['string', 'null'],
       },
+      opportunityId: {
+        type: ['string', 'null'],
+      },
       reasoning: {
         type: ['string', 'null'],
       },
@@ -67,6 +72,7 @@ interface RawAgentDecision {
   amount: string | null;
   rationale: string | null;
   proposalActionId: string | null;
+  opportunityId: string | null;
   reasoning: string | null;
 }
 
@@ -244,6 +250,19 @@ function normalizeAgentDecision(
         amount: rawDecision.amount,
         reasoning: rawDecision.reasoning ?? undefined,
       };
+    case 'open_market_position':
+      if (!rawDecision.opportunityId || !rawDecision.amount) {
+        throw new DomainInvariantError(
+          'open_market_position requires opportunityId and amount from the model.',
+        );
+      }
+
+      return {
+        type: rawDecision.type,
+        opportunityId: rawDecision.opportunityId,
+        amount: rawDecision.amount,
+        reasoning: rawDecision.reasoning ?? undefined,
+      };
     case 'finalize_turn':
       return {
         type: rawDecision.type,
@@ -266,6 +285,7 @@ export class OpenAiAgentGateway implements AgentGatewayPort {
       .addPeerSummary()
       .addEconomicContextSummary()
       .addTreasuryContextSummary()
+      .addMarketContextSummary()
       .addActionSemanticsSummary()
       .addActionableProposalSummary()
       .addNegotiationStateSummary()
@@ -326,6 +346,8 @@ export class OpenAiAgentGateway implements AgentGatewayPort {
             'proposalActionId' in parsedAction
               ? parsedAction.proposalActionId
               : null,
+          opportunityId:
+            'opportunityId' in parsedAction ? parsedAction.opportunityId : null,
           reasoning: parsedAction.reasoning ?? null,
         }),
       );

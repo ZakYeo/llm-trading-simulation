@@ -7,6 +7,7 @@ import { AdvanceGameRoundUseCase } from '../application/use-cases/advance-game-r
 import { CreateGameSessionUseCase } from '../application/use-cases/create-game-session.use-case.js';
 import { DepositToBankUseCase } from '../application/use-cases/deposit-to-bank.use-case.js';
 import { GetGameSessionUseCase } from '../application/use-cases/get-game-session.use-case.js';
+import { OpenMarketPositionUseCase } from '../application/use-cases/open-market-position.use-case.js';
 import { WithdrawFromBankUseCase } from '../application/use-cases/withdraw-from-bank.use-case.js';
 import { TransferFundsUseCase } from '../application/use-cases/transfer-funds.use-case.js';
 import { PlaceFundsWithBankerUseCase } from '../application/use-cases/place-funds-with-banker.use-case.js';
@@ -114,6 +115,12 @@ export function createGameProviders() {
         ledgerService: LedgerService,
       ) => new RedeemFundsFromBankerUseCase(repository, ledgerService),
       inject: [GAME_SESSION_REPOSITORY, LedgerService],
+    },
+    {
+      provide: OpenMarketPositionUseCase,
+      useFactory: (repository: GameSessionRepositoryPort) =>
+        new OpenMarketPositionUseCase(repository),
+      inject: [GAME_SESSION_REPOSITORY],
     },
   ];
 }

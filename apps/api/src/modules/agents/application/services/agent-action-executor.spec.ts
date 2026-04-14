@@ -94,6 +94,25 @@ class RecordingRedeemFundsFromBankerUseCase {
   }
 }
 
+class RecordingOpenMarketPositionUseCase {
+  calls: Array<{
+    gameSessionId: string;
+    ownerAgentId: string;
+    opportunityId: string;
+    amount: string;
+  }> = [];
+
+  async execute(input: {
+    gameSessionId: string;
+    ownerAgentId: string;
+    opportunityId: string;
+    amount: string;
+  }) {
+    this.calls.push(input);
+    return createSession();
+  }
+}
+
 function createSession() {
   return new GameSession({
     id: 'game-1',
@@ -171,6 +190,7 @@ describe('AgentActionExecutor', () => {
       new InMemoryAgentActionRepository(),
       placeFundsWithBankerUseCase as never,
       new RecordingRedeemFundsFromBankerUseCase() as never,
+      new RecordingOpenMarketPositionUseCase() as never,
     );
 
     const result = await executor.execute({
@@ -209,6 +229,7 @@ describe('AgentActionExecutor', () => {
       new InMemoryAgentActionRepository(),
       new RecordingPlaceFundsWithBankerUseCase() as never,
       redeemFundsFromBankerUseCase as never,
+      new RecordingOpenMarketPositionUseCase() as never,
     );
 
     const result = await executor.execute({
@@ -237,5 +258,42 @@ describe('AgentActionExecutor', () => {
       recipientAgentId: 'agent-1',
     });
     expect(result.savedMessage).toBeUndefined();
+  });
+
+  it('executes market position opens through the market use case', async () => {
+    const openMarketPositionUseCase = new RecordingOpenMarketPositionUseCase();
+    const executor = new AgentActionExecutor(
+      new InMemoryAgentMessageRepository(),
+      new InMemoryAgentActionRepository(),
+      new RecordingPlaceFundsWithBankerUseCase() as never,
+      new RecordingRedeemFundsFromBankerUseCase() as never,
+      openMarketPositionUseCase as never,
+    );
+
+    const result = await executor.execute({
+      session: createSession(),
+      agentId: 'agent-2',
+      turnNumber: 1,
+      action: {
+        type: 'open_market_position',
+        opportunityId: 'opp-risky',
+        amount: '5.0000',
+      },
+      recipientAgentId: null,
+    });
+
+    expect(openMarketPositionUseCase.calls).toEqual([
+      {
+        gameSessionId: 'game-1',
+        ownerAgentId: 'agent-2',
+        opportunityId: 'opp-risky',
+        amount: '5.0000',
+      },
+    ]);
+    expect(result.savedAction).toMatchObject({
+      actionType: 'open_market_position',
+      amount: '5.0000',
+      content: 'opp-risky',
+    });
   });
 });

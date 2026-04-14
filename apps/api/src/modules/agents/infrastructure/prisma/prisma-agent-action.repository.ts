@@ -24,6 +24,8 @@ function toPrismaActionType(
       return 'PLACE_FUNDS_WITH_BANKER';
     case 'redeem_funds_from_banker':
       return 'REDEEM_FUNDS_FROM_BANKER';
+    case 'open_market_position':
+      return 'OPEN_MARKET_POSITION';
     case 'finalize_turn':
       return 'FINALIZE_TURN';
   }
@@ -51,6 +53,8 @@ function fromPrismaActionType(
       return 'place_funds_with_banker';
     case 'REDEEM_FUNDS_FROM_BANKER':
       return 'redeem_funds_from_banker';
+    case 'OPEN_MARKET_POSITION':
+      return 'open_market_position';
     case 'FINALIZE_TURN':
       return 'finalize_turn';
   }

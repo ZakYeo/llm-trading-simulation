@@ -7,6 +7,8 @@ import { AccountBalance } from '../../domain/entities/account-balance.js';
 import { BankerCustodyPosition } from '../../domain/entities/banker-custody-position.js';
 import { GameAgent } from '../../domain/entities/game-agent.js';
 import { GameSession } from '../../domain/entities/game-session.js';
+import { MarketOpportunity } from '../../domain/entities/market-opportunity.js';
+import { MarketPosition } from '../../domain/entities/market-position.js';
 import type {
   GameSessionHistoryRecord,
   GameSessionRepositoryPort,
@@ -17,13 +19,14 @@ class InMemoryGameSessionRepository implements GameSessionRepositoryPort {
   constructor(private session: GameSession | null) {}
 
   saved: GameSession[] = [];
+  history: GameSessionHistoryRecord[] = [];
 
   async save(
     session: GameSession,
     history: GameSessionHistoryRecord[] = [],
   ): Promise<void> {
-    void history;
     this.saved.push(session);
+    this.history.push(...history);
     this.session = session;
   }
 
@@ -102,7 +105,88 @@ describe('AdvanceGameRoundUseCase', () => {
     expect(session.bankerCustodyPositions[0]?.accruedInterest.toDecimal()).toBe(
       '0.7500',
     );
+    expect(session.marketOpportunities).toHaveLength(2);
+    expect(session.marketOpportunities[0]?.listedRound).toBe(1);
     expect(repository.saved).toHaveLength(1);
+  });
+
+  it('settles one-round market positions and rotates the opportunity board', async () => {
+    const repository = new InMemoryGameSessionRepository(
+      new GameSession({
+        id: 'game-1',
+        name: 'Market Table',
+        status: 'active',
+        currentRound: 0,
+        agents: [
+          new GameAgent({
+            id: 'agent-1',
+            name: 'Banker Bot',
+            role: 'banker',
+            balance: AccountBalance.open(Money.fromDecimal('100.0000')),
+            depositAccount: DepositAccount.open(),
+          }),
+          new GameAgent({
+            id: 'agent-2',
+            name: 'Trader Bot',
+            role: 'trader',
+            balance: AccountBalance.restore(
+              Money.fromDecimal('95.0000'),
+              Money.fromDecimal('5.0000'),
+            ),
+            depositAccount: DepositAccount.open(),
+          }),
+        ],
+        marketOpportunities: [
+          new MarketOpportunity({
+            id: 'opp-risky',
+            title: 'Binary Event Volatility',
+            summary: 'High variance one-round event trade.',
+            riskLevel: 'high',
+            listedRound: 0,
+            settlementRound: 1,
+            minCommitment: '5.0000',
+            maxCommitment: '25.0000',
+            estimatedNetReturnBps: 300,
+            worstCaseReturnBps: -800,
+            bestCaseReturnBps: 1200,
+            resolutionReturnBps: 1200,
+          }),
+        ],
+        marketPositions: [
+          new MarketPosition({
+            opportunityId: 'opp-risky',
+            ownerAgentId: 'agent-2',
+            opportunityTitle: 'Binary Event Volatility',
+            principal: Money.fromDecimal('5.0000'),
+            entryRound: 0,
+            settlementRound: 1,
+          }),
+        ],
+      }),
+    );
+
+    const useCase = new AdvanceGameRoundUseCase(repository);
+    const session = await useCase.execute({
+      gameSessionId: 'game-1',
+      interestRateBps: 0,
+    });
+
+    expect(session.currentRound).toBe(1);
+    expect(session.agents[1]?.balance.available.toDecimal()).toBe('100.6000');
+    expect(session.agents[1]?.balance.reserved.toDecimal()).toBe('0.0000');
+    expect(session.marketPositions).toEqual([]);
+    expect(session.marketOpportunities).toHaveLength(2);
+    expect(session.marketOpportunities[0]?.id).toContain('-r1');
+    expect(repository.history).toContainEqual({
+      type: 'market_position_settled',
+      gameSessionId: 'game-1',
+      roundNumber: 1,
+      opportunityId: 'opp-risky',
+      opportunityTitle: 'Binary Event Volatility',
+      ownerAgentId: 'agent-2',
+      principal: '5.0000',
+      profitOrLoss: '0.6000',
+    });
   });
 
   it('uses the configured default interest rate when the request omits one', async () => {

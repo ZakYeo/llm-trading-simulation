@@ -8,6 +8,31 @@ import { GameAgent } from '../../domain/entities/game-agent.js';
 import { GameSession } from '../../domain/entities/game-session.js';
 import { PrismaGameSessionRepository } from './prisma-game-session.repository.js';
 
+function createMarketPersistenceDelegates() {
+  return {
+    marketOpportunity: {
+      async findMany() {
+        return [];
+      },
+      async deleteMany() {},
+      async upsert() {},
+    },
+    marketPosition: {
+      async findMany() {
+        return [];
+      },
+      async deleteMany() {},
+      async upsert() {},
+    },
+    marketPositionOpened: {
+      async create() {},
+    },
+    marketPositionSettled: {
+      async create() {},
+    },
+  };
+}
+
 describe('PrismaGameSessionRepository', () => {
   it('creates a session when it does not already exist', async () => {
     const receivedArgs: unknown[] = [];
@@ -59,6 +84,7 @@ describe('PrismaGameSessionRepository', () => {
       custodyAccrual: {
         async createMany() {},
       },
+      ...createMarketPersistenceDelegates(),
       deposit: {
         async create() {},
       },
@@ -114,6 +140,12 @@ describe('PrismaGameSessionRepository', () => {
             ],
           },
           bankerCustodyPositions: {
+            create: [],
+          },
+          marketOpportunities: {
+            create: [],
+          },
+          marketPositions: {
             create: [],
           },
         },
@@ -175,6 +207,7 @@ describe('PrismaGameSessionRepository', () => {
       custodyAccrual: {
         async createMany() {},
       },
+      ...createMarketPersistenceDelegates(),
       deposit: {
         async create() {},
       },
@@ -330,6 +363,7 @@ describe('PrismaGameSessionRepository', () => {
       custodyAccrual: {
         async createMany() {},
       },
+      ...createMarketPersistenceDelegates(),
       deposit: {
         async create() {},
       },
@@ -426,6 +460,7 @@ describe('PrismaGameSessionRepository', () => {
       custodyAccrual: {
         async createMany() {},
       },
+      ...createMarketPersistenceDelegates(),
       deposit: {
         async create() {},
       },
@@ -554,6 +589,7 @@ describe('PrismaGameSessionRepository', () => {
       custodyAccrual: {
         async createMany() {},
       },
+      ...createMarketPersistenceDelegates(),
       deposit: {
         async create() {},
       },
@@ -623,6 +659,7 @@ describe('PrismaGameSessionRepository', () => {
       custodyAccrual: {
         async createMany() {},
       },
+      ...createMarketPersistenceDelegates(),
       deposit: {
         async create() {},
       },
