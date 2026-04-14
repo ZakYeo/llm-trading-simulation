@@ -25,6 +25,14 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
     return `${position.opportunityId}:${position.ownerAgentId}`;
   }
 
+  private static toMarketSettlementHistoryKey(record: {
+    roundNumber: number;
+    opportunityId: string;
+    ownerAgentId: string;
+  }) {
+    return `${record.roundNumber}:${record.opportunityId}:${record.ownerAgentId}`;
+  }
+
   async save(
     session: GameSession,
     history: GameSessionHistoryRecord[] = [],
@@ -38,6 +46,14 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
         bankerAgentId: string;
         ownerAgentId: string;
         amount: string;
+      }> = [];
+      const createdMarketSettlements = new Map<string, string>();
+      const pendingResolutionParticipants: Array<{
+        marketOpportunityResolvedId: string;
+        ownerAgentId: string;
+        principal: string;
+        profitOrLoss: string;
+        settlementHistoryKey: string;
       }> = [];
 
       for (const record of history) {
@@ -113,18 +129,99 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
               },
             });
             break;
-          case 'market_position_settled':
-            await tx.marketPositionSettlement.create({
+          case 'market_opportunity_listed':
+            await tx.marketOpportunityListed.create({
               data: {
                 gameSessionId: record.gameSessionId,
                 roundNumber: record.roundNumber,
                 opportunityId: record.opportunityId,
                 opportunityTitle: record.opportunityTitle,
-                ownerAgentId: record.ownerAgentId,
-                principal: record.principal,
-                profitOrLoss: record.profitOrLoss,
+                opportunityCategory:
+                  record.opportunityCategory.toUpperCase() as never,
+                opportunitySummary: record.opportunitySummary,
+                opportunityRiskLevel:
+                  record.opportunityRiskLevel.toUpperCase() as never,
+                listedRound: record.listedRound,
+                settlementRound: record.settlementRound,
+                minCommitment: record.minCommitment,
+                maxCommitment: record.maxCommitment,
+                estimatedNetReturnBps: record.estimatedNetReturnBps,
+                worstCaseReturnBps: record.worstCaseReturnBps,
+                bestCaseReturnBps: record.bestCaseReturnBps,
               },
             });
+            break;
+          case 'market_position_settled':
+            {
+              const settlement = await tx.marketPositionSettlement.create({
+                data: {
+                  gameSessionId: record.gameSessionId,
+                  roundNumber: record.roundNumber,
+                  opportunityId: record.opportunityId,
+                  opportunityTitle: record.opportunityTitle,
+                  ownerAgentId: record.ownerAgentId,
+                  principal: record.principal,
+                  profitOrLoss: record.profitOrLoss,
+                },
+              });
+              createdMarketSettlements.set(
+                PrismaGameSessionRepository.toMarketSettlementHistoryKey(
+                  record,
+                ),
+                (settlement as { id: string }).id,
+              );
+            }
+            break;
+          case 'market_opportunity_resolved':
+            {
+              const resolvedEvent = await tx.marketOpportunityResolved.create({
+                data: {
+                  gameSessionId: record.gameSessionId,
+                  roundNumber: record.roundNumber,
+                  opportunityId: record.opportunityId,
+                  opportunityTitle: record.opportunityTitle,
+                  opportunityCategory:
+                    record.opportunityCategory.toUpperCase() as never,
+                  opportunitySummary: record.opportunitySummary,
+                  opportunityRiskLevel:
+                    record.opportunityRiskLevel.toUpperCase() as never,
+                  listedRound: record.listedRound,
+                  settlementRound: record.settlementRound,
+                  minCommitment: record.minCommitment,
+                  maxCommitment: record.maxCommitment,
+                  estimatedNetReturnBps: record.estimatedNetReturnBps,
+                  worstCaseReturnBps: record.worstCaseReturnBps,
+                  bestCaseReturnBps: record.bestCaseReturnBps,
+                  participantCount: record.participantCount,
+                  totalPrincipal: record.totalPrincipal,
+                  totalProfitOrLoss: record.totalProfitOrLoss,
+                },
+              });
+              const participantRecords = history.filter(
+                (
+                  candidate,
+                ): candidate is Extract<
+                  GameSessionHistoryRecord,
+                  { type: 'market_position_settled' }
+                > =>
+                  candidate.type === 'market_position_settled' &&
+                  candidate.roundNumber === record.roundNumber &&
+                  candidate.opportunityId === record.opportunityId,
+              );
+              pendingResolutionParticipants.push(
+                ...participantRecords.map((participant) => ({
+                  marketOpportunityResolvedId: (resolvedEvent as { id: string })
+                    .id,
+                  ownerAgentId: participant.ownerAgentId,
+                  principal: participant.principal,
+                  profitOrLoss: participant.profitOrLoss,
+                  settlementHistoryKey:
+                    PrismaGameSessionRepository.toMarketSettlementHistoryKey(
+                      participant,
+                    ),
+                })),
+              );
+            }
             break;
         }
       }
@@ -132,6 +229,31 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
       if (accruals.length > 0) {
         await tx.custodyAccrual.createMany({
           data: accruals,
+        });
+      }
+
+      if (pendingResolutionParticipants.length > 0) {
+        await tx.marketOpportunityResolutionParticipant.createMany({
+          data: pendingResolutionParticipants.flatMap((participant) => {
+            const marketPositionSettlementId = createdMarketSettlements.get(
+              participant.settlementHistoryKey,
+            );
+
+            if (!marketPositionSettlementId) {
+              return [];
+            }
+
+            return [
+              {
+                marketOpportunityResolvedId:
+                  participant.marketOpportunityResolvedId,
+                marketPositionSettlementId,
+                ownerAgentId: participant.ownerAgentId,
+                principal: participant.principal,
+                profitOrLoss: participant.profitOrLoss,
+              },
+            ];
+          }),
         });
       }
     });

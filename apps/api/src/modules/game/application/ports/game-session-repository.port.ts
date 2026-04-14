@@ -72,6 +72,45 @@ export interface MarketPositionSettledHistoryRecord {
   profitOrLoss: string;
 }
 
+export interface MarketOpportunityListedHistoryRecord {
+  type: 'market_opportunity_listed';
+  gameSessionId: string;
+  roundNumber: number;
+  opportunityId: string;
+  opportunityTitle: string;
+  opportunityCategory: GameSession['marketOpportunities'][number]['category'];
+  opportunitySummary: string;
+  opportunityRiskLevel: GameSession['marketOpportunities'][number]['riskLevel'];
+  listedRound: number;
+  settlementRound: number;
+  minCommitment: string;
+  maxCommitment: string;
+  estimatedNetReturnBps: number;
+  worstCaseReturnBps: number;
+  bestCaseReturnBps: number;
+}
+
+export interface MarketOpportunityResolvedHistoryRecord {
+  type: 'market_opportunity_resolved';
+  gameSessionId: string;
+  roundNumber: number;
+  opportunityId: string;
+  opportunityTitle: string;
+  opportunityCategory: GameSession['marketOpportunities'][number]['category'];
+  opportunitySummary: string;
+  opportunityRiskLevel: GameSession['marketOpportunities'][number]['riskLevel'];
+  listedRound: number;
+  settlementRound: number;
+  minCommitment: string;
+  maxCommitment: string;
+  estimatedNetReturnBps: number;
+  worstCaseReturnBps: number;
+  bestCaseReturnBps: number;
+  participantCount: number;
+  totalPrincipal: string;
+  totalProfitOrLoss: string;
+}
+
 export type GameSessionHistoryRecord =
   | TransferHistoryRecord
   | DepositHistoryRecord
@@ -79,8 +118,10 @@ export type GameSessionHistoryRecord =
   | CustodyPlacementHistoryRecord
   | CustodyRedemptionHistoryRecord
   | CustodyAccrualHistoryRecord
+  | MarketOpportunityListedHistoryRecord
   | MarketPositionOpenedHistoryRecord
-  | MarketPositionSettledHistoryRecord;
+  | MarketPositionSettledHistoryRecord
+  | MarketOpportunityResolvedHistoryRecord;
 
 export interface GameSessionRepositoryPort {
   save(

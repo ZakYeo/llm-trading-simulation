@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { GameReplayRecord } from '../lib/api';
 import {
+  formatBasisPoints,
+  formatCurrency,
+  formatSignedCurrency,
   formatTimestamp,
   getReplayEventDetail,
   getReplayEventLabel,
@@ -23,13 +26,20 @@ interface AuditTrailCardProps {
   latestRunSummary: string;
 }
 
-type ReplayFilter = 'all' | 'treasury' | 'messages' | 'actions' | 'transfers';
+type ReplayFilter =
+  | 'all'
+  | 'treasury'
+  | 'market'
+  | 'messages'
+  | 'actions'
+  | 'transfers';
 type ReplayWindow = '5' | '10' | '20' | 'all';
 type ReplayRoundWindow = '1' | '3' | '5' | 'all';
 
 const replayFilters: ReplayFilter[] = [
   'all',
   'treasury',
+  'market',
   'messages',
   'actions',
   'transfers',
@@ -57,6 +67,15 @@ function matchesFilter(
 
   if (filter === 'actions') {
     return event.type === 'action';
+  }
+
+  if (filter === 'market') {
+    return (
+      event.type === 'market_opportunity_listed' ||
+      event.type === 'market_position_opened' ||
+      event.type === 'market_position_settled' ||
+      event.type === 'market_opportunity_resolved'
+    );
   }
 
   return (
@@ -258,14 +277,17 @@ export function AuditTrailCard({
 
                       {group.events.map((event) => {
                         const eventDetail = getReplayEventDetail(event);
+                        const isMarketOpportunityEvent =
+                          event.type === 'market_opportunity_listed' ||
+                          event.type === 'market_opportunity_resolved';
 
                         return (
                           <article
                             key={event.id}
                             className={
                               animatedEventIds.includes(event.id)
-                                ? 'timeline-event timeline-event-enter'
-                                : 'timeline-event'
+                                ? `timeline-event${isMarketOpportunityEvent ? ' market-opportunity-event' : ''} timeline-event-enter`
+                                : `timeline-event${isMarketOpportunityEvent ? ' market-opportunity-event' : ''}`
                             }
                           >
                             <div className={`event-badge event-${event.type}`}>
@@ -276,8 +298,110 @@ export function AuditTrailCard({
                                 <strong>{getReplayEventLabel(event)}</strong>
                                 <span>{formatTimestamp(event.createdAt)}</span>
                               </div>
-                              {eventDetail ? (
+                              {eventDetail && !isMarketOpportunityEvent ? (
                                 <p className="event-detail">{eventDetail}</p>
+                              ) : null}
+                              {event.type === 'market_opportunity_listed' ? (
+                                <dl className="event-meta-grid">
+                                  <div>
+                                    <dt>Risk</dt>
+                                    <dd>{event.opportunityRiskLevel}</dd>
+                                  </div>
+                                  <div>
+                                    <dt>Window</dt>
+                                    <dd>
+                                      R{event.listedRound} to R
+                                      {event.settlementRound}
+                                    </dd>
+                                  </div>
+                                  <div>
+                                    <dt>Commitment</dt>
+                                    <dd>
+                                      {event.minCommitment &&
+                                      event.maxCommitment
+                                        ? `${formatCurrency(event.minCommitment)} - ${formatCurrency(event.maxCommitment)}`
+                                        : 'N/A'}
+                                    </dd>
+                                  </div>
+                                  <div>
+                                    <dt>Range</dt>
+                                    <dd>
+                                      {typeof event.worstCaseReturnBps ===
+                                        'number' &&
+                                      typeof event.bestCaseReturnBps ===
+                                        'number'
+                                        ? `${formatBasisPoints(event.worstCaseReturnBps)} to ${formatBasisPoints(event.bestCaseReturnBps)}`
+                                        : 'N/A'}
+                                    </dd>
+                                  </div>
+                                </dl>
+                              ) : null}
+                              {event.type === 'market_opportunity_resolved' ? (
+                                <>
+                                  <dl className="event-meta-grid">
+                                    <div>
+                                      <dt>Participants</dt>
+                                      <dd>{event.participantCount ?? 0}</dd>
+                                    </div>
+                                    <div>
+                                      <dt>Total principal</dt>
+                                      <dd>
+                                        {event.totalPrincipal
+                                          ? formatCurrency(event.totalPrincipal)
+                                          : '0.00'}
+                                      </dd>
+                                    </div>
+                                    <div>
+                                      <dt>Net PnL</dt>
+                                      <dd>
+                                        {event.totalProfitOrLoss
+                                          ? formatSignedCurrency(
+                                              event.totalProfitOrLoss,
+                                            )
+                                          : '0.00'}
+                                      </dd>
+                                    </div>
+                                    <div>
+                                      <dt>Window</dt>
+                                      <dd>
+                                        R{event.listedRound} to R
+                                        {event.settlementRound}
+                                      </dd>
+                                    </div>
+                                  </dl>
+                                  <div className="event-participants">
+                                    {event.participantSettlements?.length ? (
+                                      event.participantSettlements.map(
+                                        (participant) => (
+                                          <div
+                                            key={`${event.id}-${participant.ownerAgentId}`}
+                                            className="event-participant-row"
+                                          >
+                                            <strong>
+                                              {participant.ownerAgentName}
+                                            </strong>
+                                            <span>
+                                              Principal{' '}
+                                              {formatCurrency(
+                                                participant.principal,
+                                              )}
+                                            </span>
+                                            <span>
+                                              PnL{' '}
+                                              {formatSignedCurrency(
+                                                participant.profitOrLoss,
+                                              )}
+                                            </span>
+                                          </div>
+                                        ),
+                                      )
+                                    ) : (
+                                      <p className="event-detail">
+                                        No traders bought this opportunity.
+                                      </p>
+                                    )}
+                                  </div>
+                                </>
                               ) : null}
                               <p className="event-meta">
                                 Round {event.roundNumber ?? selectedRound ?? 0}

@@ -102,8 +102,10 @@ export interface ReplayEventRecord {
     | 'custody_placement'
     | 'custody_redemption'
     | 'custody_accrual'
+    | 'market_opportunity_listed'
     | 'market_position_opened'
-    | 'market_position_settled';
+    | 'market_position_settled'
+    | 'market_opportunity_resolved';
   createdAt: string;
   amount?: string;
   roundNumber?: number;
@@ -120,6 +122,25 @@ export interface ReplayEventRecord {
   ownerAgentName?: string;
   opportunityId?: string;
   opportunityTitle?: string;
+  opportunityCategory?: MarketOpportunityRecord['category'];
+  opportunitySummary?: string;
+  opportunityRiskLevel?: MarketOpportunityRecord['riskLevel'];
+  listedRound?: number;
+  settlementRound?: number;
+  minCommitment?: string;
+  maxCommitment?: string;
+  estimatedNetReturnBps?: number;
+  worstCaseReturnBps?: number;
+  bestCaseReturnBps?: number;
+  participantCount?: number;
+  totalPrincipal?: string;
+  totalProfitOrLoss?: string;
+  participantSettlements?: Array<{
+    ownerAgentId: string;
+    ownerAgentName: string;
+    principal: string;
+    profitOrLoss: string;
+  }>;
   senderAgentId?: string;
   senderAgentName?: string;
   recipientAgentId?: string | null;

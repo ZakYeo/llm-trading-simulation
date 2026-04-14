@@ -213,6 +213,96 @@ describe('AdvanceGameRoundUseCase', () => {
       principal: '5.0000',
       profitOrLoss: '0.6000',
     });
+    expect(repository.history).toContainEqual({
+      type: 'market_opportunity_resolved',
+      gameSessionId: 'game-1',
+      roundNumber: 1,
+      opportunityId: 'opp-risky',
+      opportunityTitle: 'Binary Event Volatility',
+      opportunityCategory: 'event',
+      opportunitySummary: 'High variance one-round event trade.',
+      opportunityRiskLevel: 'high',
+      listedRound: 0,
+      settlementRound: 1,
+      minCommitment: '5.0000',
+      maxCommitment: '25.0000',
+      estimatedNetReturnBps: 300,
+      worstCaseReturnBps: -800,
+      bestCaseReturnBps: 1200,
+      participantCount: 1,
+      totalPrincipal: '5.0000',
+      totalProfitOrLoss: '0.6000',
+    });
+    expect(
+      repository.history.some(
+        (record) => record.type === 'market_opportunity_listed',
+      ),
+    ).toBe(true);
+  });
+
+  it('records an opportunity resolution even when no trader bought it', async () => {
+    const repository = new InMemoryGameSessionRepository(
+      new GameSession({
+        id: 'game-1',
+        name: 'Market Table',
+        status: 'active',
+        currentRound: 0,
+        agents: [
+          new GameAgent({
+            id: 'agent-1',
+            name: 'Banker Bot',
+            role: 'banker',
+            balance: AccountBalance.open(Money.fromDecimal('100.0000')),
+            depositAccount: DepositAccount.open(),
+          }),
+        ],
+        marketOpportunities: [
+          new MarketOpportunity({
+            id: 'opp-idle',
+            templateId: 'carry-stable-01',
+            category: 'carry',
+            title: 'Carry Ladder',
+            summary: 'Stable carry opportunity.',
+            riskLevel: 'low',
+            listedRound: 0,
+            settlementRound: 1,
+            minCommitment: '5.0000',
+            maxCommitment: '25.0000',
+            estimatedNetReturnBps: 60,
+            worstCaseReturnBps: -20,
+            bestCaseReturnBps: 120,
+            resolutionReturnBps: 60,
+          }),
+        ],
+      }),
+    );
+
+    const useCase = new AdvanceGameRoundUseCase(repository);
+    await useCase.execute({
+      gameSessionId: 'game-1',
+      interestRateBps: 0,
+    });
+
+    expect(repository.history).toContainEqual({
+      type: 'market_opportunity_resolved',
+      gameSessionId: 'game-1',
+      roundNumber: 1,
+      opportunityId: 'opp-idle',
+      opportunityTitle: 'Carry Ladder',
+      opportunityCategory: 'carry',
+      opportunitySummary: 'Stable carry opportunity.',
+      opportunityRiskLevel: 'low',
+      listedRound: 0,
+      settlementRound: 1,
+      minCommitment: '5.0000',
+      maxCommitment: '25.0000',
+      estimatedNetReturnBps: 60,
+      worstCaseReturnBps: -20,
+      bestCaseReturnBps: 120,
+      participantCount: 0,
+      totalPrincipal: '0.0000',
+      totalProfitOrLoss: '0.0000',
+    });
   });
 
   it('uses the configured default interest rate when the request omits one', async () => {

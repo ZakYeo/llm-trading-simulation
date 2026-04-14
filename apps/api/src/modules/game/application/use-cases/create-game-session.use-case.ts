@@ -7,6 +7,7 @@ import { Money } from '../../../shared/domain/value-objects/money.js';
 import { AccountBalance } from '../../domain/entities/account-balance.js';
 import { GameAgent } from '../../domain/entities/game-agent.js';
 import { GameSession } from '../../domain/entities/game-session.js';
+import type { MarketOpportunity } from '../../domain/entities/market-opportunity.js';
 import type { GameSessionRepositoryPort } from '../ports/game-session-repository.port.js';
 import { MarketOpportunityBoardFactory } from '../services/market-opportunity-board.factory.js';
 
@@ -56,18 +57,53 @@ export class CreateGameSessionUseCase {
 
     const sessionId = this.idGenerator.next();
 
+    const marketOpportunities =
+      this.marketOpportunityBoardFactory.createInitialBoard(sessionId, 1);
+
     const session = new GameSession({
       id: sessionId,
       name: input.name,
       status: 'setup',
       currentRound: 1,
       agents,
-      marketOpportunities:
-        this.marketOpportunityBoardFactory.createInitialBoard(sessionId, 1),
+      marketOpportunities,
     });
 
-    await this.repository.save(session);
+    await this.repository.save(
+      session,
+      marketOpportunities.map((opportunity) =>
+        CreateGameSessionUseCase.toMarketOpportunityListedHistory(
+          session.id,
+          session.currentRound,
+          opportunity,
+        ),
+      ),
+    );
 
     return session;
+  }
+
+  private static toMarketOpportunityListedHistory(
+    gameSessionId: string,
+    roundNumber: number,
+    opportunity: MarketOpportunity,
+  ) {
+    return {
+      type: 'market_opportunity_listed' as const,
+      gameSessionId,
+      roundNumber,
+      opportunityId: opportunity.id,
+      opportunityTitle: opportunity.title,
+      opportunityCategory: opportunity.category,
+      opportunitySummary: opportunity.summary,
+      opportunityRiskLevel: opportunity.riskLevel,
+      listedRound: opportunity.listedRound,
+      settlementRound: opportunity.settlementRound,
+      minCommitment: opportunity.minCommitment,
+      maxCommitment: opportunity.maxCommitment,
+      estimatedNetReturnBps: opportunity.estimatedNetReturnBps,
+      worstCaseReturnBps: opportunity.worstCaseReturnBps,
+      bestCaseReturnBps: opportunity.bestCaseReturnBps,
+    };
   }
 }

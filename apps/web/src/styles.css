@@ -964,6 +964,11 @@ select {
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.market-opportunity-event {
+  padding: 10px 14px;
+  gap: 12px;
+}
+
 .timeline-event-enter {
   animation: timeline-event-enter 420ms cubic-bezier(0.2, 0.9, 0.2, 1);
   transform-origin: bottom center;
@@ -1003,6 +1008,14 @@ select {
   color: #9be7b5;
 }
 
+.event-market_opportunity_listed,
+.event-market_position_opened,
+.event-market_position_settled,
+.event-market_opportunity_resolved {
+  background: rgba(104, 184, 255, 0.14);
+  color: #9fd0ff;
+}
+
 .event-content {
   min-width: 0;
 }
@@ -1018,10 +1031,62 @@ select {
   font-size: 0.82rem;
 }
 
+.event-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px 14px;
+  margin: 10px 0 0;
+}
+
+.market-opportunity-event .event-meta-grid {
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+
+.event-meta-grid dt {
+  margin: 0;
+  color: rgba(244, 239, 230, 0.54);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.event-meta-grid dd {
+  margin: 4px 0 0;
+}
+
+.event-participants {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.market-opportunity-event .event-participants {
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.event-participant-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.market-opportunity-event .event-participant-row {
+  padding: 8px 10px;
+}
+
 .event-detail,
 .event-meta,
 .error-copy {
   margin: 0;
+}
+
+.event-meta {
+  margin-top: 6px;
 }
 
 .error-copy {

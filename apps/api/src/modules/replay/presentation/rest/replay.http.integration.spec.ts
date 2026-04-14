@@ -148,6 +148,8 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
         actionType?: string;
         relatedProposalActionId?: string;
         content?: string;
+        participantCount?: number;
+        totalPrincipal?: string;
       }>;
     };
 
@@ -182,6 +184,21 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
           event.type === 'action' &&
           event.actionType === 'place_funds_with_banker' &&
           event.amount === '10',
+      ),
+    ).toBe(true);
+    expect(
+      replay.events.some(
+        (event) =>
+          event.type === 'market_opportunity_listed' &&
+          event.totalPrincipal === undefined,
+      ),
+    ).toBe(true);
+    expect(
+      replay.events.some(
+        (event) =>
+          event.type === 'market_opportunity_resolved' &&
+          event.participantCount === 0 &&
+          event.totalPrincipal === '0',
       ),
     ).toBe(true);
     expect(

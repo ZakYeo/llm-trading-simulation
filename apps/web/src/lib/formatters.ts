@@ -9,6 +9,13 @@ export function formatCurrency(value: string) {
   }).format(amount);
 }
 
+export function formatSignedCurrency(value: string) {
+  const amount = Number.parseFloat(value);
+  const formatted = formatCurrency(value);
+
+  return amount > 0 ? `+${formatted}` : formatted;
+}
+
 export function formatTimestamp(value: string) {
   return new Intl.DateTimeFormat('en-GB', {
     hour: '2-digit',
@@ -40,12 +47,20 @@ export function getReplayEventLabel(event: GameReplayRecord['events'][number]) {
     return `${event.ownerAgentName} accrued custody interest`;
   }
 
+  if (event.type === 'market_opportunity_listed') {
+    return `${event.opportunityTitle} listed`;
+  }
+
   if (event.type === 'market_position_opened') {
     return `${event.ownerAgentName} opened ${event.opportunityTitle}`;
   }
 
   if (event.type === 'market_position_settled') {
     return `${event.ownerAgentName} settled ${event.opportunityTitle}`;
+  }
+
+  if (event.type === 'market_opportunity_resolved') {
+    return `${event.opportunityTitle} resolved`;
   }
 
   if (event.type === 'message') {
@@ -110,8 +125,32 @@ export function getReplayEventDetail(
 
   if (event.type === 'market_position_settled') {
     return event.profitOrLoss
-      ? `PnL ${formatCurrency(event.profitOrLoss)}`
+      ? `PnL ${formatSignedCurrency(event.profitOrLoss)}`
       : null;
+  }
+
+  if (event.type === 'market_opportunity_listed') {
+    return event.opportunitySummary ?? null;
+  }
+
+  if (event.type === 'market_opportunity_resolved') {
+    const participantCount = event.participantCount ?? 0;
+    const totalPrincipal = event.totalPrincipal
+      ? formatCurrency(event.totalPrincipal)
+      : null;
+    const totalProfitOrLoss = event.totalProfitOrLoss
+      ? formatSignedCurrency(event.totalProfitOrLoss)
+      : null;
+
+    return [
+      participantCount === 1
+        ? '1 trader participated'
+        : `${participantCount} traders participated`,
+      totalPrincipal ? `Total principal ${totalPrincipal}` : null,
+      totalProfitOrLoss ? `Net PnL ${totalProfitOrLoss}` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
   }
 
   if (event.type === 'action') {

@@ -17,6 +17,17 @@ function createMarketPersistenceDelegates() {
       async deleteMany() {},
       async upsert() {},
     },
+    marketOpportunityListed: {
+      async create() {},
+    },
+    marketOpportunityResolved: {
+      async create() {
+        return { id: 'market-opportunity-resolved-1' };
+      },
+    },
+    marketOpportunityResolutionParticipant: {
+      async createMany() {},
+    },
     marketPosition: {
       async findMany() {
         return [];
@@ -28,7 +39,9 @@ function createMarketPersistenceDelegates() {
       async create() {},
     },
     marketPositionSettlement: {
-      async create() {},
+      async create() {
+        return { id: 'market-position-settlement-1' };
+      },
     },
   };
 }

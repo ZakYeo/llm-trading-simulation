@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client"
-  output   = "../src/generated/prisma-client-runtime"
+  output   = "../src/generated/prisma-client-runtime-v2"
 }
 
 datasource db {
@@ -75,6 +75,8 @@ model GameSession {
   custodyAccruals CustodyAccrual[]
   marketOpportunities MarketOpportunity[]
   marketPositions MarketPosition[]
+  marketOpportunityListedEvents MarketOpportunityListed[]
+  marketOpportunityResolvedEvents MarketOpportunityResolved[]
   marketPositionOpens MarketPositionOpen[]
   marketPositionSettlements MarketPositionSettlement[]
 }
@@ -107,6 +109,7 @@ model Agent {
   marketPositions MarketPosition[]
   marketPositionOpens MarketPositionOpen[]
   marketPositionSettlements MarketPositionSettlement[]
+  marketPositionSettlementParticipants MarketOpportunityResolutionParticipant[]
 }
 
 model AgentBalance {
@@ -306,6 +309,26 @@ model MarketPositionOpen {
   ownerAgent       Agent @relation(fields: [ownerAgentId], references: [id], onDelete: Cascade)
 }
 
+model MarketOpportunityListed {
+  id                    String   @id @default(uuid())
+  gameSessionId         String
+  roundNumber           Int
+  opportunityId         String
+  opportunityTitle      String
+  opportunityCategory   MarketOpportunityCategory
+  opportunitySummary    String
+  opportunityRiskLevel  MarketOpportunityRiskLevel
+  listedRound           Int
+  settlementRound       Int
+  minCommitment         Decimal  @db.Decimal(18, 4)
+  maxCommitment         Decimal  @db.Decimal(18, 4)
+  estimatedNetReturnBps Int
+  worstCaseReturnBps    Int
+  bestCaseReturnBps     Int
+  createdAt             DateTime @default(now())
+  gameSession           GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+}
+
 model MarketPositionSettlement {
   id               String   @id @default(uuid())
   gameSessionId     String
@@ -318,4 +341,44 @@ model MarketPositionSettlement {
   createdAt        DateTime @default(now())
   gameSession      GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
   ownerAgent       Agent @relation(fields: [ownerAgentId], references: [id], onDelete: Cascade)
+  resolutionParticipants MarketOpportunityResolutionParticipant[]
+}
+
+model MarketOpportunityResolved {
+  id                    String   @id @default(uuid())
+  gameSessionId         String
+  roundNumber           Int
+  opportunityId         String
+  opportunityTitle      String
+  opportunityCategory   MarketOpportunityCategory
+  opportunitySummary    String
+  opportunityRiskLevel  MarketOpportunityRiskLevel
+  listedRound           Int
+  settlementRound       Int
+  minCommitment         Decimal  @db.Decimal(18, 4)
+  maxCommitment         Decimal  @db.Decimal(18, 4)
+  estimatedNetReturnBps Int
+  worstCaseReturnBps    Int
+  bestCaseReturnBps     Int
+  participantCount      Int
+  totalPrincipal        Decimal  @db.Decimal(18, 4)
+  totalProfitOrLoss     Decimal  @db.Decimal(18, 4)
+  createdAt             DateTime @default(now())
+  gameSession           GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  participants          MarketOpportunityResolutionParticipant[]
+}
+
+model MarketOpportunityResolutionParticipant {
+  id                      String   @id @default(uuid())
+  marketOpportunityResolvedId String
+  marketPositionSettlementId  String
+  ownerAgentId            String
+  principal               Decimal  @db.Decimal(18, 4)
+  profitOrLoss            Decimal  @db.Decimal(18, 4)
+  createdAt               DateTime @default(now())
+  marketOpportunityResolved MarketOpportunityResolved @relation(fields: [marketOpportunityResolvedId], references: [id], onDelete: Cascade)
+  marketPositionSettlement  MarketPositionSettlement @relation(fields: [marketPositionSettlementId], references: [id], onDelete: Cascade)
+  ownerAgent              Agent @relation(fields: [ownerAgentId], references: [id], onDelete: Cascade)
+
+  @@unique([marketOpportunityResolvedId, marketPositionSettlementId])
 }

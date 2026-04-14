@@ -14,13 +14,14 @@ import { CreateGameSessionUseCase } from './create-game-session.use-case.js';
 
 class InMemoryGameSessionRepository implements GameSessionRepositoryPort {
   saved: GameSession[] = [];
+  history: GameSessionHistoryRecord[] = [];
 
   async save(
     session: GameSession,
     history: GameSessionHistoryRecord[] = [],
   ): Promise<void> {
-    void history;
     this.saved.push(session);
+    this.history.push(...history);
   }
 
   async findById(id: string): Promise<GameSession | null> {
@@ -171,6 +172,11 @@ describe('CreateGameSessionUseCase', () => {
     ]);
     expect(repository.saved).toHaveLength(1);
     expect(repository.saved[0]).toBe(session);
+    expect(
+      repository.history.filter(
+        (record) => record.type === 'market_opportunity_listed',
+      ),
+    ).toHaveLength(2);
   });
 
   it('allows custom rosters, including duplicate roles and omitted roles', async () => {

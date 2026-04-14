@@ -1,5 +1,7 @@
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
+import type { MarketOpportunity } from '../../domain/entities/market-opportunity.js';
+import type { MarketPosition } from '../../domain/entities/market-position.js';
 import type { GameSessionRepositoryPort } from '../ports/game-session-repository.port.js';
 import { MarketOpportunityBoardFactory } from '../services/market-opportunity-board.factory.js';
 import { MarketOpportunityResolutionService } from '../services/market-opportunity-resolution.service.js';
@@ -106,8 +108,9 @@ export class AdvanceGameRoundUseCase {
       )
       .withBankerCustodyPositions(accruedPositions);
 
+    const nextRound = session.currentRound + 1;
     const settledMarketHistory = session.marketPositions.flatMap((position) => {
-      if (position.settlementRound !== session.currentRound + 1) {
+      if (position.settlementRound !== nextRound) {
         return [];
       }
 
@@ -159,7 +162,7 @@ export class AdvanceGameRoundUseCase {
         {
           type: 'market_position_settled' as const,
           gameSessionId: session.id,
-          roundNumber: session.currentRound + 1,
+          roundNumber: nextRound,
           opportunityId: position.opportunityId,
           opportunityTitle: position.opportunityTitle,
           ownerAgentId: position.ownerAgentId,
@@ -169,7 +172,21 @@ export class AdvanceGameRoundUseCase {
       ];
     });
 
-    const nextRound = session.currentRound + 1;
+    const resolvedMarketHistory = session.marketOpportunities
+      .filter((opportunity) => opportunity.settlementRound === nextRound)
+      .map((opportunity) =>
+        AdvanceGameRoundUseCase.toMarketOpportunityResolvedHistory(
+          session.id,
+          nextRound,
+          opportunity,
+          session.marketPositions.filter(
+            (position) => position.opportunityId === opportunity.id,
+          ),
+          settledMarketHistory.filter(
+            (record) => record.opportunityId === opportunity.id,
+          ),
+        ),
+      );
     const remainingMarketPositions = session.marketPositions.filter(
       (position) => position.settlementRound !== nextRound,
     );
@@ -197,8 +214,81 @@ export class AdvanceGameRoundUseCase {
         ...record,
       })),
       ...settledMarketHistory,
+      ...resolvedMarketHistory,
+      ...marketOpportunityAdditions.map((opportunity) =>
+        AdvanceGameRoundUseCase.toMarketOpportunityListedHistory(
+          session.id,
+          nextRound,
+          opportunity,
+        ),
+      ),
     ]);
 
     return updatedSession;
+  }
+
+  private static toMarketOpportunityListedHistory(
+    gameSessionId: string,
+    roundNumber: number,
+    opportunity: MarketOpportunity,
+  ) {
+    return {
+      type: 'market_opportunity_listed' as const,
+      gameSessionId,
+      roundNumber,
+      opportunityId: opportunity.id,
+      opportunityTitle: opportunity.title,
+      opportunityCategory: opportunity.category,
+      opportunitySummary: opportunity.summary,
+      opportunityRiskLevel: opportunity.riskLevel,
+      listedRound: opportunity.listedRound,
+      settlementRound: opportunity.settlementRound,
+      minCommitment: opportunity.minCommitment,
+      maxCommitment: opportunity.maxCommitment,
+      estimatedNetReturnBps: opportunity.estimatedNetReturnBps,
+      worstCaseReturnBps: opportunity.worstCaseReturnBps,
+      bestCaseReturnBps: opportunity.bestCaseReturnBps,
+    };
+  }
+
+  private static toMarketOpportunityResolvedHistory(
+    gameSessionId: string,
+    roundNumber: number,
+    opportunity: MarketOpportunity,
+    settledPositions: MarketPosition[],
+    settlements: Array<{
+      principal: string;
+      profitOrLoss: string;
+    }>,
+  ) {
+    const totalPrincipal = settledPositions.reduce(
+      (sum, position) => sum.add(position.principal),
+      Money.zero(),
+    );
+    const totalProfitOrLoss = settlements.reduce(
+      (sum, settlement) => sum.add(Money.fromDecimal(settlement.profitOrLoss)),
+      Money.zero(),
+    );
+
+    return {
+      type: 'market_opportunity_resolved' as const,
+      gameSessionId,
+      roundNumber,
+      opportunityId: opportunity.id,
+      opportunityTitle: opportunity.title,
+      opportunityCategory: opportunity.category,
+      opportunitySummary: opportunity.summary,
+      opportunityRiskLevel: opportunity.riskLevel,
+      listedRound: opportunity.listedRound,
+      settlementRound: opportunity.settlementRound,
+      minCommitment: opportunity.minCommitment,
+      maxCommitment: opportunity.maxCommitment,
+      estimatedNetReturnBps: opportunity.estimatedNetReturnBps,
+      worstCaseReturnBps: opportunity.worstCaseReturnBps,
+      bestCaseReturnBps: opportunity.bestCaseReturnBps,
+      participantCount: settledPositions.length,
+      totalPrincipal: totalPrincipal.toDecimal(),
+      totalProfitOrLoss: totalProfitOrLoss.toDecimal(),
+    };
   }
 }

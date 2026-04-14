@@ -7,6 +7,8 @@ import type {
   CustodyPlacementHistoryRecord,
   CustodyRedemptionHistoryRecord,
   DepositHistoryRecord,
+  MarketOpportunityListedHistoryRecord,
+  MarketOpportunityResolvedHistoryRecord,
   MarketPositionOpenedHistoryRecord,
   MarketPositionSettledHistoryRecord,
   TransferHistoryRecord,
@@ -27,6 +29,21 @@ type MarketPositionSettledCreateData = Omit<
   MarketPositionSettledHistoryRecord,
   'type'
 >;
+type MarketOpportunityListedCreateData = Omit<
+  MarketOpportunityListedHistoryRecord,
+  'type'
+>;
+type MarketOpportunityResolvedCreateData = Omit<
+  MarketOpportunityResolvedHistoryRecord,
+  'type'
+>;
+type MarketOpportunityResolutionParticipantCreateData = {
+  marketOpportunityResolvedId: string;
+  marketPositionSettlementId: string;
+  ownerAgentId: string;
+  principal: string;
+  profitOrLoss: string;
+};
 
 export interface PrismaGameSessionDelegate {
   create(args: {
@@ -241,6 +258,20 @@ export interface PrismaMarketPositionSettlementDelegate {
   create(args: { data: MarketPositionSettledCreateData }): Promise<unknown>;
 }
 
+export interface PrismaMarketOpportunityListedDelegate {
+  create(args: { data: MarketOpportunityListedCreateData }): Promise<unknown>;
+}
+
+export interface PrismaMarketOpportunityResolvedDelegate {
+  create(args: { data: MarketOpportunityResolvedCreateData }): Promise<unknown>;
+}
+
+export interface PrismaMarketOpportunityResolutionParticipantDelegate {
+  createMany(args: {
+    data: MarketOpportunityResolutionParticipantCreateData[];
+  }): Promise<unknown>;
+}
+
 export interface PrismaClientLike {
   gameSession: PrismaGameSessionDelegate;
   agent: PrismaAgentDelegate;
@@ -254,6 +285,9 @@ export interface PrismaClientLike {
   bankerCustodyPosition: PrismaBankerCustodyPositionDelegate;
   marketOpportunity: PrismaMarketOpportunityDelegate;
   marketPosition: PrismaMarketPositionDelegate;
+  marketOpportunityListed: PrismaMarketOpportunityListedDelegate;
+  marketOpportunityResolved: PrismaMarketOpportunityResolvedDelegate;
+  marketOpportunityResolutionParticipant: PrismaMarketOpportunityResolutionParticipantDelegate;
   marketPositionOpen: PrismaMarketPositionOpenDelegate;
   marketPositionSettlement: PrismaMarketPositionSettlementDelegate;
   $transaction<T>(callback: (tx: PrismaClientLike) => Promise<T>): Promise<T>;

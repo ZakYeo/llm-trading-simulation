@@ -80,6 +80,26 @@ const replaySessionInclude = {
       createdAt: 'asc',
     },
   },
+  marketOpportunityListedEvents: {
+    orderBy: {
+      createdAt: 'asc',
+    },
+  },
+  marketOpportunityResolvedEvents: {
+    include: {
+      participants: {
+        include: {
+          ownerAgent: true,
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+  },
   agentMessages: {
     include: {
       senderAgent: true,
@@ -208,6 +228,59 @@ function mapMarketPositionOpenEvents(
   }));
 }
 
+function toOpportunityCategory(
+  value: ReplaySessionRecord['marketOpportunityListedEvents'][number]['opportunityCategory'],
+): NonNullable<ReplayEventRecord['opportunityCategory']> {
+  switch (value) {
+    case 'CARRY':
+      return 'carry';
+    case 'EVENT':
+      return 'event';
+    case 'TREND':
+      return 'trend';
+    case 'ARBITRAGE':
+      return 'arbitrage';
+    case 'LIQUIDITY_STRESS':
+      return 'liquidity_stress';
+    case 'SPECIAL_SITUATION':
+      return 'special_situation';
+  }
+}
+
+function toOpportunityRiskLevel(
+  value: ReplaySessionRecord['marketOpportunityListedEvents'][number]['opportunityRiskLevel'],
+): NonNullable<ReplayEventRecord['opportunityRiskLevel']> {
+  switch (value) {
+    case 'LOW':
+      return 'low';
+    case 'HIGH':
+      return 'high';
+  }
+}
+
+function mapMarketOpportunityListedEvents(
+  session: ReplaySessionRecord,
+): ReplayEventRecord[] {
+  return (session.marketOpportunityListedEvents ?? []).map((event) => ({
+    id: event.id,
+    type: 'market_opportunity_listed',
+    createdAt: event.createdAt.toISOString(),
+    roundNumber: event.roundNumber,
+    opportunityId: event.opportunityId,
+    opportunityTitle: event.opportunityTitle,
+    opportunityCategory: toOpportunityCategory(event.opportunityCategory),
+    opportunitySummary: event.opportunitySummary,
+    opportunityRiskLevel: toOpportunityRiskLevel(event.opportunityRiskLevel),
+    listedRound: event.listedRound,
+    settlementRound: event.settlementRound,
+    minCommitment: toAmountString(event.minCommitment),
+    maxCommitment: toAmountString(event.maxCommitment),
+    estimatedNetReturnBps: event.estimatedNetReturnBps,
+    worstCaseReturnBps: event.worstCaseReturnBps,
+    bestCaseReturnBps: event.bestCaseReturnBps,
+  }));
+}
+
 function mapMarketPositionSettlementEvents(
   session: ReplaySessionRecord,
 ): ReplayEventRecord[] {
@@ -222,6 +295,38 @@ function mapMarketPositionSettlementEvents(
     ownerAgentName: settlement.ownerAgent.name,
     amount: toAmountString(settlement.principal),
     profitOrLoss: toAmountString(settlement.profitOrLoss),
+  }));
+}
+
+function mapMarketOpportunityResolvedEvents(
+  session: ReplaySessionRecord,
+): ReplayEventRecord[] {
+  return (session.marketOpportunityResolvedEvents ?? []).map((event) => ({
+    id: event.id,
+    type: 'market_opportunity_resolved',
+    createdAt: event.createdAt.toISOString(),
+    roundNumber: event.roundNumber,
+    opportunityId: event.opportunityId,
+    opportunityTitle: event.opportunityTitle,
+    opportunityCategory: toOpportunityCategory(event.opportunityCategory),
+    opportunitySummary: event.opportunitySummary,
+    opportunityRiskLevel: toOpportunityRiskLevel(event.opportunityRiskLevel),
+    listedRound: event.listedRound,
+    settlementRound: event.settlementRound,
+    minCommitment: toAmountString(event.minCommitment),
+    maxCommitment: toAmountString(event.maxCommitment),
+    estimatedNetReturnBps: event.estimatedNetReturnBps,
+    worstCaseReturnBps: event.worstCaseReturnBps,
+    bestCaseReturnBps: event.bestCaseReturnBps,
+    participantCount: event.participantCount,
+    totalPrincipal: toAmountString(event.totalPrincipal),
+    totalProfitOrLoss: toAmountString(event.totalProfitOrLoss),
+    participantSettlements: event.participants.map((participant) => ({
+      ownerAgentId: participant.ownerAgentId,
+      ownerAgentName: participant.ownerAgent.name,
+      principal: toAmountString(participant.principal),
+      profitOrLoss: toAmountString(participant.profitOrLoss),
+    })),
   }));
 }
 
@@ -295,8 +400,10 @@ function mapReplayEvents(session: ReplaySessionRecord): ReplayEventRecord[] {
     ...mapCustodyPlacementEvents(session),
     ...mapCustodyRedemptionEvents(session),
     ...mapCustodyAccrualEvents(session),
+    ...mapMarketOpportunityListedEvents(session),
     ...mapMarketPositionOpenEvents(session),
     ...mapMarketPositionSettlementEvents(session),
+    ...mapMarketOpportunityResolvedEvents(session),
     ...mapMessageEvents(session),
     ...mapActionEvents(session),
   ].sort((left, right) => {
