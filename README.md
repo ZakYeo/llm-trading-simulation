@@ -280,6 +280,28 @@ corepack pnpm test:integration
 
 `test:integration` automatically prepares the test database first. It loads `.env` when present and defaults `TEST_DATABASE_URL` to the conventional local test database shown above.
 
+Run the full Playwright suite:
+
+```bash
+corepack pnpm test:e2e
+```
+
+Run the deterministic frontend state suite:
+
+```bash
+corepack pnpm test:e2e:deterministic
+```
+
+This suite keeps the browser, React app, and TanStack Query behavior real, but fulfills the frontend API requests with controlled Playwright route mocks so UI updates can be asserted against exact backend snapshots.
+
+Run the thinner real-stack smoke suite:
+
+```bash
+corepack pnpm test:e2e:ui-smoke
+```
+
+Use `test:e2e:ui-smoke` to verify the Docker/Postgres-backed API and Vite frontend still boot and wire together correctly. Use `test:e2e:deterministic` when you want stable coverage of frontend updates such as custody totals, interest accrual, market-position opening, settlement visibility, and replay synchronization.
+
 Round-advance requests can omit `interestRateBps`. In that case the backend uses `DEFAULT_INTEREST_RATE_BPS` or falls back to `250`.
 
 Run linting:
@@ -334,6 +356,9 @@ This test uses the real OpenAI API and requires `OPENAI_API_KEY` to be present i
 - `corepack pnpm db:migrate:deploy`: apply migrations without prompts
 - `corepack pnpm db:test:prepare`: reset and prepare the test database
 - `corepack pnpm test:all`: run unit tests, then integration tests
+- `corepack pnpm test:e2e`: run the full Playwright suite
+- `corepack pnpm test:e2e:deterministic`: run the deterministic frontend-state Playwright suite
+- `corepack pnpm test:e2e:ui-smoke`: run the real-stack Playwright smoke suite
 - `corepack pnpm test:integration`: prepare the test database and run integration tests
 - `corepack pnpm test:integration:openai`: run integration tests with the live OpenAI suite enabled
 

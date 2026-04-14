@@ -15,6 +15,7 @@
     "test": "corepack pnpm -r test",
     "test:all": "corepack pnpm test && corepack pnpm test:integration",
     "test:e2e": "playwright test",
+    "test:e2e:deterministic": "playwright test apps/web/e2e/state-rendering.spec.ts apps/web/e2e/state-transitions.spec.ts apps/web/e2e/error-states.spec.ts",
     "test:e2e:install": "playwright install chromium",
     "test:e2e:ui-smoke": "playwright test --grep @smoke",
     "test:integration": "corepack pnpm db:test:prepare && corepack pnpm -r --if-present test:integration",
