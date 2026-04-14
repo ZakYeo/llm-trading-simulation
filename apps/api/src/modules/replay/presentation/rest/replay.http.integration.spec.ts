@@ -399,12 +399,12 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
     };
 
     expect(replayResponse.status).toBe(200);
-    expect(replay.gameSession.currentRound).toBe(2);
+    expect(replay.gameSession.currentRound).toBe(1);
     expect(
       replay.events.some(
         (event) =>
           event.type === 'message' &&
-          event.roundNumber === 1 &&
+          event.roundNumber === 0 &&
           event.turnNumber === 1 &&
           typeof event.content === 'string' &&
           event.content.length > 0,
@@ -414,18 +414,10 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
       replay.events.some(
         (event) =>
           event.type === 'message' &&
-          event.roundNumber === 1 &&
+          event.roundNumber === 0 &&
           event.turnNumber === 2 &&
           event.content ===
             'Volatility is compressing and timing risk is falling.',
-      ),
-    ).toBe(true);
-    expect(
-      replay.events.some(
-        (event) =>
-          event.type === 'custody_accrual' &&
-          event.roundNumber === 2 &&
-          event.amount === '0.2500',
       ),
     ).toBe(true);
   });

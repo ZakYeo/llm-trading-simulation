@@ -19,6 +19,19 @@ DROP DATABASE IF EXISTS ${TEST_DB_NAME} WITH (FORCE);
 CREATE DATABASE ${TEST_DB_NAME};
 SQL
 
+ATTEMPTS=0
+until docker compose exec -T postgres \
+  psql -U postgres -d "${TEST_DB_NAME}" -c 'SELECT 1' >/dev/null 2>&1; do
+  ATTEMPTS=$((ATTEMPTS + 1))
+
+  if [ "${ATTEMPTS}" -ge 10 ]; then
+    echo "Test database ${TEST_DB_NAME} did not become ready in time." >&2
+    exit 1
+  fi
+
+  sleep 1
+done
+
 DATABASE_URL="$TEST_DATABASE_URL" corepack pnpm --filter @llm-sim/api exec prisma migrate deploy >/dev/null
 
 printf 'Prepared test database: %s\n' "$TEST_DATABASE_URL"
