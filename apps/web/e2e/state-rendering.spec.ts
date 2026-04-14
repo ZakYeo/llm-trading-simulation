@@ -21,7 +21,7 @@ test('renders a connected session with live opportunities and no trader exposure
   await expect(topbarMetric(page, 'Session')).toContainText(
     initial.session.name,
   );
-  await expect(topbarMetric(page, 'Round')).toContainText('0');
+  await expect(topbarMetric(page, 'Round')).toContainText('1');
   await expect(page.locator('.market-shell')).toContainText(
     '2 opportunities / 0 positions',
   );

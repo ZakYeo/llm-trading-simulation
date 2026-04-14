@@ -31,7 +31,7 @@ test('@smoke connects to a seeded session and renders the expected numbers', asy
   await expect(topbarMetric(page, 0)).toContainText(
     'Playwright Seeded Session',
   );
-  await expect(topbarMetric(page, 1)).toContainText('1');
+  await expect(topbarMetric(page, 1)).toContainText('2');
   await expect(page.locator('.balance-card').first()).toContainText('110.25');
   await expect(page.locator('.balance-card').nth(1)).toContainText('90.00');
   await expect(page.locator('.treasury-shell')).toContainText('10.25');
@@ -57,6 +57,7 @@ test('@smoke shows only session startup on first load and collapses it after con
   await expect(
     page.getByRole('heading', { name: 'Session Startup' }),
   ).toHaveCount(1);
+  await expect(page.locator('.topbar-metric')).toHaveCount(0);
   await expect(page.getByText('Run The Session')).toHaveCount(0);
   await expect(page.getByText('Audit Trail')).toHaveCount(0);
   await expect(page.getByText('Session Workspace')).toHaveCount(0);
@@ -92,7 +93,7 @@ test('@smoke runs one turn and updates balances, positions, and replay after com
   await page.getByRole('button', { name: '1 turn' }).click();
   await page.getByRole('button', { name: /Run next 1 turn/ }).click();
 
-  await expect(page.locator('.activity-note strong')).toContainText(
+  await expect(topbarMetric(page, 3)).toContainText(
     `Ran 1 turn for session ${session.id}`,
   );
   await expect(page.locator('.balance-card').nth(1)).toContainText(
@@ -136,7 +137,7 @@ test('@smoke shows a live in-progress banner near the audit trail while turns ar
   await expect(page.locator('.live-run-banner')).toContainText(
     'Running 1 turn...',
   );
-  await expect(page.locator('.activity-note strong')).toContainText(
+  await expect(topbarMetric(page, 3)).toContainText(
     `Ran 1 turn for session ${session.id}`,
   );
 });
@@ -154,7 +155,7 @@ test('@smoke advances one round and reflects custody accrual in the UI', async (
   await connectToSession(page, session.id);
   await page.getByRole('button', { name: 'Advance round settlement' }).click();
 
-  await expect(topbarMetric(page, 1)).toContainText('1');
+  await expect(topbarMetric(page, 1)).toContainText('2');
   await expect(page.locator('.treasury-shell')).toContainText('10.25');
   await expect(page.locator('.treasury-shell')).toContainText('0.25');
   await expect(page.locator('.balance-card').first()).toContainText('110.25');
@@ -198,7 +199,5 @@ test('@smoke surfaces orchestration failures without showing fake completed-turn
   await expect(page.locator('.market-shell')).toContainText(
     'No market positions opened yet.',
   );
-  await expect(page.locator('.activity-note strong')).toContainText(
-    'No actions yet.',
-  );
+  await expect(topbarMetric(page, 3)).toContainText('Awaiting operator input');
 });

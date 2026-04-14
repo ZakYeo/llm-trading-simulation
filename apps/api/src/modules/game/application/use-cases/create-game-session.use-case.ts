@@ -60,10 +60,10 @@ export class CreateGameSessionUseCase {
       id: sessionId,
       name: input.name,
       status: 'setup',
-      currentRound: 0,
+      currentRound: 1,
       agents,
       marketOpportunities:
-        this.marketOpportunityBoardFactory.createInitialBoard(sessionId, 0),
+        this.marketOpportunityBoardFactory.createInitialBoard(sessionId, 1),
     });
 
     await this.repository.save(session);

@@ -12,7 +12,7 @@ CREATE TABLE "GameSession" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "status" "GameStatus" NOT NULL DEFAULT 'SETUP',
-    "currentRound" INTEGER NOT NULL DEFAULT 0,
+    "currentRound" INTEGER NOT NULL DEFAULT 1,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -135,4 +135,3 @@ ALTER TABLE "Withdrawal" ADD CONSTRAINT "Withdrawal_gameSessionId_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "Withdrawal" ADD CONSTRAINT "Withdrawal_agentId_fkey" FOREIGN KEY ("agentId") REFERENCES "Agent"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-

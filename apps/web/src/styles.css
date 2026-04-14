@@ -63,7 +63,7 @@ select {
 .session-card-enter {
   opacity: 0;
   transform: translateY(20px) scale(0.985);
-  animation: session-card-enter 520ms cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
+  animation: session-card-enter 1040ms cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
   animation-delay: var(--card-enter-delay, 0ms);
 }
 
@@ -94,6 +94,8 @@ select {
 
 .topbar-side {
   gap: 12px;
+  align-content: start;
+  min-height: 232px;
 }
 
 .topbar-actions {
@@ -124,7 +126,6 @@ select {
 .lede,
 .empty-copy,
 .event-detail,
-.activity-note span,
 .section-copy p {
   color: rgba(244, 239, 230, 0.8);
 }
@@ -139,6 +140,12 @@ select {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.topbar-metrics-enter {
+  opacity: 0;
+  transform: translateY(18px) scale(0.985);
+  animation: topbar-metrics-enter 640ms cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
 }
 
 .ghost-button {
@@ -192,7 +199,6 @@ select {
 }
 
 .topbar-metric strong,
-.activity-note strong,
 .treasury-stat-card strong,
 .treasury-position-card strong,
 .balance-card dd {
@@ -486,15 +492,6 @@ select {
 .action-button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-}
-
-.activity-note {
-  display: grid;
-  gap: 6px;
-  padding: 16px;
-  border-radius: 18px;
-  background: rgba(152, 193, 255, 0.08);
-  border: 1px solid rgba(152, 193, 255, 0.14);
 }
 
 .live-run-banner {
@@ -846,6 +843,12 @@ select {
   gap: 16px;
 }
 
+.timeline-scroll,
+.help-modal {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(244, 177, 94, 0.55) rgba(255, 255, 255, 0.08);
+}
+
 .timeline-scroll {
   height: min(64vh, 680px);
   overflow-y: auto;
@@ -859,13 +862,35 @@ select {
   align-content: start;
 }
 
-.timeline-scroll::-webkit-scrollbar {
-  width: 10px;
+.timeline-scroll::-webkit-scrollbar,
+.help-modal::-webkit-scrollbar {
+  width: 12px;
 }
 
-.timeline-scroll::-webkit-scrollbar-thumb {
+.timeline-scroll::-webkit-scrollbar-track,
+.help-modal::-webkit-scrollbar-track {
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.timeline-scroll::-webkit-scrollbar-thumb,
+.help-modal::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(244, 177, 94, 0.72),
+    rgba(121, 178, 255, 0.56)
+  );
+  border: 2px solid rgba(8, 20, 30, 0.42);
+}
+
+.timeline-scroll::-webkit-scrollbar-thumb:hover,
+.help-modal::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(244, 177, 94, 0.84),
+    rgba(121, 178, 255, 0.68)
+  );
 }
 
 .replay-toolbar {
@@ -1021,6 +1046,18 @@ select {
   from {
     opacity: 0;
     transform: translateY(20px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes topbar-metrics-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
   }
 
   to {

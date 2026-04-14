@@ -6,7 +6,6 @@ interface OperateCardProps {
   selectedSessionId: string;
   currentRound?: number;
   turnCount: number;
-  latestRunSummary: string;
   isRunning: boolean;
   isAdvancing: boolean;
   runError?: string;
@@ -20,7 +19,6 @@ export function OperateCard({
   selectedSessionId,
   currentRound,
   turnCount,
-  latestRunSummary,
   isRunning,
   isAdvancing,
   runError,
@@ -42,7 +40,7 @@ export function OperateCard({
         compact
         actions={
           <>
-            <span className="status-chip muted">Round {currentRound ?? 0}</span>
+            <span className="status-chip muted">Round {currentRound ?? 1}</span>
             <CardCollapseButton
               isExpanded={isExpanded}
               expandLabel="Maximise operate section"
@@ -107,11 +105,6 @@ export function OperateCard({
             >
               {isAdvancing ? 'Advancing round...' : 'Advance round settlement'}
             </button>
-          </div>
-
-          <div className="activity-note">
-            <span>Latest activity</span>
-            <strong>{latestRunSummary || 'No actions yet.'}</strong>
           </div>
 
           {runError ? <p className="error-copy">{runError}</p> : null}

@@ -225,7 +225,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
     ]);
     expect(listedSessions[0]).toMatchObject({
       status: 'setup',
-      currentRound: 0,
+      currentRound: 1,
     });
   });
 
@@ -353,7 +353,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
 
     expect(redeemResponse.status).toBe(200);
     expect(advancedSession.status).toBe('active');
-    expect(advancedSession.currentRound).toBe(1);
+    expect(advancedSession.currentRound).toBe(2);
     expect(advancedBanker?.availableBalance).toBe('136.0000');
     expect(advancedTrader?.availableBalance).toBe('65.0000');
     expect(advancedSession.bankerCustodyPositions).toEqual([
@@ -457,7 +457,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
     );
 
     expect(advanceResponse.status).toBe(200);
-    expect(advancedSession.currentRound).toBe(1);
+    expect(advancedSession.currentRound).toBe(2);
     expect(advancedBanker?.availableBalance).toBe('141.0000');
     expect(advancedSession.bankerCustodyPositions).toEqual([
       {

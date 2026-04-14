@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import {
   buildCustodyAccrualTransition,
@@ -7,6 +7,10 @@ import {
 } from './helpers/fixtures';
 import { mockSessionApiScenario } from './helpers/mock-api';
 import { connectToSession, topbarMetric } from './helpers/ui';
+
+function latestActivityMetric(page: Page) {
+  return topbarMetric(page, 'Latest activity');
+}
 
 test('updates balances, exposure, and replay after a trader opens a market position', async ({
   page,
@@ -28,7 +32,7 @@ test('updates balances, exposure, and replay after a trader opens a market posit
   await page.getByRole('button', { name: '1 turn' }).click();
   await page.getByRole('button', { name: /Run next 1 turn/ }).click();
 
-  await expect(page.locator('.activity-note strong')).toContainText(
+  await expect(latestActivityMetric(page)).toContainText(
     `Ran 1 turn for session ${scenario.initial.session.id}`,
   );
   await expect(page.locator('.market-shell')).toContainText(
@@ -64,9 +68,9 @@ test('updates treasury totals, replay, and round metrics after interest accrues'
 
   await page.getByRole('button', { name: 'Advance round settlement' }).click();
 
-  await expect(topbarMetric(page, 'Round')).toContainText('1');
-  await expect(page.locator('.activity-note strong')).toContainText(
-    'Advanced to round 1 with 250 bps custody interest',
+  await expect(topbarMetric(page, 'Round')).toContainText('2');
+  await expect(latestActivityMetric(page)).toContainText(
+    'Advanced to round 2 with 250 bps custody interest',
   );
   await expect(page.locator('.treasury-shell')).toContainText('10.25');
   await expect(page.locator('.treasury-shell')).toContainText('0.25');
@@ -94,9 +98,9 @@ test('updates market settlement status and replay after the round advances', asy
 
   await page.getByRole('button', { name: 'Advance round settlement' }).click();
 
-  await expect(topbarMetric(page, 'Round')).toContainText('1');
+  await expect(topbarMetric(page, 'Round')).toContainText('2');
   await expect(page.locator('.market-shell')).toContainText('Settled');
-  await expect(page.locator('.market-shell')).toContainText('Round 1');
+  await expect(page.locator('.market-shell')).toContainText('Round 2');
   await expect(page.locator('.balance-card').nth(1)).toContainText('123.00');
   await expect(page.locator('.balance-card').nth(1)).toContainText('0.00');
   await expect(page.locator('.replay-panel')).toContainText(

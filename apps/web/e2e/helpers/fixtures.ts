@@ -26,7 +26,7 @@ export function buildBankerTraderSessionSummary(
     id: sessionId,
     name: 'Deterministic Session',
     status: 'active',
-    currentRound: 0,
+    currentRound: 1,
     ...overrides,
   };
 }
@@ -128,7 +128,7 @@ export function buildActionEvent(input: {
     agentName: 'Trader Bot',
     actionType: input.actionType,
     amount: input.amount,
-    roundNumber: input.roundNumber ?? 0,
+    roundNumber: input.roundNumber ?? 1,
     turnNumber: input.turnNumber ?? 1,
   });
 }
@@ -148,7 +148,7 @@ export function buildOpenMarketPositionEvent(input: {
     opportunityId: input.opportunityId ?? 'opp-event-1',
     opportunityTitle: input.opportunityTitle ?? 'Binary Event Volatility',
     amount: input.amount,
-    roundNumber: input.roundNumber ?? 0,
+    roundNumber: input.roundNumber ?? 1,
   });
 }
 
@@ -165,7 +165,7 @@ export function buildCustodyPlacementEvent(input: {
     bankerAgentId,
     bankerAgentName: 'Banker Bot',
     amount: input.amount,
-    roundNumber: input.roundNumber ?? 0,
+    roundNumber: input.roundNumber ?? 1,
   });
 }
 
@@ -182,7 +182,7 @@ export function buildCustodyAccrualEvent(input: {
     bankerAgentId,
     bankerAgentName: 'Banker Bot',
     amount: input.amount,
-    roundNumber: input.roundNumber ?? 1,
+    roundNumber: input.roundNumber ?? 2,
   });
 }
 
@@ -201,7 +201,7 @@ export function buildMarketSettlementEvent(input: {
     opportunityId: input.opportunityId ?? 'opp-event-1',
     opportunityTitle: input.opportunityTitle ?? 'Binary Event Volatility',
     profitOrLoss: input.profitOrLoss,
-    roundNumber: input.roundNumber ?? 1,
+    roundNumber: input.roundNumber ?? 2,
   });
 }
 
@@ -292,8 +292,8 @@ export function buildOpenMarketPositionTransition() {
         ownerAgentId: traderAgentId,
         opportunityTitle: 'Binary Event Volatility',
         principal: '20.0000',
-        entryRound: 0,
-        settlementRound: 1,
+        entryRound: 1,
+        settlementRound: 2,
       },
     ],
   });
@@ -314,11 +314,11 @@ export function buildOpenMarketPositionTransition() {
   };
   const orchestratedRound: OrchestratedRoundRecord = {
     gameSessionId: nextSession.id,
-    roundNumber: 0,
+    roundNumber: 1,
     turns: [
       {
         gameSessionId: nextSession.id,
-        roundNumber: 0,
+        roundNumber: 1,
         turnNumber: 1,
         actions: [
           {
@@ -347,7 +347,7 @@ export function buildOpenMarketPositionTransition() {
 export function buildCustodyAccrualTransition() {
   const initial = buildCustodyPlacedState();
   const nextSession = buildBankerTraderSession({
-    currentRound: 1,
+    currentRound: 2,
     agents: [
       {
         id: bankerAgentId,
@@ -377,7 +377,7 @@ export function buildCustodyAccrualTransition() {
   const nextState: MockApiState = {
     sessions: [
       buildBankerTraderSessionSummary({
-        currentRound: 1,
+        currentRound: 2,
       }),
     ],
     session: nextSession,
@@ -423,7 +423,7 @@ export function buildMarketSettlementTransition() {
     ]),
   };
   const nextSession = buildBankerTraderSession({
-    currentRound: 1,
+    currentRound: 2,
     agents: [
       {
         id: bankerAgentId,
@@ -446,15 +446,15 @@ export function buildMarketSettlementTransition() {
         ownerAgentId: traderAgentId,
         opportunityTitle: 'Binary Event Volatility',
         principal: '20.0000',
-        entryRound: 0,
-        settlementRound: 1,
+        entryRound: 1,
+        settlementRound: 2,
       },
     ],
   });
   const nextState: MockApiState = {
     sessions: [
       buildBankerTraderSessionSummary({
-        currentRound: 1,
+        currentRound: 2,
       }),
     ],
     session: nextSession,

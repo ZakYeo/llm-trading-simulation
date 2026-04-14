@@ -59,7 +59,7 @@ model GameSession {
   id           String       @id @default(uuid())
   name         String
   status       GameStatus    @default(SETUP)
-  currentRound Int          @default(0)
+  currentRound Int          @default(1)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   agents       Agent[]

@@ -49,6 +49,9 @@ export function App() {
   const [revealedSessionId, setRevealedSessionId] = useState<string | null>(
     null,
   );
+  const [revealedHeaderSessionId, setRevealedHeaderSessionId] = useState<
+    string | null
+  >(null);
   const previousVisibleSessionId = useRef<string | null>(null);
 
   const sessionQuery = useQuery({
@@ -151,6 +154,7 @@ export function App() {
   const selectedSession = sessionQuery.data;
   const replay = replayQuery.data;
   const hasSelectedSession = selectedSessionId.length > 0;
+  const shouldShowHeaderMetrics = Boolean(selectedSession);
   const canRemoveAgent = agentDrafts.length > 1;
   const isTurnFlowInProgress =
     orchestrateMutation.isPending || advanceRoundMutation.isPending;
@@ -160,6 +164,8 @@ export function App() {
       ? 'Applying round settlement...'
       : '';
   const shouldAnimateSessionCards = selectedSession?.id === revealedSessionId;
+  const shouldAnimateHeaderMetrics =
+    selectedSession?.id === revealedHeaderSessionId;
 
   function handleSelectedSessionIdChange(value: string) {
     setSelectedSessionId(value);
@@ -183,6 +189,7 @@ export function App() {
     if (!selectedSession) {
       previousVisibleSessionId.current = null;
       setRevealedSessionId(null);
+      setRevealedHeaderSessionId(null);
       return;
     }
 
@@ -192,15 +199,22 @@ export function App() {
 
     previousVisibleSessionId.current = selectedSession.id;
     setRevealedSessionId(selectedSession.id);
+    setRevealedHeaderSessionId(selectedSession.id);
 
-    const timer = window.setTimeout(() => {
+    const workspaceTimer = window.setTimeout(() => {
       setRevealedSessionId((current) =>
         current === selectedSession.id ? null : current,
       );
-    }, 900);
+    }, 1250);
+    const headerTimer = window.setTimeout(() => {
+      setRevealedHeaderSessionId((current) =>
+        current === selectedSession.id ? null : current,
+      );
+    }, 980);
 
     return () => {
-      window.clearTimeout(timer);
+      window.clearTimeout(workspaceTimer);
+      window.clearTimeout(headerTimer);
     };
   }, [selectedSession]);
 
@@ -270,24 +284,34 @@ export function App() {
             </button>
           </div>
 
-          <div className="topbar-metrics">
-            <article className="topbar-metric">
-              <span>Session</span>
-              <strong>{selectedSession?.name ?? 'No session connected'}</strong>
-            </article>
-            <article className="topbar-metric">
-              <span>Round</span>
-              <strong>{selectedSession?.currentRound ?? 0}</strong>
-            </article>
-            <article className="topbar-metric">
-              <span>Status</span>
-              <strong>{selectedSession?.status ?? 'setup'}</strong>
-            </article>
-            <article className="topbar-metric highlight">
-              <span>Latest activity</span>
-              <strong>{latestRunSummary || 'Awaiting operator input'}</strong>
-            </article>
-          </div>
+          {shouldShowHeaderMetrics ? (
+            <div
+              className={
+                shouldAnimateHeaderMetrics
+                  ? 'topbar-metrics topbar-metrics-enter'
+                  : 'topbar-metrics'
+              }
+            >
+              <article className="topbar-metric">
+                <span>Session</span>
+                <strong>
+                  {selectedSession?.name ?? 'No session connected'}
+                </strong>
+              </article>
+              <article className="topbar-metric">
+                <span>Round</span>
+                <strong>{selectedSession?.currentRound ?? 1}</strong>
+              </article>
+              <article className="topbar-metric">
+                <span>Status</span>
+                <strong>{selectedSession?.status ?? 'setup'}</strong>
+              </article>
+              <article className="topbar-metric highlight">
+                <span>Latest activity</span>
+                <strong>{latestRunSummary || 'Awaiting operator input'}</strong>
+              </article>
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -361,7 +385,6 @@ export function App() {
                   selectedSessionId={selectedSessionId}
                   currentRound={selectedSession?.currentRound}
                   turnCount={turnCount}
-                  latestRunSummary={latestRunSummary}
                   isRunning={orchestrateMutation.isPending}
                   isAdvancing={advanceRoundMutation.isPending}
                   runError={orchestrateMutation.error?.message}
@@ -377,7 +400,7 @@ export function App() {
                     ? 'dashboard-card session-card-enter'
                     : 'dashboard-card'
                 }
-                style={{ '--card-enter-delay': '80ms' } as CSSProperties}
+                style={{ '--card-enter-delay': '160ms' } as CSSProperties}
               >
                 <AuditTrailCard
                   replay={replay}
@@ -397,7 +420,7 @@ export function App() {
                     ? 'dashboard-card session-card-enter'
                     : 'dashboard-card'
                 }
-                style={{ '--card-enter-delay': '160ms' } as CSSProperties}
+                style={{ '--card-enter-delay': '320ms' } as CSSProperties}
               >
                 <BalancesCard
                   selectedSession={selectedSession}
@@ -410,7 +433,7 @@ export function App() {
                     ? 'dashboard-card session-card-enter'
                     : 'dashboard-card'
                 }
-                style={{ '--card-enter-delay': '240ms' } as CSSProperties}
+                style={{ '--card-enter-delay': '480ms' } as CSSProperties}
               >
                 <TreasuryCard
                   selectedSession={selectedSession}
@@ -423,7 +446,7 @@ export function App() {
                     ? 'dashboard-card session-card-enter'
                     : 'dashboard-card'
                 }
-                style={{ '--card-enter-delay': '320ms' } as CSSProperties}
+                style={{ '--card-enter-delay': '640ms' } as CSSProperties}
               >
                 <MarketVisibilityCard
                   selectedSession={selectedSession}

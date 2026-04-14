@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import {
   buildBankerTraderSession,
@@ -7,6 +7,10 @@ import {
 } from './helpers/fixtures';
 import { mockSessionApiScenario } from './helpers/mock-api';
 import { connectToSession, topbarMetric } from './helpers/ui';
+
+function latestActivityMetric(page: Page) {
+  return topbarMetric(page, 'Latest activity');
+}
 
 test('keeps previous session state visible when orchestration fails', async ({
   page,
@@ -36,8 +40,8 @@ test('keeps previous session state visible when orchestration fails', async ({
   );
   await expect(page.locator('.balance-card').first()).toContainText('100.00');
   await expect(page.locator('.balance-card').nth(1)).toContainText('100.00');
-  await expect(page.locator('.activity-note strong')).toContainText(
-    'No actions yet.',
+  await expect(latestActivityMetric(page)).toContainText(
+    'Awaiting operator input',
   );
 });
 
@@ -63,9 +67,9 @@ test('does not fake a round increment when round advancement fails', async ({
   await expect(page.locator('.error-copy')).toContainText(
     'Synthetic round advancement failure.',
   );
-  await expect(topbarMetric(page, 'Round')).toContainText('0');
-  await expect(page.locator('.activity-note strong')).toContainText(
-    'No actions yet.',
+  await expect(topbarMetric(page, 'Round')).toContainText('1');
+  await expect(latestActivityMetric(page)).toContainText(
+    'Awaiting operator input',
   );
   await expect(page.locator('.treasury-shell')).toContainText(
     'No trader funds are currently placed with the banker.',
@@ -94,7 +98,7 @@ test('shows the live in-progress banner while a mocked turn is still running', a
   await expect(page.locator('.live-run-banner')).toContainText(
     'Running 1 turn...',
   );
-  await expect(page.locator('.activity-note strong')).toContainText(
+  await expect(latestActivityMetric(page)).toContainText(
     `Ran 0 turns for session ${initial.session.id}`,
   );
 });

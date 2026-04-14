@@ -36,6 +36,7 @@ describe('App', () => {
     expect(html).not.toContain('Market Visibility');
     expect(html).not.toContain('Run The Session');
     expect(html).not.toContain('Advance round settlement');
+    expect(html).not.toContain('Latest activity');
     expect(html).not.toContain('Analyst Bot');
     expect(html).not.toContain('Lawyer Bot');
     expect(html).not.toContain('Influencer Bot');

@@ -87,7 +87,7 @@ describe('CreateGameSessionUseCase', () => {
 
     expect(session.id).toBe('game-1');
     expect(session.status).toBe('setup');
-    expect(session.currentRound).toBe(0);
+    expect(session.currentRound).toBe(1);
     expect(session.agents).toHaveLength(5);
     expect(session.marketPositions).toEqual([]);
     expect(session.marketOpportunities).toHaveLength(2);
@@ -102,20 +102,20 @@ describe('CreateGameSessionUseCase', () => {
       })),
     ).toEqual([
       {
-        id: 'game-1-carry-stable-01-r0-n1',
+        id: 'game-1-carry-stable-01-r1-n1',
         templateId: 'carry-stable-01',
         category: 'carry',
         riskLevel: 'low',
-        listedRound: 0,
-        settlementRound: 1,
+        listedRound: 1,
+        settlementRound: 2,
       },
       {
-        id: 'game-1-liquidity-crunch-01-r0-n2',
+        id: 'game-1-liquidity-crunch-01-r1-n2',
         templateId: 'liquidity-crunch-01',
         category: 'liquidity_stress',
         riskLevel: 'high',
-        listedRound: 0,
-        settlementRound: 1,
+        listedRound: 1,
+        settlementRound: 2,
       },
     ]);
     expect(
