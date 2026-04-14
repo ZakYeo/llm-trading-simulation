@@ -6,6 +6,8 @@ import { Money } from '../../../shared/domain/value-objects/money.js';
 import { AccountBalance } from '../../domain/entities/account-balance.js';
 import { GameAgent } from '../../domain/entities/game-agent.js';
 import { GameSession } from '../../domain/entities/game-session.js';
+import { MarketOpportunity } from '../../domain/entities/market-opportunity.js';
+import { MarketPosition } from '../../domain/entities/market-position.js';
 import {
   GameSessionPrismaMapper,
   type PersistedGameSessionRecord,
@@ -37,6 +39,32 @@ describe('GameSessionPrismaMapper', () => {
           ownerAgentId: 'agent-1',
           principal: Money.fromDecimal('10.0000'),
           accruedInterest: Money.fromDecimal('1.5000'),
+        }),
+      ],
+      marketOpportunities: [
+        new MarketOpportunity({
+          id: 'opp-1',
+          title: 'Binary Event Volatility',
+          summary: 'High variance one-round event trade.',
+          riskLevel: 'high',
+          listedRound: 0,
+          settlementRound: 1,
+          minCommitment: '5.0000',
+          maxCommitment: '25.0000',
+          estimatedNetReturnBps: 300,
+          worstCaseReturnBps: -800,
+          bestCaseReturnBps: 1200,
+          resolutionReturnBps: 1200,
+        }),
+      ],
+      marketPositions: [
+        new MarketPosition({
+          opportunityId: 'opp-1',
+          ownerAgentId: 'agent-1',
+          opportunityTitle: 'Binary Event Volatility',
+          principal: Money.fromDecimal('12.0000'),
+          entryRound: 0,
+          settlementRound: 1,
         }),
       ],
     });
@@ -77,6 +105,36 @@ describe('GameSessionPrismaMapper', () => {
           },
         ],
       },
+      marketOpportunities: {
+        create: [
+          {
+            id: 'opp-1',
+            title: 'Binary Event Volatility',
+            summary: 'High variance one-round event trade.',
+            riskLevel: 'HIGH',
+            listedRound: 0,
+            settlementRound: 1,
+            minCommitment: '5.0000',
+            maxCommitment: '25.0000',
+            estimatedNetReturnBps: 300,
+            worstCaseReturnBps: -800,
+            bestCaseReturnBps: 1200,
+            resolutionReturnBps: 1200,
+          },
+        ],
+      },
+      marketPositions: {
+        create: [
+          {
+            opportunityId: 'opp-1',
+            ownerAgentId: 'agent-1',
+            opportunityTitle: 'Binary Event Volatility',
+            principal: '12.0000',
+            entryRound: 0,
+            settlementRound: 1,
+          },
+        ],
+      },
     });
   });
 
@@ -109,6 +167,32 @@ describe('GameSessionPrismaMapper', () => {
           accrued: '0.5000',
         },
       ],
+      marketOpportunities: [
+        {
+          id: 'opp-1',
+          title: 'Crowded Carry Trap',
+          summary: 'Weak expected value and hidden drag.',
+          riskLevel: 'LOW',
+          listedRound: 2,
+          settlementRound: 3,
+          minCommitment: '5.0000',
+          maxCommitment: '20.0000',
+          estimatedNetReturnBps: -75,
+          worstCaseReturnBps: -150,
+          bestCaseReturnBps: 25,
+          resolutionReturnBps: -100,
+        },
+      ],
+      marketPositions: [
+        {
+          opportunityId: 'opp-1',
+          ownerAgentId: 'agent-1',
+          opportunityTitle: 'Crowded Carry Trap',
+          principal: '9.0000',
+          entryRound: 2,
+          settlementRound: 3,
+        },
+      ],
     };
 
     const session = GameSessionPrismaMapper.toDomain(record);
@@ -132,5 +216,7 @@ describe('GameSessionPrismaMapper', () => {
     expect(session.bankerCustodyPositions[0]?.accruedInterest.toDecimal()).toBe(
       '0.5000',
     );
+    expect(session.marketOpportunities[0]?.riskLevel).toBe('low');
+    expect(session.marketPositions[0]?.principal.toDecimal()).toBe('9.0000');
   });
 });

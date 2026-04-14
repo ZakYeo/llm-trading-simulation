@@ -26,6 +26,7 @@ export type AgentActionType =
   | 'reject_payment_request'
   | 'place_funds_with_banker'
   | 'redeem_funds_from_banker'
+  | 'open_market_position'
   | 'finalize_turn';
 
 export type AgentMessageVisibility = 'public' | 'private';
@@ -46,9 +47,34 @@ export interface BankerCustodyPositionRecord {
   totalBalance: string;
 }
 
+export interface MarketOpportunityRecord {
+  id: string;
+  title: string;
+  summary: string;
+  riskLevel: 'low' | 'high';
+  listedRound: number;
+  settlementRound: number;
+  minCommitment: string;
+  maxCommitment: string;
+  estimatedNetReturnBps: number;
+  worstCaseReturnBps: number;
+  bestCaseReturnBps: number;
+}
+
+export interface MarketPositionRecord {
+  opportunityId: string;
+  ownerAgentId: string;
+  opportunityTitle: string;
+  principal: string;
+  entryRound: number;
+  settlementRound: number;
+}
+
 export interface GameSessionRecord extends GameSessionSummary {
   agents: GameAgentRecord[];
   bankerCustodyPositions: BankerCustodyPositionRecord[];
+  marketOpportunities: MarketOpportunityRecord[];
+  marketPositions: MarketPositionRecord[];
 }
 
 export interface ReplayRoundRecord {
@@ -67,7 +93,9 @@ export interface ReplayEventRecord {
     | 'action'
     | 'custody_placement'
     | 'custody_redemption'
-    | 'custody_accrual';
+    | 'custody_accrual'
+    | 'market_position_opened'
+    | 'market_position_settled';
   createdAt: string;
   amount?: string;
   roundNumber?: number;
@@ -82,6 +110,8 @@ export interface ReplayEventRecord {
   bankerAgentName?: string;
   ownerAgentId?: string;
   ownerAgentName?: string;
+  opportunityId?: string;
+  opportunityTitle?: string;
   senderAgentId?: string;
   senderAgentName?: string;
   recipientAgentId?: string | null;
@@ -90,6 +120,7 @@ export interface ReplayEventRecord {
   content?: string;
   actionType?: AgentActionType;
   relatedProposalActionId?: string;
+  profitOrLoss?: string;
 }
 
 export interface GameReplayRecord {

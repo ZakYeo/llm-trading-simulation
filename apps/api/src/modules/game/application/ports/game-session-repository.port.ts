@@ -49,13 +49,36 @@ export interface CustodyAccrualHistoryRecord {
   amount: string;
 }
 
+export interface MarketPositionOpenedHistoryRecord {
+  type: 'market_position_opened';
+  gameSessionId: string;
+  roundNumber: number;
+  opportunityId: string;
+  opportunityTitle: string;
+  ownerAgentId: string;
+  amount: string;
+}
+
+export interface MarketPositionSettledHistoryRecord {
+  type: 'market_position_settled';
+  gameSessionId: string;
+  roundNumber: number;
+  opportunityId: string;
+  opportunityTitle: string;
+  ownerAgentId: string;
+  principal: string;
+  profitOrLoss: string;
+}
+
 export type GameSessionHistoryRecord =
   | TransferHistoryRecord
   | DepositHistoryRecord
   | WithdrawalHistoryRecord
   | CustodyPlacementHistoryRecord
   | CustodyRedemptionHistoryRecord
-  | CustodyAccrualHistoryRecord;
+  | CustodyAccrualHistoryRecord
+  | MarketPositionOpenedHistoryRecord
+  | MarketPositionSettledHistoryRecord;
 
 export interface GameSessionRepositoryPort {
   save(

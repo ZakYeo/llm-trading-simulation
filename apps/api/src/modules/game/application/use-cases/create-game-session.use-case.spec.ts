@@ -79,6 +79,29 @@ describe('CreateGameSessionUseCase', () => {
     expect(session.status).toBe('setup');
     expect(session.currentRound).toBe(0);
     expect(session.agents).toHaveLength(5);
+    expect(session.marketPositions).toEqual([]);
+    expect(session.marketOpportunities).toHaveLength(2);
+    expect(
+      session.marketOpportunities.map((opportunity) => ({
+        id: opportunity.id,
+        riskLevel: opportunity.riskLevel,
+        listedRound: opportunity.listedRound,
+        settlementRound: opportunity.settlementRound,
+      })),
+    ).toEqual([
+      {
+        id: 'game-1-bad-opportunity-r0',
+        riskLevel: 'low',
+        listedRound: 0,
+        settlementRound: 1,
+      },
+      {
+        id: 'game-1-risky-opportunity-r0',
+        riskLevel: 'high',
+        listedRound: 0,
+        settlementRound: 1,
+      },
+    ]);
     expect(
       session.agents.map((agent) => ({
         id: agent.id,
@@ -166,6 +189,7 @@ describe('CreateGameSessionUseCase', () => {
       'trader',
     ]);
     expect(session.agents).toHaveLength(5);
+    expect(session.marketOpportunities).toHaveLength(2);
   });
 
   it('rejects empty agent rosters', async () => {

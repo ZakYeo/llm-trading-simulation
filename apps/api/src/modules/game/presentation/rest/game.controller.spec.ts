@@ -119,6 +119,8 @@ describe('GameController', () => {
           totalBalance: '11.0000',
         },
       ],
+      marketOpportunities: [],
+      marketPositions: [],
     });
   });
 

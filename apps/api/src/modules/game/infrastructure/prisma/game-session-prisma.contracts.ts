@@ -7,6 +7,8 @@ import type {
   CustodyPlacementHistoryRecord,
   CustodyRedemptionHistoryRecord,
   DepositHistoryRecord,
+  MarketPositionOpenedHistoryRecord,
+  MarketPositionSettledHistoryRecord,
   TransferHistoryRecord,
   WithdrawalHistoryRecord,
 } from '../../application/ports/game-session-repository.port.js';
@@ -17,6 +19,14 @@ type WithdrawalCreateData = Omit<WithdrawalHistoryRecord, 'type'>;
 type CustodyPlacementCreateData = Omit<CustodyPlacementHistoryRecord, 'type'>;
 type CustodyRedemptionCreateData = Omit<CustodyRedemptionHistoryRecord, 'type'>;
 type CustodyAccrualCreateData = Omit<CustodyAccrualHistoryRecord, 'type'>;
+type MarketPositionOpenedCreateData = Omit<
+  MarketPositionOpenedHistoryRecord,
+  'type'
+>;
+type MarketPositionSettledCreateData = Omit<
+  MarketPositionSettledHistoryRecord,
+  'type'
+>;
 
 export interface PrismaGameSessionDelegate {
   create(args: {
@@ -36,6 +46,8 @@ export interface PrismaGameSessionDelegate {
         };
       };
       bankerCustodyPositions?: true;
+      marketOpportunities?: true;
+      marketPositions?: true;
     };
     select?: {
       id: true;
@@ -111,6 +123,78 @@ export interface PrismaBankerCustodyPositionDelegate {
   }): Promise<unknown>;
 }
 
+export interface PrismaMarketOpportunityDelegate {
+  findMany(args: {
+    where: {
+      gameSessionId: string;
+    };
+    select: {
+      id: true;
+    };
+  }): Promise<Array<{ id: string }>>;
+  deleteMany(args: {
+    where: {
+      gameSessionId: string;
+      id?: {
+        in: string[];
+      };
+    };
+  }): Promise<unknown>;
+  upsert(args: {
+    where: {
+      id: string;
+    };
+    create: ReturnType<
+      typeof GameSessionPrismaMapper.toMarketOpportunityCreateManyInput
+    >[number];
+    update: Omit<
+      ReturnType<
+        typeof GameSessionPrismaMapper.toMarketOpportunityCreateManyInput
+      >[number],
+      'id' | 'gameSessionId'
+    >;
+  }): Promise<unknown>;
+}
+
+export interface PrismaMarketPositionDelegate {
+  findMany(args: {
+    where: {
+      gameSessionId: string;
+    };
+    select: {
+      opportunityId: true;
+      ownerAgentId: true;
+    };
+  }): Promise<Array<{ opportunityId: string; ownerAgentId: string }>>;
+  deleteMany(args: {
+    where: {
+      gameSessionId: string;
+      OR?: Array<{
+        opportunityId: string;
+        ownerAgentId: string;
+      }>;
+    };
+  }): Promise<unknown>;
+  upsert(args: {
+    where: {
+      gameSessionId_opportunityId_ownerAgentId: {
+        gameSessionId: string;
+        opportunityId: string;
+        ownerAgentId: string;
+      };
+    };
+    create: ReturnType<
+      typeof GameSessionPrismaMapper.toMarketPositionCreateManyInput
+    >[number];
+    update: Omit<
+      ReturnType<
+        typeof GameSessionPrismaMapper.toMarketPositionCreateManyInput
+      >[number],
+      'gameSessionId' | 'opportunityId' | 'ownerAgentId'
+    >;
+  }): Promise<unknown>;
+}
+
 export interface PrismaDepositDelegate {
   create(args: { data: DepositCreateData }): Promise<unknown>;
 }
@@ -131,6 +215,14 @@ export interface PrismaCustodyAccrualDelegate {
   createMany(args: { data: CustodyAccrualCreateData[] }): Promise<unknown>;
 }
 
+export interface PrismaMarketPositionOpenedDelegate {
+  create(args: { data: MarketPositionOpenedCreateData }): Promise<unknown>;
+}
+
+export interface PrismaMarketPositionSettledDelegate {
+  create(args: { data: MarketPositionSettledCreateData }): Promise<unknown>;
+}
+
 export interface PrismaClientLike {
   gameSession: PrismaGameSessionDelegate;
   agent: PrismaAgentDelegate;
@@ -142,5 +234,9 @@ export interface PrismaClientLike {
   custodyRedemption: PrismaCustodyRedemptionDelegate;
   custodyAccrual: PrismaCustodyAccrualDelegate;
   bankerCustodyPosition: PrismaBankerCustodyPositionDelegate;
+  marketOpportunity: PrismaMarketOpportunityDelegate;
+  marketPosition: PrismaMarketPositionDelegate;
+  marketPositionOpened: PrismaMarketPositionOpenedDelegate;
+  marketPositionSettled: PrismaMarketPositionSettledDelegate;
   $transaction<T>(callback: (tx: PrismaClientLike) => Promise<T>): Promise<T>;
 }

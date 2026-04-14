@@ -16,6 +16,13 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
     return `${position.bankerAgentId}:${position.ownerAgentId}`;
   }
 
+  private static toMarketPositionKey(position: {
+    opportunityId: string;
+    ownerAgentId: string;
+  }) {
+    return `${position.opportunityId}:${position.ownerAgentId}`;
+  }
+
   async save(
     session: GameSession,
     history: GameSessionHistoryRecord[] = [],
@@ -92,6 +99,31 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
               amount: record.amount,
             });
             break;
+          case 'market_position_opened':
+            await tx.marketPositionOpened.create({
+              data: {
+                gameSessionId: record.gameSessionId,
+                roundNumber: record.roundNumber,
+                opportunityId: record.opportunityId,
+                opportunityTitle: record.opportunityTitle,
+                ownerAgentId: record.ownerAgentId,
+                amount: record.amount,
+              },
+            });
+            break;
+          case 'market_position_settled':
+            await tx.marketPositionSettled.create({
+              data: {
+                gameSessionId: record.gameSessionId,
+                roundNumber: record.roundNumber,
+                opportunityId: record.opportunityId,
+                opportunityTitle: record.opportunityTitle,
+                ownerAgentId: record.ownerAgentId,
+                principal: record.principal,
+                profitOrLoss: record.profitOrLoss,
+              },
+            });
+            break;
         }
       }
 
@@ -114,6 +146,8 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
           },
         },
         bankerCustodyPositions: true,
+        marketOpportunities: true,
+        marketPositions: true,
       },
     });
 
@@ -217,6 +251,110 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
         update: {
           principal: position.principal,
           accrued: position.accrued,
+        },
+      });
+    }
+
+    const marketOpportunityData =
+      GameSessionPrismaMapper.toMarketOpportunityCreateManyInput(session);
+    const existingMarketOpportunities = await tx.marketOpportunity.findMany({
+      where: {
+        gameSessionId: session.id,
+      },
+      select: {
+        id: true,
+      },
+    });
+    const nextOpportunityIds = new Set(
+      marketOpportunityData.map((opportunity) => opportunity.id),
+    );
+    const opportunitiesToDelete = existingMarketOpportunities
+      .filter((opportunity) => !nextOpportunityIds.has(opportunity.id))
+      .map((opportunity) => opportunity.id);
+
+    if (opportunitiesToDelete.length > 0) {
+      await tx.marketOpportunity.deleteMany({
+        where: {
+          gameSessionId: session.id,
+          id: {
+            in: opportunitiesToDelete,
+          },
+        },
+      });
+    }
+
+    for (const opportunity of marketOpportunityData) {
+      await tx.marketOpportunity.upsert({
+        where: {
+          id: opportunity.id,
+        },
+        create: opportunity,
+        update: {
+          title: opportunity.title,
+          summary: opportunity.summary,
+          riskLevel: opportunity.riskLevel,
+          listedRound: opportunity.listedRound,
+          settlementRound: opportunity.settlementRound,
+          minCommitment: opportunity.minCommitment,
+          maxCommitment: opportunity.maxCommitment,
+          estimatedNetReturnBps: opportunity.estimatedNetReturnBps,
+          worstCaseReturnBps: opportunity.worstCaseReturnBps,
+          bestCaseReturnBps: opportunity.bestCaseReturnBps,
+          resolutionReturnBps: opportunity.resolutionReturnBps,
+        },
+      });
+    }
+
+    const marketPositionData =
+      GameSessionPrismaMapper.toMarketPositionCreateManyInput(session);
+    const existingMarketPositions = await tx.marketPosition.findMany({
+      where: {
+        gameSessionId: session.id,
+      },
+      select: {
+        opportunityId: true,
+        ownerAgentId: true,
+      },
+    });
+    const nextMarketPositionKeys = new Set(
+      marketPositionData.map((position) =>
+        PrismaGameSessionRepository.toMarketPositionKey(position),
+      ),
+    );
+    const marketPositionsToDelete = existingMarketPositions.filter(
+      (position) =>
+        !nextMarketPositionKeys.has(
+          PrismaGameSessionRepository.toMarketPositionKey(position),
+        ),
+    );
+
+    if (marketPositionsToDelete.length > 0) {
+      await tx.marketPosition.deleteMany({
+        where: {
+          gameSessionId: session.id,
+          OR: marketPositionsToDelete.map((position) => ({
+            opportunityId: position.opportunityId,
+            ownerAgentId: position.ownerAgentId,
+          })),
+        },
+      });
+    }
+
+    for (const position of marketPositionData) {
+      await tx.marketPosition.upsert({
+        where: {
+          gameSessionId_opportunityId_ownerAgentId: {
+            gameSessionId: session.id,
+            opportunityId: position.opportunityId,
+            ownerAgentId: position.ownerAgentId,
+          },
+        },
+        create: position,
+        update: {
+          opportunityTitle: position.opportunityTitle,
+          principal: position.principal,
+          entryRound: position.entryRound,
+          settlementRound: position.settlementRound,
         },
       });
     }

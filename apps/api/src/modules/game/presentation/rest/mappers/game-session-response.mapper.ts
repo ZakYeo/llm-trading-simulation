@@ -25,6 +25,27 @@ export class GameSessionResponseMapper {
           totalBalance: position.totalBalance().toDecimal(),
         }),
       ),
+      marketOpportunities: session.marketOpportunities.map((opportunity) => ({
+        id: opportunity.id,
+        title: opportunity.title,
+        summary: opportunity.summary,
+        riskLevel: opportunity.riskLevel,
+        listedRound: opportunity.listedRound,
+        settlementRound: opportunity.settlementRound,
+        minCommitment: opportunity.minCommitment,
+        maxCommitment: opportunity.maxCommitment,
+        estimatedNetReturnBps: opportunity.estimatedNetReturnBps,
+        worstCaseReturnBps: opportunity.worstCaseReturnBps,
+        bestCaseReturnBps: opportunity.bestCaseReturnBps,
+      })),
+      marketPositions: session.marketPositions.map((position) => ({
+        opportunityId: position.opportunityId,
+        ownerAgentId: position.ownerAgentId,
+        opportunityTitle: position.opportunityTitle,
+        principal: position.principal.toDecimal(),
+        entryRound: position.entryRound,
+        settlementRound: position.settlementRound,
+      })),
     };
   }
 }

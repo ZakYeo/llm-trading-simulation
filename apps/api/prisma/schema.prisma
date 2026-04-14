@@ -37,7 +37,13 @@ enum AgentTurnActionType {
   REJECT_DIRECT_TRANSFER_PROPOSAL
   PLACE_FUNDS_WITH_BANKER
   REDEEM_FUNDS_FROM_BANKER
+  OPEN_MARKET_POSITION
   FINALIZE_TURN
+}
+
+enum MarketOpportunityRiskLevel {
+  LOW
+  HIGH
 }
 
 model GameSession {
@@ -58,6 +64,10 @@ model GameSession {
   custodyPlacements CustodyPlacement[]
   custodyRedemptions CustodyRedemption[]
   custodyAccruals CustodyAccrual[]
+  marketOpportunities MarketOpportunity[]
+  marketPositions MarketPosition[]
+  marketPositionOpens MarketPositionOpen[]
+  marketPositionSettlements MarketPositionSettlement[]
 }
 
 model Agent {
@@ -85,6 +95,9 @@ model Agent {
   custodyRedemptionsAsOwner CustodyRedemption[] @relation("CustodyRedemptionOwner")
   custodyAccrualsAsBanker CustodyAccrual[] @relation("CustodyAccrualBanker")
   custodyAccrualsAsOwner CustodyAccrual[] @relation("CustodyAccrualOwner")
+  marketPositions MarketPosition[]
+  marketPositionOpens MarketPositionOpen[]
+  marketPositionSettlements MarketPositionSettlement[]
 }
 
 model AgentBalance {
@@ -229,4 +242,69 @@ model CustodyAccrual {
   gameSession   GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
   bankerAgent   Agent @relation("CustodyAccrualBanker", fields: [bankerAgentId], references: [id], onDelete: Cascade)
   ownerAgent    Agent @relation("CustodyAccrualOwner", fields: [ownerAgentId], references: [id], onDelete: Cascade)
+}
+
+model MarketOpportunity {
+  id                   String   @id
+  gameSessionId        String
+  title                String
+  summary              String
+  riskLevel            MarketOpportunityRiskLevel
+  listedRound          Int
+  settlementRound      Int
+  minCommitment        Decimal  @db.Decimal(18, 4)
+  maxCommitment        Decimal  @db.Decimal(18, 4)
+  estimatedNetReturnBps Int
+  worstCaseReturnBps   Int
+  bestCaseReturnBps    Int
+  resolutionReturnBps  Int
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  gameSession          GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  positions            MarketPosition[]
+}
+
+model MarketPosition {
+  id              String   @id @default(uuid())
+  gameSessionId    String
+  opportunityId   String
+  ownerAgentId     String
+  opportunityTitle String
+  principal        Decimal  @db.Decimal(18, 4)
+  entryRound       Int
+  settlementRound  Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  gameSession      GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  opportunity      MarketOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  ownerAgent       Agent @relation(fields: [ownerAgentId], references: [id], onDelete: Cascade)
+
+  @@unique([gameSessionId, opportunityId, ownerAgentId])
+}
+
+model MarketPositionOpen {
+  id               String   @id @default(uuid())
+  gameSessionId     String
+  roundNumber       Int
+  opportunityId    String
+  opportunityTitle String
+  ownerAgentId      String
+  amount           Decimal  @db.Decimal(18, 4)
+  createdAt        DateTime @default(now())
+  gameSession      GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  ownerAgent       Agent @relation(fields: [ownerAgentId], references: [id], onDelete: Cascade)
+}
+
+model MarketPositionSettlement {
+  id               String   @id @default(uuid())
+  gameSessionId     String
+  roundNumber       Int
+  opportunityId    String
+  opportunityTitle String
+  ownerAgentId      String
+  principal        Decimal  @db.Decimal(18, 4)
+  profitOrLoss     Decimal  @db.Decimal(18, 4)
+  createdAt        DateTime @default(now())
+  gameSession      GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  ownerAgent       Agent @relation(fields: [ownerAgentId], references: [id], onDelete: Cascade)
 }

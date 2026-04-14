@@ -1,6 +1,8 @@
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import type { BankerCustodyPosition } from './banker-custody-position.js';
 import type { GameAgent } from './game-agent.js';
+import type { MarketOpportunity } from './market-opportunity.js';
+import type { MarketPosition } from './market-position.js';
 
 export type GameSessionStatus =
   | 'setup'
@@ -16,6 +18,8 @@ export interface GameSessionProps {
   currentRound: number;
   agents: GameAgent[];
   bankerCustodyPositions?: BankerCustodyPosition[];
+  marketOpportunities?: MarketOpportunity[];
+  marketPositions?: MarketPosition[];
 }
 
 export class GameSession {
@@ -25,6 +29,8 @@ export class GameSession {
   readonly currentRound: number;
   readonly agents: GameAgent[];
   readonly bankerCustodyPositions: BankerCustodyPosition[];
+  readonly marketOpportunities: MarketOpportunity[];
+  readonly marketPositions: MarketPosition[];
 
   constructor(props: GameSessionProps) {
     if (props.name.trim().length === 0) {
@@ -45,6 +51,8 @@ export class GameSession {
     }
 
     const bankerCustodyPositions = props.bankerCustodyPositions ?? [];
+    const marketOpportunities = props.marketOpportunities ?? [];
+    const marketPositions = props.marketPositions ?? [];
 
     if (
       new Set(
@@ -58,12 +66,35 @@ export class GameSession {
       );
     }
 
+    if (
+      new Set(marketOpportunities.map((opportunity) => opportunity.id)).size !==
+      marketOpportunities.length
+    ) {
+      throw new DomainInvariantError(
+        'Game session market opportunity ids must be unique.',
+      );
+    }
+
+    if (
+      new Set(
+        marketPositions.map(
+          (position) => `${position.opportunityId}:${position.ownerAgentId}`,
+        ),
+      ).size !== marketPositions.length
+    ) {
+      throw new DomainInvariantError(
+        'Game session market positions must be unique per opportunity and owner.',
+      );
+    }
+
     this.id = props.id;
     this.name = props.name;
     this.status = props.status;
     this.currentRound = props.currentRound;
     this.agents = props.agents;
     this.bankerCustodyPositions = bankerCustodyPositions;
+    this.marketOpportunities = marketOpportunities;
+    this.marketPositions = marketPositions;
   }
 
   withAgents(agents: GameAgent[]): GameSession {
@@ -74,6 +105,8 @@ export class GameSession {
       currentRound: this.currentRound,
       agents,
       bankerCustodyPositions: this.bankerCustodyPositions,
+      marketOpportunities: this.marketOpportunities,
+      marketPositions: this.marketPositions,
     });
   }
 
@@ -87,6 +120,36 @@ export class GameSession {
       currentRound: this.currentRound,
       agents: this.agents,
       bankerCustodyPositions,
+      marketOpportunities: this.marketOpportunities,
+      marketPositions: this.marketPositions,
+    });
+  }
+
+  withMarketOpportunities(
+    marketOpportunities: MarketOpportunity[],
+  ): GameSession {
+    return new GameSession({
+      id: this.id,
+      name: this.name,
+      status: this.status,
+      currentRound: this.currentRound,
+      agents: this.agents,
+      bankerCustodyPositions: this.bankerCustodyPositions,
+      marketOpportunities,
+      marketPositions: this.marketPositions,
+    });
+  }
+
+  withMarketPositions(marketPositions: MarketPosition[]): GameSession {
+    return new GameSession({
+      id: this.id,
+      name: this.name,
+      status: this.status,
+      currentRound: this.currentRound,
+      agents: this.agents,
+      bankerCustodyPositions: this.bankerCustodyPositions,
+      marketOpportunities: this.marketOpportunities,
+      marketPositions,
     });
   }
 
@@ -104,6 +167,8 @@ export class GameSession {
       currentRound: this.currentRound + 1,
       agents: this.agents,
       bankerCustodyPositions: this.bankerCustodyPositions,
+      marketOpportunities: this.marketOpportunities,
+      marketPositions: this.marketPositions,
     });
   }
 }
