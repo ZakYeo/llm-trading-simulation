@@ -3,12 +3,17 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
 
 import { createApp } from '../../../../app.factory.js';
+import type { AgentAction, AgentTurnContext } from '@llm-sim/mcp-contracts';
+
 import { RunAgentCommunicationTurnUseCase } from '../../application/use-cases/run-agent-communication-turn.use-case.js';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service.js';
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 
 interface PatchedRunAgentCommunicationTurnUseCase {
+  agentGateway: {
+    decideNextAction: (context: AgentTurnContext) => Promise<AgentAction>;
+  };
   agentActionExecutor: {
     openMarketPositionUseCase: {
       execute: (...args: unknown[]) => Promise<unknown>;
@@ -69,6 +74,32 @@ describe.runIf(Boolean(testDatabaseUrl))(
       expect(createResponse.status).toBe(201);
 
       return (await createResponse.json()) as { id: string };
+    }
+
+    async function fetchSession(sessionId: string) {
+      const sessionResponse = await fetch(
+        `${baseUrl}/api/game/sessions/${sessionId}`,
+      );
+      expect(sessionResponse.status).toBe(200);
+
+      return (await sessionResponse.json()) as {
+        currentRound: number;
+        agents: Array<{
+          id: string;
+          role: string;
+          availableBalance: string;
+          reservedBalance: string;
+        }>;
+        marketOpportunities: Array<{
+          id: string;
+          minCommitment: string;
+        }>;
+        marketPositions: Array<{
+          opportunityId: string;
+          ownerAgentId: string;
+          principal: string;
+        }>;
+      };
     }
 
     it('keeps session state and replay aligned when a market position opens', async () => {
@@ -231,6 +262,124 @@ describe.runIf(Boolean(testDatabaseUrl))(
         replay.events.some((event) => event.type === 'market_position_opened'),
       ).toBe(false);
       expect(replay.events).toHaveLength(2);
+    });
+
+    it('builds banker context from the current open position set after settlement and reopen', async () => {
+      const createdSession = await createBankerTraderSession();
+      const initialSession = await fetchSession(createdSession.id);
+      const trader = initialSession.agents.find(
+        (agent) => agent.role === 'trader',
+      );
+
+      expect(trader).toBeDefined();
+      expect(initialSession.marketOpportunities).not.toHaveLength(0);
+
+      const firstOpportunity = initialSession.marketOpportunities[0];
+      expect(firstOpportunity).toBeDefined();
+
+      const firstOpenResponse = await fetch(
+        `${baseUrl}/api/game/sessions/${createdSession.id}/market/open`,
+        {
+          method: 'PATCH',
+          headers: {
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            ownerAgentId: trader?.id,
+            opportunityId: firstOpportunity?.id,
+            amount: firstOpportunity?.minCommitment,
+          }),
+        },
+      );
+      expect(firstOpenResponse.status).toBe(200);
+
+      const expectedSecondRound = initialSession.currentRound + 1;
+      const advanceRoundResponse = await fetch(
+        `${baseUrl}/api/game/sessions/${createdSession.id}/rounds/advance`,
+        {
+          method: 'PATCH',
+          headers: {
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({}),
+        },
+      );
+      expect(advanceRoundResponse.status).toBe(200);
+
+      const secondRoundSession = await fetchSession(createdSession.id);
+      expect(secondRoundSession.currentRound).toBe(expectedSecondRound);
+      expect(secondRoundSession.marketPositions).toEqual([]);
+
+      const secondOpportunity = secondRoundSession.marketOpportunities[0];
+      expect(secondOpportunity).toBeDefined();
+      expect(secondOpportunity?.id).not.toBe(firstOpportunity?.id);
+
+      const secondOpenResponse = await fetch(
+        `${baseUrl}/api/game/sessions/${createdSession.id}/market/open`,
+        {
+          method: 'PATCH',
+          headers: {
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            ownerAgentId: trader?.id,
+            opportunityId: secondOpportunity?.id,
+            amount: secondOpportunity?.minCommitment,
+          }),
+        },
+      );
+      expect(secondOpenResponse.status).toBe(200);
+
+      const runAgentCommunicationTurnUseCase = app.get(
+        RunAgentCommunicationTurnUseCase,
+      ) as unknown as PatchedRunAgentCommunicationTurnUseCase;
+      const capturedContexts: AgentTurnContext[] = [];
+      const originalDecideNextAction =
+        runAgentCommunicationTurnUseCase.agentGateway.decideNextAction;
+
+      runAgentCommunicationTurnUseCase.agentGateway.decideNextAction = async (
+        context,
+      ) => {
+        capturedContexts.push(context);
+        return { type: 'finalize_turn' };
+      };
+
+      try {
+        await app.get(RunAgentCommunicationTurnUseCase).execute({
+          gameSessionId: createdSession.id,
+          turnNumber: 1,
+        });
+      } finally {
+        runAgentCommunicationTurnUseCase.agentGateway.decideNextAction =
+          originalDecideNextAction;
+      }
+
+      const bankerContext = capturedContexts.find(
+        (context) => context.self.role === 'banker',
+      );
+
+      expect(bankerContext).toBeDefined();
+      expect(
+        bankerContext?.marketContext.primaryCounterpartyOpenPositions,
+      ).toEqual([
+        {
+          opportunityId: secondOpportunity?.id,
+          opportunityTitle: expect.any(String),
+          principal: '5.0000',
+          entryRound: expectedSecondRound,
+          settlementRound: expect.any(Number),
+        },
+      ]);
+      expect(
+        bankerContext?.marketContext.primaryCounterpartyOpenPositions.some(
+          (position) => position.opportunityId === firstOpportunity?.id,
+        ),
+      ).toBe(false);
+      expect(bankerContext?.marketContext.exposureSummary).toMatchObject({
+        primaryCounterpartyOpenPositionCount: 1,
+        primaryCounterpartyOpenPrincipal: '5.0000',
+        primaryCounterpartyReservedBalance: '5.0000',
+      });
     });
   },
 );
