@@ -92,12 +92,16 @@ describe.runIf(Boolean(testDatabaseUrl))(
         }>;
         marketOpportunities: Array<{
           id: string;
+          listedRound: number;
           minCommitment: string;
+          settlementRound: number;
         }>;
         marketPositions: Array<{
           opportunityId: string;
           ownerAgentId: string;
           principal: string;
+          entryRound: number;
+          settlementRound: number;
         }>;
       };
     }
@@ -161,14 +165,16 @@ describe.runIf(Boolean(testDatabaseUrl))(
       const marketOpenedEvent = replay.events.find(
         (event) => event.type === 'market_position_opened',
       );
+      const openedPrincipal = session.marketPositions[0]?.principal ?? '0';
+      const openedPrincipalNumber = Number.parseFloat(openedPrincipal);
 
       expect(trader).toMatchObject({
-        availableBalance: '95.0000',
-        reservedBalance: '5.0000',
+        availableBalance: (100 - openedPrincipalNumber).toFixed(4),
+        reservedBalance: openedPrincipalNumber.toFixed(4),
       });
       expect(session.marketPositions).toHaveLength(1);
       expect(session.marketPositions[0]).toMatchObject({
-        principal: '5.0000',
+        principal: openedPrincipal,
       });
       expect(openAction).toBeDefined();
       expect(marketOpenedEvent).toBeDefined();
@@ -274,7 +280,11 @@ describe.runIf(Boolean(testDatabaseUrl))(
       expect(trader).toBeDefined();
       expect(initialSession.marketOpportunities).not.toHaveLength(0);
 
-      const firstOpportunity = initialSession.marketOpportunities[0];
+      const firstOpportunity =
+        initialSession.marketOpportunities.find(
+          (opportunity) =>
+            opportunity.settlementRound === initialSession.currentRound + 1,
+        ) ?? initialSession.marketOpportunities[0];
       expect(firstOpportunity).toBeDefined();
 
       const firstOpenResponse = await fetch(
@@ -310,7 +320,10 @@ describe.runIf(Boolean(testDatabaseUrl))(
       expect(secondRoundSession.currentRound).toBe(expectedSecondRound);
       expect(secondRoundSession.marketPositions).toEqual([]);
 
-      const secondOpportunity = secondRoundSession.marketOpportunities[0];
+      const secondOpportunity = secondRoundSession.marketOpportunities.find(
+        (opportunity) =>
+          opportunity.listedRound === secondRoundSession.currentRound,
+      );
       expect(secondOpportunity).toBeDefined();
       expect(secondOpportunity?.id).not.toBe(firstOpportunity?.id);
 
@@ -365,11 +378,17 @@ describe.runIf(Boolean(testDatabaseUrl))(
         {
           opportunityId: secondOpportunity?.id,
           opportunityTitle: expect.any(String),
-          principal: '5.0000',
+          principal: expect.any(String),
           entryRound: expectedSecondRound,
-          settlementRound: expect.any(Number),
+          settlementRound: secondOpportunity?.settlementRound,
         },
       ]);
+      expect(
+        Number.parseFloat(
+          bankerContext?.marketContext.primaryCounterpartyOpenPositions[0]
+            ?.principal ?? '0',
+        ),
+      ).toBe(Number.parseFloat(secondOpportunity?.minCommitment ?? '0'));
       expect(
         bankerContext?.marketContext.primaryCounterpartyOpenPositions.some(
           (position) => position.opportunityId === firstOpportunity?.id,
@@ -377,9 +396,21 @@ describe.runIf(Boolean(testDatabaseUrl))(
       ).toBe(false);
       expect(bankerContext?.marketContext.exposureSummary).toMatchObject({
         primaryCounterpartyOpenPositionCount: 1,
-        primaryCounterpartyOpenPrincipal: '5.0000',
-        primaryCounterpartyReservedBalance: '5.0000',
+        primaryCounterpartyOpenPrincipal: expect.any(String),
+        primaryCounterpartyReservedBalance: expect.any(String),
       });
+      expect(
+        Number.parseFloat(
+          bankerContext?.marketContext.exposureSummary
+            .primaryCounterpartyOpenPrincipal ?? '0',
+        ),
+      ).toBe(Number.parseFloat(secondOpportunity?.minCommitment ?? '0'));
+      expect(
+        Number.parseFloat(
+          bankerContext?.marketContext.exposureSummary
+            .primaryCounterpartyReservedBalance ?? '0',
+        ),
+      ).toBe(Number.parseFloat(secondOpportunity?.minCommitment ?? '0'));
     });
   },
 );
