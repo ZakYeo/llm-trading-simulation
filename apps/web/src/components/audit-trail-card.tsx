@@ -7,7 +7,12 @@ import {
   getReplayEventLabel,
 } from '../lib/formatters';
 
-import { CardCollapseButton, CardHeader, CardShell } from './card-shell';
+import {
+  CardBody,
+  CardCollapseButton,
+  CardHeader,
+  CardShell,
+} from './card-shell';
 
 interface AuditTrailCardProps {
   replay?: GameReplayRecord;
@@ -175,7 +180,7 @@ export function AuditTrailCard({
         }
       />
 
-      {isExpanded ? (
+      <CardBody isExpanded={isExpanded}>
         <>
           {isTurnFlowInProgress ? (
             <div className="live-run-banner" aria-live="polite">
@@ -304,7 +309,7 @@ export function AuditTrailCard({
             )}
           </div>
         </>
-      ) : null}
+      </CardBody>
     </CardShell>
   );
 }

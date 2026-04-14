@@ -3,7 +3,12 @@ import { useState } from 'react';
 import type { GameSessionRecord } from '../lib/api';
 import { formatCurrency } from '../lib/formatters';
 
-import { CardCollapseButton, CardHeader, CardShell } from './card-shell';
+import {
+  CardBody,
+  CardCollapseButton,
+  CardHeader,
+  CardShell,
+} from './card-shell';
 
 interface TreasuryCardProps {
   selectedSession?: GameSessionRecord;
@@ -130,7 +135,7 @@ export function TreasuryCard({
         }
       />
 
-      {isExpanded ? (
+      <CardBody isExpanded={isExpanded}>
         <div className="treasury-layout">
           <div className="treasury-column full-width">
             <div className="treasury-summary-grid">
@@ -190,7 +195,7 @@ export function TreasuryCard({
             )}
           </div>
         </div>
-      ) : null}
+      </CardBody>
     </CardShell>
   );
 }

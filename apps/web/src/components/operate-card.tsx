@@ -1,6 +1,11 @@
 import { useState } from 'react';
 
-import { CardCollapseButton, CardHeader, CardShell } from './card-shell';
+import {
+  CardBody,
+  CardCollapseButton,
+  CardHeader,
+  CardShell,
+} from './card-shell';
 
 interface OperateCardProps {
   selectedSessionId: string;
@@ -51,7 +56,7 @@ export function OperateCard({
         }
       />
 
-      {isExpanded ? (
+      <CardBody isExpanded={isExpanded}>
         <>
           <label className="field">
             <span>Turn count</span>
@@ -110,7 +115,7 @@ export function OperateCard({
           {runError ? <p className="error-copy">{runError}</p> : null}
           {advanceError ? <p className="error-copy">{advanceError}</p> : null}
         </>
-      ) : null}
+      </CardBody>
     </CardShell>
   );
 }

@@ -19,6 +19,12 @@ interface CardCollapseButtonProps {
   onToggle: () => void;
 }
 
+interface CardBodyProps {
+  children: ReactNode;
+  isExpanded: boolean;
+  className?: string;
+}
+
 function joinClasses(...values: Array<string | undefined>) {
   return values.filter(Boolean).join(' ');
 }
@@ -65,5 +71,20 @@ export function CardCollapseButton({
     >
       {isExpanded ? '−' : '+'}
     </button>
+  );
+}
+
+export function CardBody({ children, isExpanded, className }: CardBodyProps) {
+  return (
+    <div
+      className={joinClasses(
+        'card-body',
+        isExpanded ? 'expanded' : 'collapsed',
+        className,
+      )}
+      aria-hidden={!isExpanded}
+    >
+      <div className="card-body-inner">{children}</div>
+    </div>
   );
 }

@@ -3,7 +3,12 @@ import { useState } from 'react';
 import type { GameSessionRecord } from '../lib/api';
 import { formatCurrency } from '../lib/formatters';
 
-import { CardCollapseButton, CardHeader, CardShell } from './card-shell';
+import {
+  CardBody,
+  CardCollapseButton,
+  CardHeader,
+  CardShell,
+} from './card-shell';
 
 interface BalancesCardProps {
   selectedSession?: GameSessionRecord;
@@ -67,7 +72,7 @@ export function BalancesCard({
         }
       />
 
-      {isExpanded ? (
+      <CardBody isExpanded={isExpanded}>
         <div className="agent-balance-grid">
           {selectedSession.agents.map((agent) => (
             <article key={agent.id} className="balance-card">
@@ -88,7 +93,7 @@ export function BalancesCard({
             </article>
           ))}
         </div>
-      ) : null}
+      </CardBody>
     </CardShell>
   );
 }

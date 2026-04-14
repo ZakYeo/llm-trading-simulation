@@ -56,6 +56,34 @@ select {
   gap: 18px;
 }
 
+.card-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+    grid-template-rows 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms ease,
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.card-body.expanded {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.card-body.collapsed {
+  pointer-events: none;
+}
+
+.card-body-inner {
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  gap: 18px;
+}
+
 .dashboard-card {
   min-width: 0;
 }
