@@ -73,6 +73,7 @@ The backend currently supports:
 - round advancement with interest accrual
 - agent round orchestration
 - replay APIs over persisted history
+- state-grounded banker and trader context built from current balances, custody positions, and currently open market positions
 
 ### Frontend
 
@@ -84,6 +85,17 @@ The frontend is an operator dashboard that currently supports:
 - explicitly advancing rounds from the UI
 - inspecting balances and current session state
 - viewing replay events
+- reviewing the audit trail to compare agent narration against persisted actions, custody events, and market settlements
+
+## Agent Decision Model
+
+Agent runtimes operate on a backend-built turn context rather than raw replay history alone. In practice this means:
+
+- current balances, custody totals, and currently open market positions are treated as authoritative session state
+- settled positions are removed from the open-position view used for subsequent agent turns
+- banker guidance about liquidity, exposure, and custody should reflect the latest persisted session state rather than prior conversational plans
+
+This state-grounded context is built in the API before each agent action and is shared across both mock and OpenAI-backed runtimes.
 
 ## Environment Configuration
 
