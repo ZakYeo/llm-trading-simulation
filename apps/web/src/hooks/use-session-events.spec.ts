@@ -29,12 +29,15 @@ describe('createSessionEventHandlers', () => {
     expect(setLatestRunSummary).toHaveBeenCalledWith(
       'Turn 4 completed with 2 actions and 1 messages.',
     );
-    expect(invalidateQueries).toHaveBeenCalledTimes(2);
+    expect(invalidateQueries).toHaveBeenCalledTimes(3);
     expect(invalidateQueries).toHaveBeenNthCalledWith(1, {
       queryKey: ['game-session', 'session-1'],
     });
     expect(invalidateQueries).toHaveBeenNthCalledWith(2, {
       queryKey: ['game-replay', 'session-1'],
+    });
+    expect(invalidateQueries).toHaveBeenNthCalledWith(3, {
+      queryKey: ['game-sessions'],
     });
   });
 
@@ -83,7 +86,7 @@ describe('createSessionEventHandlers', () => {
 
     await Promise.resolve();
 
-    expect(invalidateQueries).toHaveBeenCalledTimes(6);
+    expect(invalidateQueries).toHaveBeenCalledTimes(9);
     expect(setLatestRunSummary).toHaveBeenLastCalledWith(
       'Round 1 finished after 4 turns.',
     );

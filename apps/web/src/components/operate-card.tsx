@@ -117,14 +117,7 @@ export function OperateCard({
           {runError ? <p className="error-copy">{runError}</p> : null}
           {advanceError ? <p className="error-copy">{advanceError}</p> : null}
         </>
-      ) : (
-        <div className="collapsed-setup-copy">
-          <p>
-            Session operation is hidden. Expand it to run turns or settle
-            rounds.
-          </p>
-        </div>
-      )}
+      ) : null}
     </CardShell>
   );
 }

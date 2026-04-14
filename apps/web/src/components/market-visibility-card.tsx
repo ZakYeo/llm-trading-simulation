@@ -47,13 +47,6 @@ export function MarketVisibilityCard({
         }
       />
 
-      {!selectedSession ? (
-        <p className="empty-copy">
-          Connect to a session to inspect live market opportunities and trader
-          positions.
-        </p>
-      ) : null}
-
       {selectedSession && isExpanded ? (
         <div className="market-layout">
           <section className="market-section">

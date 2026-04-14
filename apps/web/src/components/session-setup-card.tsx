@@ -1,3 +1,4 @@
+import type { GameSessionSummary } from '../lib/api';
 import { useState } from 'react';
 
 import { CardCollapseButton, CardHeader, CardShell } from './card-shell';
@@ -10,6 +11,7 @@ interface AgentDraft {
 
 interface SessionSetupCardProps {
   selectedSessionId: string;
+  availableSessions: GameSessionSummary[];
   sessionName: string;
   initialBalance: string;
   interestRateBps: string;
@@ -34,6 +36,7 @@ const agentRoleOptions = ['banker', 'trader'] as const;
 
 export function SessionSetupCard({
   selectedSessionId,
+  availableSessions,
   sessionName,
   initialBalance,
   interestRateBps,
@@ -175,26 +178,25 @@ export function SessionSetupCard({
           </button>
 
           <label className="field">
-            <span>Or connect to session id</span>
-            <input
+            <span>Connect to session</span>
+            <select
               value={selectedSessionId}
               onChange={(event) =>
                 onSelectedSessionIdChange(event.target.value)
               }
-              placeholder="Paste an existing session id"
-            />
+            >
+              <option value="">Select a saved session</option>
+              {availableSessions.map((session) => (
+                <option key={session.id} value={session.id}>
+                  {session.name} ({session.id})
+                </option>
+              ))}
+            </select>
           </label>
 
           {createError ? <p className="error-copy">{createError}</p> : null}
         </div>
-      ) : (
-        <div className="collapsed-setup-copy">
-          <p>
-            Session setup is hidden. Expand it to create a new session or edit
-            the roster.
-          </p>
-        </div>
-      )}
+      ) : null}
     </CardShell>
   );
 }

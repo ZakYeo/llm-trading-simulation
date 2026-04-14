@@ -8,11 +8,7 @@ import {
 
 async function connectToSession(page: Page, sessionId: string) {
   await page.goto('/');
-  await page
-    .locator('label')
-    .filter({ hasText: 'Or connect to session id' })
-    .locator('input')
-    .fill(sessionId);
+  await page.getByLabel('Connect to session').selectOption(sessionId);
 }
 
 function topbarMetric(page: Page, index: number) {
@@ -47,6 +43,50 @@ test('@smoke connects to a seeded session and renders the expected numbers', asy
   );
 });
 
+test('@smoke keeps collapsed cards compact before a session is connected and expands help content', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  await page.getByRole('button', { name: 'Minimise live state' }).click();
+  await page
+    .getByRole('button', { name: 'Minimise market visibility' })
+    .click();
+  await page.getByRole('button', { name: 'Minimise audit trail' }).click();
+  await page.getByRole('button', { name: 'Minimise session setup' }).click();
+  await page.getByRole('button', { name: 'Minimise operate section' }).click();
+
+  await expect(
+    page.getByText(
+      'Start by creating a session or connecting to an existing one.',
+    ),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText(
+      'Connect to a session to inspect live market opportunities and trader positions.',
+    ),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText(
+      'Audit trail is hidden. Expand it to inspect replay history.',
+    ),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText(
+      'Session setup is hidden. Expand it to create a new session or edit the roster.',
+    ),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText(
+      'Session operation is hidden. Expand it to run turns or settle rounds.',
+    ),
+  ).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Help' }).click();
+  await expect(page.getByRole('dialog')).toContainText('Custody Overview');
+  await expect(page.getByRole('dialog')).toContainText('Market Visibility');
+});
+
 test('@smoke runs one turn and updates balances, positions, and replay after completion', async ({
   page,
   request,
@@ -73,6 +113,37 @@ test('@smoke runs one turn and updates balances, positions, and replay after com
   );
   await expect(page.locator('.replay-panel')).toContainText(
     'Trader Bot / open market position',
+  );
+});
+
+test('@smoke shows a live in-progress banner near the audit trail while turns are still running', async ({
+  page,
+  request,
+}) => {
+  const session = await createBankerTraderSession(
+    request,
+    'Playwright In Progress Session',
+  );
+
+  await connectToSession(page, session.id);
+  await page.route(
+    `http://127.0.0.1:3100/api/agents/sessions/${session.id}/rounds/orchestrate`,
+    async (route) => {
+      const response = await route.fetch();
+
+      await page.waitForTimeout(750);
+      await route.fulfill({ response });
+    },
+  );
+
+  await page.getByRole('button', { name: '1 turn' }).click();
+  await page.getByRole('button', { name: /Run next 1 turn/ }).click();
+
+  await expect(page.locator('.live-run-banner')).toContainText(
+    'Running 1 turn...',
+  );
+  await expect(page.locator('.activity-note strong')).toContainText(
+    `Ran 1 turn for session ${session.id}`,
   );
 });
 

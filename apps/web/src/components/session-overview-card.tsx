@@ -5,13 +5,11 @@ import type { GameSessionRecord } from '../lib/api';
 import { CardCollapseButton, CardHeader, CardShell } from './card-shell';
 
 interface SessionOverviewCardProps {
-  selectedSessionId: string;
   selectedSession?: GameSessionRecord;
   isFetching: boolean;
 }
 
 export function SessionOverviewCard({
-  selectedSessionId,
   selectedSession,
   isFetching,
 }: SessionOverviewCardProps) {
@@ -41,11 +39,6 @@ export function SessionOverviewCard({
       />
 
       {isFetching ? <p>Loading session...</p> : null}
-      {!selectedSessionId ? (
-        <p className="empty-copy">
-          Start by creating a session or connecting to an existing one.
-        </p>
-      ) : null}
 
       {selectedSession && isExpanded ? (
         <div className="overview-grid">
@@ -65,12 +58,6 @@ export function SessionOverviewCard({
             <span>Session id</span>
             <strong className="mono">{selectedSession.id}</strong>
           </article>
-        </div>
-      ) : selectedSession ? (
-        <div className="collapsed-setup-copy workspace-collapsed-copy">
-          <p>
-            Live state is hidden. Expand it to inspect balances and treasury.
-          </p>
         </div>
       ) : null}
     </CardShell>

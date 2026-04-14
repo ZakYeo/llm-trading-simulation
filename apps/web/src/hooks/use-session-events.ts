@@ -8,7 +8,7 @@ import {
 interface UseSessionEventsInput {
   queryClient: {
     invalidateQueries: (input: {
-      queryKey: readonly [string, string];
+      queryKey: readonly [string, string?];
     }) => Promise<unknown>;
   };
   selectedSessionId: string;
@@ -27,6 +27,9 @@ export function createSessionEventHandlers({
       }),
       queryClient.invalidateQueries({
         queryKey: ['game-replay', selectedSessionId],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ['game-sessions'],
       }),
     ]);
   }

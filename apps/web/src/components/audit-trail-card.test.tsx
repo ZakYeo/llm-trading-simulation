@@ -46,6 +46,8 @@ describe('AuditTrailCard', () => {
         replay={buildReplay()}
         selectedRound={2}
         isFetching={false}
+        isTurnFlowInProgress={false}
+        latestRunSummary=""
       />,
     );
 

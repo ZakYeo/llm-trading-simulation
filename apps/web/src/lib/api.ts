@@ -1,6 +1,7 @@
 import type {
   GameReplayRecord,
   GameSessionRecord,
+  GameSessionSummary,
   OrchestratedRoundRecord,
 } from '@llm-sim/shared-types';
 
@@ -8,6 +9,7 @@ export type {
   AgentSessionEventRecord,
   GameReplayRecord,
   GameSessionRecord,
+  GameSessionSummary,
   OrchestratedRoundRecord,
 } from '@llm-sim/shared-types';
 
@@ -52,6 +54,10 @@ export function createGameSession(input: CreateSessionInput) {
 
 export function getGameSession(gameSessionId: string) {
   return request<GameSessionRecord>(`/game/sessions/${gameSessionId}`);
+}
+
+export function listGameSessions() {
+  return request<GameSessionSummary[]>('/game/sessions');
 }
 
 export function getGameReplay(gameSessionId: string) {

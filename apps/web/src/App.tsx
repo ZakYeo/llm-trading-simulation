@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { startTransition, useState } from 'react';
+import type { CSSProperties } from 'react';
+import { startTransition, useEffect, useRef, useState } from 'react';
 
 import { AuditTrailCard } from './components/audit-trail-card';
 import { BalancesCard } from './components/balances-card';
@@ -13,6 +14,7 @@ import {
   createGameSession,
   getGameReplay,
   getGameSession,
+  listGameSessions,
   orchestrateAgentRound,
 } from './lib/api';
 import { useSessionEvents } from './hooks/use-session-events';
@@ -44,6 +46,10 @@ export function App() {
   const [nextAgentDraftId, setNextAgentDraftId] = useState(
     defaultAgentSetup.length + 1,
   );
+  const [revealedSessionId, setRevealedSessionId] = useState<string | null>(
+    null,
+  );
+  const previousVisibleSessionId = useRef<string | null>(null);
 
   const sessionQuery = useQuery({
     queryKey: ['game-session', selectedSessionId],
@@ -54,6 +60,10 @@ export function App() {
     queryKey: ['game-replay', selectedSessionId],
     queryFn: () => getGameReplay(selectedSessionId),
     enabled: selectedSessionId.length > 0,
+  });
+  const sessionsQuery = useQuery({
+    queryKey: ['game-sessions'],
+    queryFn: listGameSessions,
   });
 
   const createSessionMutation = useMutation({
@@ -71,9 +81,24 @@ export function App() {
         setSelectedSessionId(session.id);
         setLatestRunSummary(`Created session ${session.name}`);
       });
+      queryClient.setQueryData(
+        ['game-sessions'],
+        (current: typeof sessionsQuery.data = []) => [
+          {
+            id: session.id,
+            name: session.name,
+            status: session.status,
+            currentRound: session.currentRound,
+          },
+          ...current.filter((existing) => existing.id !== session.id),
+        ],
+      );
       queryClient.setQueryData(['game-session', session.id], session);
       void queryClient.invalidateQueries({
         queryKey: ['game-replay', session.id],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['game-sessions'],
       });
     },
   });
@@ -97,6 +122,9 @@ export function App() {
         queryClient.invalidateQueries({
           queryKey: ['game-replay', selectedSessionId],
         }),
+        queryClient.invalidateQueries({
+          queryKey: ['game-sessions'],
+        }),
       ]);
     },
   });
@@ -108,15 +136,53 @@ export function App() {
         `Advanced to round ${session.currentRound} with ${roundInterestRateBps ?? 'default'} bps custody interest`,
       );
       queryClient.setQueryData(['game-session', session.id], session);
-      void queryClient.invalidateQueries({
-        queryKey: ['game-replay', selectedSessionId],
-      });
+      void Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['game-replay', selectedSessionId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['game-sessions'],
+        }),
+      ]);
     },
   });
 
   const selectedSession = sessionQuery.data;
   const replay = replayQuery.data;
   const canRemoveAgent = agentDrafts.length > 1;
+  const isTurnFlowInProgress =
+    orchestrateMutation.isPending || advanceRoundMutation.isPending;
+  const inProgressLabel = orchestrateMutation.isPending
+    ? `Running ${turnCount} turn${turnCount === 1 ? '' : 's'}...`
+    : advanceRoundMutation.isPending
+      ? 'Applying round settlement...'
+      : '';
+  const shouldAnimateSessionCards = selectedSession?.id === revealedSessionId;
+
+  useEffect(() => {
+    if (!selectedSession) {
+      previousVisibleSessionId.current = null;
+      setRevealedSessionId(null);
+      return;
+    }
+
+    if (previousVisibleSessionId.current === selectedSession.id) {
+      return;
+    }
+
+    previousVisibleSessionId.current = selectedSession.id;
+    setRevealedSessionId(selectedSession.id);
+
+    const timer = window.setTimeout(() => {
+      setRevealedSessionId((current) =>
+        current === selectedSession.id ? null : current,
+      );
+    }, 900);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [selectedSession]);
 
   function updateAgentDraft(
     draftId: string,
@@ -204,6 +270,7 @@ export function App() {
         <aside className="control-rail">
           <SessionSetupCard
             selectedSessionId={selectedSessionId}
+            availableSessions={sessionsQuery.data ?? []}
             sessionName={sessionName}
             initialBalance={initialBalance}
             interestRateBps={interestRateBps}
@@ -237,19 +304,66 @@ export function App() {
         </aside>
 
         <div className="workspace-column">
-          <SessionOverviewCard
-            selectedSessionId={selectedSessionId}
-            selectedSession={selectedSession}
-            isFetching={sessionQuery.isFetching}
-          />
-          <BalancesCard selectedSession={selectedSession} />
-          <TreasuryCard selectedSession={selectedSession} />
-          <MarketVisibilityCard selectedSession={selectedSession} />
-          <AuditTrailCard
-            replay={replay}
-            selectedRound={selectedSession?.currentRound}
-            isFetching={replayQuery.isFetching}
-          />
+          <div
+            className={
+              shouldAnimateSessionCards
+                ? 'dashboard-card session-card-enter'
+                : 'dashboard-card'
+            }
+            style={{ '--card-enter-delay': '0ms' } as CSSProperties}
+          >
+            <SessionOverviewCard
+              selectedSession={selectedSession}
+              isFetching={sessionQuery.isFetching}
+            />
+          </div>
+          <div
+            className={
+              shouldAnimateSessionCards
+                ? 'dashboard-card session-card-enter'
+                : 'dashboard-card'
+            }
+            style={{ '--card-enter-delay': '80ms' } as CSSProperties}
+          >
+            <BalancesCard selectedSession={selectedSession} />
+          </div>
+          <div
+            className={
+              shouldAnimateSessionCards
+                ? 'dashboard-card session-card-enter'
+                : 'dashboard-card'
+            }
+            style={{ '--card-enter-delay': '160ms' } as CSSProperties}
+          >
+            <TreasuryCard selectedSession={selectedSession} />
+          </div>
+          <div
+            className={
+              shouldAnimateSessionCards
+                ? 'dashboard-card session-card-enter'
+                : 'dashboard-card'
+            }
+            style={{ '--card-enter-delay': '240ms' } as CSSProperties}
+          >
+            <MarketVisibilityCard selectedSession={selectedSession} />
+          </div>
+          <div
+            className={
+              shouldAnimateSessionCards
+                ? 'dashboard-card session-card-enter'
+                : 'dashboard-card'
+            }
+            style={{ '--card-enter-delay': '320ms' } as CSSProperties}
+          >
+            <AuditTrailCard
+              replay={replay}
+              selectedRound={selectedSession?.currentRound}
+              isFetching={replayQuery.isFetching}
+              isTurnFlowInProgress={isTurnFlowInProgress}
+              inProgressLabel={inProgressLabel}
+              latestRunSummary={latestRunSummary}
+            />
+          </div>
         </div>
       </section>
 
@@ -284,8 +398,8 @@ export function App() {
               <article className="help-card">
                 <strong>1. Create or connect</strong>
                 <p>
-                  Use Session Setup to create a new simulation or load an
-                  existing session id.
+                  Use Session Setup to create a new simulation or connect to a
+                  saved session from the dropdown list.
                 </p>
               </article>
               <article className="help-card">
@@ -310,7 +424,23 @@ export function App() {
                 </p>
               </article>
               <article className="help-card">
-                <strong>5. Audit history</strong>
+                <strong>5. Custody overview</strong>
+                <p>
+                  Custody Overview shows banker-led custody totals, principal,
+                  accrued interest, and the trader&apos;s currently redeemable
+                  balance with the banker.
+                </p>
+              </article>
+              <article className="help-card">
+                <strong>6. Market visibility</strong>
+                <p>
+                  Market Visibility shows the current opportunity board and any
+                  trader market positions that are still shaping session
+                  exposure.
+                </p>
+              </article>
+              <article className="help-card">
+                <strong>7. Audit history</strong>
                 <p>
                   Filter the Audit Trail by treasury, messages, actions, or
                   transfers, and limit the view to recent events when the log

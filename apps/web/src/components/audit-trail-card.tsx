@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { GameReplayRecord } from '../lib/api';
 import {
@@ -13,6 +13,9 @@ interface AuditTrailCardProps {
   replay?: GameReplayRecord;
   selectedRound?: number;
   isFetching: boolean;
+  isTurnFlowInProgress: boolean;
+  inProgressLabel?: string;
+  latestRunSummary: string;
 }
 
 type ReplayFilter = 'all' | 'treasury' | 'messages' | 'actions' | 'transfers';
@@ -62,12 +65,18 @@ export function AuditTrailCard({
   replay,
   selectedRound,
   isFetching,
+  isTurnFlowInProgress,
+  inProgressLabel,
+  latestRunSummary,
 }: AuditTrailCardProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [activeFilter, setActiveFilter] = useState<ReplayFilter>('all');
   const [activeWindow, setActiveWindow] = useState<ReplayWindow>('all');
   const [activeRoundWindow, setActiveRoundWindow] =
     useState<ReplayRoundWindow>('all');
+  const [animatedEventIds, setAnimatedEventIds] = useState<string[]>([]);
+  const timelineScrollRef = useRef<HTMLDivElement | null>(null);
+  const previousVisibleEventIds = useRef<string[]>([]);
 
   const matchingEvents =
     replay?.events.filter((event) => matchesFilter(activeFilter, event)) ?? [];
@@ -110,6 +119,40 @@ export function AuditTrailCard({
     return groups;
   }, []);
 
+  useEffect(() => {
+    if (!isExpanded) {
+      previousVisibleEventIds.current = visibleEvents.map((event) => event.id);
+      return;
+    }
+
+    const previousIds = new Set(previousVisibleEventIds.current);
+    const appendedEventIds = visibleEvents
+      .map((event) => event.id)
+      .filter((eventId) => !previousIds.has(eventId));
+
+    previousVisibleEventIds.current = visibleEvents.map((event) => event.id);
+
+    if (appendedEventIds.length === 0) {
+      return;
+    }
+
+    setAnimatedEventIds(appendedEventIds);
+    timelineScrollRef.current?.scrollTo({
+      top: timelineScrollRef.current.scrollHeight,
+      behavior: 'smooth',
+    });
+
+    const timer = window.setTimeout(() => {
+      setAnimatedEventIds((current) =>
+        current.filter((eventId) => !appendedEventIds.includes(eventId)),
+      );
+    }, 700);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isExpanded, visibleEvents]);
+
   return (
     <CardShell className="replay-panel">
       <CardHeader
@@ -134,6 +177,18 @@ export function AuditTrailCard({
 
       {isExpanded ? (
         <>
+          {isTurnFlowInProgress ? (
+            <div className="live-run-banner" aria-live="polite">
+              <div className="live-run-indicator">
+                <span className="live-run-dot" aria-hidden="true" />
+                <strong>{inProgressLabel ?? 'Turn flow in progress'}</strong>
+              </div>
+              <span>
+                {latestRunSummary || 'Waiting for the next agent event...'}
+              </span>
+            </div>
+          ) : null}
+
           <div className="replay-toolbar">
             <div className="filter-row">
               {replayFilters.map((filter) => (
@@ -187,7 +242,7 @@ export function AuditTrailCard({
 
           {replay ? (
             visibleEvents.length > 0 ? (
-              <div className="timeline-scroll">
+              <div ref={timelineScrollRef} className="timeline-scroll">
                 <div className="timeline">
                   {eventsByRound.map((group) => (
                     <section key={group.roundNumber} className="round-group">
@@ -200,7 +255,14 @@ export function AuditTrailCard({
                         const eventDetail = getReplayEventDetail(event);
 
                         return (
-                          <article key={event.id} className="timeline-event">
+                          <article
+                            key={event.id}
+                            className={
+                              animatedEventIds.includes(event.id)
+                                ? 'timeline-event timeline-event-enter'
+                                : 'timeline-event'
+                            }
+                          >
                             <div className={`event-badge event-${event.type}`}>
                               {event.type.replace(/_/gu, ' ')}
                             </div>
@@ -238,11 +300,7 @@ export function AuditTrailCard({
             </p>
           )}
         </>
-      ) : (
-        <div className="collapsed-setup-copy">
-          <p>Audit trail is hidden. Expand it to inspect replay history.</p>
-        </div>
-      )}
+      ) : null}
     </CardShell>
   );
 }
