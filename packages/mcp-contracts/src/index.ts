@@ -128,6 +128,47 @@ export const agentTurnContextSchema = z.object({
         settlementRound: z.number().int().nonnegative(),
       }),
     ),
+    primaryCounterpartyOpenPositions: z.array(
+      z.object({
+        opportunityId: z.string().min(1),
+        opportunityTitle: z.string().min(1),
+        principal: z.string(),
+        entryRound: z.number().int().nonnegative(),
+        settlementRound: z.number().int().nonnegative(),
+      }),
+    ),
+    recentSettlements: z.array(
+      z.object({
+        opportunityId: z.string().min(1),
+        opportunityTitle: z.string().min(1),
+        ownerAgentId: z.string().min(1),
+        ownerName: z.string().min(1),
+        principal: z.string(),
+        settledRound: z.number().int().nonnegative(),
+        profitOrLoss: z.string(),
+      }),
+    ),
+    exposureSummary: z.object({
+      selfOpenPositionCount: z.number().int().nonnegative(),
+      selfOpenPrincipal: z.string(),
+      selfOpenWorstCaseDownside: z.string(),
+      selfOpenBestCaseUpside: z.string(),
+      selfLiquidBalance: z.string(),
+      selfReservedBalance: z.string(),
+      selfCustodiedBalance: z.string(),
+      primaryCounterpartyAgentId: z.string().min(1).nullable(),
+      primaryCounterpartyName: z.string().min(1).nullable(),
+      primaryCounterpartyRole: z
+        .enum(['banker', 'analyst', 'lawyer', 'influencer', 'trader'])
+        .nullable(),
+      primaryCounterpartyOpenPositionCount: z.number().int().nonnegative(),
+      primaryCounterpartyOpenPrincipal: z.string(),
+      primaryCounterpartyOpenWorstCaseDownside: z.string(),
+      primaryCounterpartyOpenBestCaseUpside: z.string(),
+      primaryCounterpartyLiquidBalance: z.string(),
+      primaryCounterpartyReservedBalance: z.string(),
+      primaryCounterpartyCustodiedBalance: z.string(),
+    }),
   }),
   economicContext: z.object({
     objective: z.string().min(1),

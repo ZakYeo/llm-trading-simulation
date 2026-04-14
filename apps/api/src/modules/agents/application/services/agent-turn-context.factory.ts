@@ -292,6 +292,126 @@ function buildMarketContext(
   >,
   agentId: string,
 ) {
+  const agent = session.agents.find((candidate) => candidate.id === agentId);
+
+  if (!agent) {
+    throw new Error('Agent must exist in the session to build market context.');
+  }
+
+  const primaryCounterparty = findPrimaryCounterparty(
+    session,
+    agentId,
+    agent.role,
+  );
+  const selfOpenPositions = session.marketPositions
+    .filter((position) => position.ownerAgentId === agentId)
+    .map((position) => ({
+      opportunityId: position.opportunityId,
+      opportunityTitle: position.opportunityTitle,
+      principal: position.principal.toDecimal(),
+      entryRound: position.entryRound,
+      settlementRound: position.settlementRound,
+    }));
+  const primaryCounterpartyOpenPositions = primaryCounterparty
+    ? session.marketPositions
+        .filter((position) => position.ownerAgentId === primaryCounterparty.id)
+        .map((position) => ({
+          opportunityId: position.opportunityId,
+          opportunityTitle: position.opportunityTitle,
+          principal: position.principal.toDecimal(),
+          entryRound: position.entryRound,
+          settlementRound: position.settlementRound,
+        }))
+    : [];
+  const summarizeExposure = (ownerAgentId: string, custodiedBalance: Money) => {
+    const owner = session.agents.find(
+      (candidate) => candidate.id === ownerAgentId,
+    );
+
+    if (!owner) {
+      throw new Error('Exposure summary owner must exist in the session.');
+    }
+
+    const openPositions = session.marketPositions.filter(
+      (position) => position.ownerAgentId === ownerAgentId,
+    );
+
+    const totals = openPositions.reduce(
+      (summary, position) => {
+        const opportunity = session.marketOpportunities.find(
+          (candidate) => candidate.id === position.opportunityId,
+        );
+
+        if (!opportunity) {
+          return summary;
+        }
+
+        const downsideBps = Math.max(
+          0,
+          Math.abs(opportunity.worstCaseReturnBps),
+        );
+        const upsideBps = Math.max(0, opportunity.bestCaseReturnBps);
+
+        return {
+          openPrincipal: summary.openPrincipal.add(position.principal),
+          worstCaseDownside: summary.worstCaseDownside.add(
+            position.principal.multiplyBps(downsideBps),
+          ),
+          bestCaseUpside: summary.bestCaseUpside.add(
+            position.principal.multiplyBps(upsideBps),
+          ),
+        };
+      },
+      {
+        openPrincipal: Money.zero(),
+        worstCaseDownside: Money.zero(),
+        bestCaseUpside: Money.zero(),
+      },
+    );
+
+    return {
+      openPositionCount: openPositions.length,
+      openPrincipal: totals.openPrincipal.toDecimal(),
+      openWorstCaseDownside: totals.worstCaseDownside.toDecimal(),
+      openBestCaseUpside: totals.bestCaseUpside.toDecimal(),
+      liquidBalance: owner.balance.available.toDecimal(),
+      reservedBalance: owner.balance.reserved.toDecimal(),
+      custodiedBalance: custodiedBalance.toDecimal(),
+    };
+  };
+  const selfCustodiedBalance =
+    session.bankerCustodyPositions
+      .find(
+        (position) =>
+          position.ownerAgentId === agentId &&
+          position.bankerAgentId ===
+            session.agents.find((candidate) => candidate.role === 'banker')?.id,
+      )
+      ?.totalBalance() ?? Money.zero();
+  const primaryCounterpartyCustodiedBalance = primaryCounterparty
+    ? session.bankerCustodyPositions
+        .filter((position) => position.ownerAgentId === primaryCounterparty.id)
+        .reduce(
+          (total, position) => total.add(position.totalBalance()),
+          Money.zero(),
+        )
+    : Money.zero();
+  const selfExposureSummary = summarizeExposure(agentId, selfCustodiedBalance);
+  const primaryCounterpartyExposureSummary = primaryCounterparty
+    ? summarizeExposure(
+        primaryCounterparty.id,
+        primaryCounterpartyCustodiedBalance,
+      )
+    : {
+        openPositionCount: 0,
+        openPrincipal: Money.zero().toDecimal(),
+        openWorstCaseDownside: Money.zero().toDecimal(),
+        openBestCaseUpside: Money.zero().toDecimal(),
+        liquidBalance: Money.zero().toDecimal(),
+        reservedBalance: Money.zero().toDecimal(),
+        custodiedBalance: Money.zero().toDecimal(),
+      };
+
   return {
     visibleOpportunities: session.marketOpportunities.map((opportunity) => ({
       opportunityId: opportunity.id,
@@ -306,15 +426,35 @@ function buildMarketContext(
       worstCaseReturnBps: opportunity.worstCaseReturnBps,
       bestCaseReturnBps: opportunity.bestCaseReturnBps,
     })),
-    selfOpenPositions: session.marketPositions
-      .filter((position) => position.ownerAgentId === agentId)
-      .map((position) => ({
-        opportunityId: position.opportunityId,
-        opportunityTitle: position.opportunityTitle,
-        principal: position.principal.toDecimal(),
-        entryRound: position.entryRound,
-        settlementRound: position.settlementRound,
-      })),
+    selfOpenPositions,
+    primaryCounterpartyOpenPositions,
+    recentSettlements: [],
+    exposureSummary: {
+      selfOpenPositionCount: selfExposureSummary.openPositionCount,
+      selfOpenPrincipal: selfExposureSummary.openPrincipal,
+      selfOpenWorstCaseDownside: selfExposureSummary.openWorstCaseDownside,
+      selfOpenBestCaseUpside: selfExposureSummary.openBestCaseUpside,
+      selfLiquidBalance: selfExposureSummary.liquidBalance,
+      selfReservedBalance: selfExposureSummary.reservedBalance,
+      selfCustodiedBalance: selfExposureSummary.custodiedBalance,
+      primaryCounterpartyAgentId: primaryCounterparty?.id ?? null,
+      primaryCounterpartyName: primaryCounterparty?.name ?? null,
+      primaryCounterpartyRole: primaryCounterparty?.role ?? null,
+      primaryCounterpartyOpenPositionCount:
+        primaryCounterpartyExposureSummary.openPositionCount,
+      primaryCounterpartyOpenPrincipal:
+        primaryCounterpartyExposureSummary.openPrincipal,
+      primaryCounterpartyOpenWorstCaseDownside:
+        primaryCounterpartyExposureSummary.openWorstCaseDownside,
+      primaryCounterpartyOpenBestCaseUpside:
+        primaryCounterpartyExposureSummary.openBestCaseUpside,
+      primaryCounterpartyLiquidBalance:
+        primaryCounterpartyExposureSummary.liquidBalance,
+      primaryCounterpartyReservedBalance:
+        primaryCounterpartyExposureSummary.reservedBalance,
+      primaryCounterpartyCustodiedBalance:
+        primaryCounterpartyExposureSummary.custodiedBalance,
+    },
   };
 }
 

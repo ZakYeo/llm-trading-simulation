@@ -81,6 +81,35 @@ function createContext(
         },
       ],
       selfOpenPositions: [],
+      primaryCounterpartyOpenPositions: [
+        {
+          opportunityId: 'opp-risky',
+          opportunityTitle: 'Binary Event Volatility',
+          principal: '9.0000',
+          entryRound: 0,
+          settlementRound: 1,
+        },
+      ],
+      recentSettlements: [],
+      exposureSummary: {
+        selfOpenPositionCount: 0,
+        selfOpenPrincipal: '0.0000',
+        selfOpenWorstCaseDownside: '0.0000',
+        selfOpenBestCaseUpside: '0.0000',
+        selfLiquidBalance: '100.0000',
+        selfReservedBalance: '0.0000',
+        selfCustodiedBalance: '0.0000',
+        primaryCounterpartyAgentId: 'trader-1',
+        primaryCounterpartyName: 'Trader Bot',
+        primaryCounterpartyRole: 'trader',
+        primaryCounterpartyOpenPositionCount: 1,
+        primaryCounterpartyOpenPrincipal: '9.0000',
+        primaryCounterpartyOpenWorstCaseDownside: '0.7200',
+        primaryCounterpartyOpenBestCaseUpside: '1.0800',
+        primaryCounterpartyLiquidBalance: '78.0000',
+        primaryCounterpartyReservedBalance: '9.0000',
+        primaryCounterpartyCustodiedBalance: '13.0000',
+      },
     },
     economicContext: {
       objective: 'Maximize expected fake-money outcome.',
@@ -143,6 +172,15 @@ describe('OpenAiAgentSystemContextBuilder', () => {
       'Market context: visible market opportunities: [id=opp-risky title=Binary Event Volatility',
     );
     expect(prompt).toContain(
+      'primary counterparty open market positions: [id=opp-risky title=Binary Event Volatility principal=9.0000',
+    );
+    expect(prompt).toContain(
+      'Exposure summary: self open position count = 0 self open principal = 0.0000',
+    );
+    expect(prompt).toContain(
+      'Only positions listed as open are currently open.',
+    );
+    expect(prompt).toContain(
       "Role economics: as the banker, you improve your outcome by attracting and retaining trader trader-1's custodial funds",
     );
     expect(prompt).toContain(
@@ -176,6 +214,54 @@ describe('OpenAiAgentSystemContextBuilder', () => {
             content: 'Funds can be placed in custody.',
           },
         ],
+        treasuryContext: {
+          bankerAgentId: 'banker-1',
+          bankerName: 'Banker Bot',
+          totalCustodiedPrincipal: '12.5000',
+          totalCustodiedAccruedInterest: '0.5000',
+          totalCustodiedBalance: '13.0000',
+          selfCustodyPosition: null,
+          obligationsForBanker: [],
+        },
+        marketContext: {
+          visibleOpportunities: [
+            {
+              opportunityId: 'opp-risky',
+              title: 'Binary Event Volatility',
+              summary: 'High variance one-round event trade.',
+              riskLevel: 'high',
+              listedRound: 0,
+              settlementRound: 1,
+              minCommitment: '5.0000',
+              maxCommitment: '25.0000',
+              estimatedNetReturnBps: 300,
+              worstCaseReturnBps: -800,
+              bestCaseReturnBps: 1200,
+            },
+          ],
+          selfOpenPositions: [],
+          primaryCounterpartyOpenPositions: [],
+          recentSettlements: [],
+          exposureSummary: {
+            selfOpenPositionCount: 0,
+            selfOpenPrincipal: '0.0000',
+            selfOpenWorstCaseDownside: '0.0000',
+            selfOpenBestCaseUpside: '0.0000',
+            selfLiquidBalance: '90.0000',
+            selfReservedBalance: '0.0000',
+            selfCustodiedBalance: '0.0000',
+            primaryCounterpartyAgentId: 'banker-1',
+            primaryCounterpartyName: 'Banker Bot',
+            primaryCounterpartyRole: 'banker',
+            primaryCounterpartyOpenPositionCount: 0,
+            primaryCounterpartyOpenPrincipal: '0.0000',
+            primaryCounterpartyOpenWorstCaseDownside: '0.0000',
+            primaryCounterpartyOpenBestCaseUpside: '0.0000',
+            primaryCounterpartyLiquidBalance: '100.0000',
+            primaryCounterpartyReservedBalance: '0.0000',
+            primaryCounterpartyCustodiedBalance: '13.0000',
+          },
+        },
       }),
     )
       .addBaseSystemPrompt()

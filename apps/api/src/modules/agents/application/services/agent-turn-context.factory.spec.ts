@@ -6,6 +6,7 @@ import { BankerCustodyPosition } from '../../../game/domain/entities/banker-cust
 import { GameAgent } from '../../../game/domain/entities/game-agent.js';
 import { GameSession } from '../../../game/domain/entities/game-session.js';
 import { MarketOpportunity } from '../../../game/domain/entities/market-opportunity.js';
+import { MarketPosition } from '../../../game/domain/entities/market-position.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import type { AgentActionRecord } from '../ports/agent-action-repository.port.js';
 import type { AgentMessageRecord } from '../ports/agent-message-repository.port.js';
@@ -78,6 +79,7 @@ function createSession() {
         resolutionReturnBps: 1200,
       }),
     ],
+    marketPositions: [],
   });
 }
 
@@ -193,6 +195,27 @@ describe('AgentTurnContextFactory', () => {
     });
     expect(context.marketContext.visibleOpportunities).toHaveLength(2);
     expect(context.marketContext.selfOpenPositions).toEqual([]);
+    expect(context.marketContext.primaryCounterpartyOpenPositions).toEqual([]);
+    expect(context.marketContext.recentSettlements).toEqual([]);
+    expect(context.marketContext.exposureSummary).toMatchObject({
+      selfOpenPositionCount: 0,
+      selfOpenPrincipal: '0.0000',
+      selfOpenWorstCaseDownside: '0.0000',
+      selfOpenBestCaseUpside: '0.0000',
+      selfLiquidBalance: '100.0000',
+      selfReservedBalance: '0.0000',
+      selfCustodiedBalance: '0.0000',
+      primaryCounterpartyAgentId: 'agent-2',
+      primaryCounterpartyName: 'Trader Bot',
+      primaryCounterpartyRole: 'trader',
+      primaryCounterpartyOpenPositionCount: 0,
+      primaryCounterpartyOpenPrincipal: '0.0000',
+      primaryCounterpartyOpenWorstCaseDownside: '0.0000',
+      primaryCounterpartyOpenBestCaseUpside: '0.0000',
+      primaryCounterpartyLiquidBalance: '100.0000',
+      primaryCounterpartyReservedBalance: '0.0000',
+      primaryCounterpartyCustodiedBalance: '13.0000',
+    });
   });
 
   it('builds trader context with self custody position and no banker obligations', () => {
@@ -240,6 +263,14 @@ describe('AgentTurnContextFactory', () => {
       opportunityId: 'opp-risky',
       riskLevel: 'high',
       estimatedNetReturnBps: 300,
+    });
+    expect(context.marketContext.exposureSummary).toMatchObject({
+      selfOpenPositionCount: 0,
+      selfLiquidBalance: '100.0000',
+      selfReservedBalance: '0.0000',
+      selfCustodiedBalance: '13.0000',
+      primaryCounterpartyAgentId: 'agent-1',
+      primaryCounterpartyRole: 'banker',
     });
   });
 
@@ -301,6 +332,78 @@ describe('AgentTurnContextFactory', () => {
     ]);
     expect(context.negotiationState).toMatchObject({
       privateMessageExchangeCountWithPrimaryCounterparty: 0,
+    });
+  });
+
+  it('grounds banker market context in the current open positions only', () => {
+    const factory = new AgentTurnContextFactory();
+    const session = createSession()
+      .withAgents([
+        new GameAgent({
+          id: 'agent-1',
+          name: 'Banker Bot',
+          role: 'banker',
+          balance: AccountBalance.open(Money.fromDecimal('103.5000')),
+          depositAccount: DepositAccount.open(),
+        }),
+        new GameAgent({
+          id: 'agent-2',
+          name: 'Trader Bot',
+          role: 'trader',
+          balance: AccountBalance.restore(
+            Money.fromDecimal('78.0000'),
+            Money.fromDecimal('9.0000'),
+          ),
+          depositAccount: DepositAccount.open(),
+        }),
+        new GameAgent({
+          id: 'agent-3',
+          name: 'Analyst Bot',
+          role: 'analyst',
+          balance: AccountBalance.open(Money.fromDecimal('100.0000')),
+          depositAccount: DepositAccount.open(),
+        }),
+      ])
+      .withBankerCustodyPositions([
+        new BankerCustodyPosition({
+          bankerAgentId: 'agent-1',
+          ownerAgentId: 'agent-2',
+          principal: Money.fromDecimal('12.5000'),
+          accruedInterest: Money.fromDecimal('1.0000'),
+        }),
+      ])
+      .withMarketPositions([
+        new MarketPosition({
+          opportunityId: 'opp-risky',
+          ownerAgentId: 'agent-2',
+          opportunityTitle: 'Binary Event Volatility',
+          principal: Money.fromDecimal('9.0000'),
+          entryRound: 2,
+          settlementRound: 3,
+        }),
+      ]);
+
+    const context = factory.build(session, 'agent-1', 1, [], []);
+
+    expect(context.marketContext.selfOpenPositions).toEqual([]);
+    expect(context.marketContext.primaryCounterpartyOpenPositions).toEqual([
+      {
+        opportunityId: 'opp-risky',
+        opportunityTitle: 'Binary Event Volatility',
+        principal: '9.0000',
+        entryRound: 2,
+        settlementRound: 3,
+      },
+    ]);
+    expect(context.marketContext.exposureSummary).toMatchObject({
+      primaryCounterpartyAgentId: 'agent-2',
+      primaryCounterpartyOpenPositionCount: 1,
+      primaryCounterpartyOpenPrincipal: '9.0000',
+      primaryCounterpartyOpenWorstCaseDownside: '0.7200',
+      primaryCounterpartyOpenBestCaseUpside: '1.0800',
+      primaryCounterpartyLiquidBalance: '78.0000',
+      primaryCounterpartyReservedBalance: '9.0000',
+      primaryCounterpartyCustodiedBalance: '13.5000',
     });
   });
 
