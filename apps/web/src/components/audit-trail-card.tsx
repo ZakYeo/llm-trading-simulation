@@ -65,7 +65,7 @@ export function AuditTrailCard({
 }: AuditTrailCardProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [activeFilter, setActiveFilter] = useState<ReplayFilter>('all');
-  const [activeWindow, setActiveWindow] = useState<ReplayWindow>('10');
+  const [activeWindow, setActiveWindow] = useState<ReplayWindow>('all');
   const [activeRoundWindow, setActiveRoundWindow] =
     useState<ReplayRoundWindow>('all');
 

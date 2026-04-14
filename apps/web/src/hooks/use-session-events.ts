@@ -15,6 +15,82 @@ interface UseSessionEventsInput {
   setLatestRunSummary: (value: string) => void;
 }
 
+export function createSessionEventHandlers({
+  queryClient,
+  selectedSessionId,
+  setLatestRunSummary,
+}: UseSessionEventsInput) {
+  function refreshLiveState() {
+    void Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ['game-session', selectedSessionId],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ['game-replay', selectedSessionId],
+      }),
+    ]);
+  }
+
+  function handleActionProgressed(event: MessageEvent<string>) {
+    const payload = JSON.parse(event.data) as AgentSessionEventRecord;
+
+    if (payload.type !== 'action_progressed') {
+      return;
+    }
+
+    setLatestRunSummary(
+      `${payload.agentName} progressed ${payload.actionType} on turn ${payload.turnNumber}.`,
+    );
+    refreshLiveState();
+  }
+
+  function handleTransferSettled(event: MessageEvent<string>) {
+    const payload = JSON.parse(event.data) as AgentSessionEventRecord;
+
+    if (payload.type !== 'transfer_settled') {
+      return;
+    }
+
+    setLatestRunSummary(
+      `Transfer settled on turn ${payload.turnNumber} for ${payload.amount}.`,
+    );
+    refreshLiveState();
+  }
+
+  function handleTurnCompleted(event: MessageEvent<string>) {
+    const payload = JSON.parse(event.data) as AgentSessionEventRecord;
+
+    if (payload.type !== 'turn_completed') {
+      return;
+    }
+
+    setLatestRunSummary(
+      `Turn ${payload.turnNumber} completed with ${payload.actionCount} actions and ${payload.messageCount} messages.`,
+    );
+    refreshLiveState();
+  }
+
+  function handleRoundCompleted(event: MessageEvent<string>) {
+    const payload = JSON.parse(event.data) as AgentSessionEventRecord;
+
+    if (payload.type !== 'round_completed') {
+      return;
+    }
+
+    setLatestRunSummary(
+      `Round ${payload.roundNumber} finished after ${payload.turnCount} turn${payload.turnCount === 1 ? '' : 's'}.`,
+    );
+    refreshLiveState();
+  }
+
+  return {
+    handleActionProgressed,
+    handleTransferSettled,
+    handleTurnCompleted,
+    handleRoundCompleted,
+  };
+}
+
 export function useSessionEvents({
   queryClient,
   selectedSessionId,
@@ -26,68 +102,16 @@ export function useSessionEvents({
     }
 
     const eventSource = createAgentSessionEventSource(selectedSessionId);
-
-    function refreshLiveState() {
-      void Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ['game-session', selectedSessionId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ['game-replay', selectedSessionId],
-        }),
-      ]);
-    }
-
-    function handleActionProgressed(event: MessageEvent<string>) {
-      const payload = JSON.parse(event.data) as AgentSessionEventRecord;
-
-      if (payload.type !== 'action_progressed') {
-        return;
-      }
-
-      setLatestRunSummary(
-        `${payload.agentName} progressed ${payload.actionType} on turn ${payload.turnNumber}.`,
-      );
-      refreshLiveState();
-    }
-
-    function handleTransferSettled(event: MessageEvent<string>) {
-      const payload = JSON.parse(event.data) as AgentSessionEventRecord;
-
-      if (payload.type !== 'transfer_settled') {
-        return;
-      }
-
-      setLatestRunSummary(
-        `Transfer settled on turn ${payload.turnNumber} for ${payload.amount}.`,
-      );
-      refreshLiveState();
-    }
-
-    function handleTurnCompleted(event: MessageEvent<string>) {
-      const payload = JSON.parse(event.data) as AgentSessionEventRecord;
-
-      if (payload.type !== 'turn_completed') {
-        return;
-      }
-
-      setLatestRunSummary(
-        `Turn ${payload.turnNumber} completed with ${payload.actionCount} actions and ${payload.messageCount} messages.`,
-      );
-    }
-
-    function handleRoundCompleted(event: MessageEvent<string>) {
-      const payload = JSON.parse(event.data) as AgentSessionEventRecord;
-
-      if (payload.type !== 'round_completed') {
-        return;
-      }
-
-      setLatestRunSummary(
-        `Round ${payload.roundNumber} finished after ${payload.turnCount} turn${payload.turnCount === 1 ? '' : 's'}.`,
-      );
-      refreshLiveState();
-    }
+    const {
+      handleActionProgressed,
+      handleTransferSettled,
+      handleTurnCompleted,
+      handleRoundCompleted,
+    } = createSessionEventHandlers({
+      queryClient,
+      selectedSessionId,
+      setLatestRunSummary,
+    });
 
     eventSource.addEventListener(
       'action_progressed',

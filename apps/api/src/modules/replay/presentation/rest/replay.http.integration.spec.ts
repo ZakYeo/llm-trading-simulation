@@ -334,6 +334,102 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
     ]);
   });
 
+  it('keeps replay messages available after a four-turn round and a later round advance', async () => {
+    const createResponse = await fetch(`${baseUrl}/api/game/sessions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'Replay Visibility Table',
+        initialBalance: '100.0000',
+        agents: [
+          { name: 'Banker Bot', role: 'banker' },
+          { name: 'Analyst Bot', role: 'analyst' },
+          { name: 'Trader Bot', role: 'trader' },
+        ],
+      }),
+    });
+    const createdSession = (await createResponse.json()) as {
+      id: string;
+    };
+
+    expect(createResponse.status).toBe(201);
+
+    const orchestrateResponse = await fetch(
+      `${baseUrl}/api/agents/sessions/${createdSession.id}/rounds/orchestrate`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          turnCount: 4,
+        }),
+      },
+    );
+    expect(orchestrateResponse.status).toBe(201);
+
+    const advanceRoundResponse = await fetch(
+      `${baseUrl}/api/game/sessions/${createdSession.id}/rounds/advance`,
+      {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          interestRateBps: 250,
+        }),
+      },
+    );
+    expect(advanceRoundResponse.status).toBe(200);
+
+    const replayResponse = await fetch(
+      `${baseUrl}/api/replay/sessions/${createdSession.id}`,
+    );
+    const replay = (await replayResponse.json()) as {
+      gameSession: { currentRound: number };
+      events: Array<{
+        type: string;
+        roundNumber?: number;
+        turnNumber?: number;
+        content?: string;
+        amount?: string;
+      }>;
+    };
+
+    expect(replayResponse.status).toBe(200);
+    expect(replay.gameSession.currentRound).toBe(2);
+    expect(
+      replay.events.some(
+        (event) =>
+          event.type === 'message' &&
+          event.roundNumber === 1 &&
+          event.turnNumber === 1 &&
+          typeof event.content === 'string' &&
+          event.content.length > 0,
+      ),
+    ).toBe(true);
+    expect(
+      replay.events.some(
+        (event) =>
+          event.type === 'message' &&
+          event.roundNumber === 1 &&
+          event.turnNumber === 2 &&
+          event.content ===
+            'Volatility is compressing and timing risk is falling.',
+      ),
+    ).toBe(true);
+    expect(
+      replay.events.some(
+        (event) =>
+          event.type === 'custody_accrual' &&
+          event.roundNumber === 2 &&
+          event.amount === '0.2500',
+      ),
+    ).toBe(true);
+  });
+
   it('includes rejected proposal actions without an extra transfer event', async () => {
     process.env.AGENT_MOCK_SCENARIO = 'reject_proposal';
 
