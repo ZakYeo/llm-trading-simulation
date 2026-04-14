@@ -107,6 +107,10 @@ class InMemoryAgentMessageRepository implements AgentMessageRepositoryPort {
   async findRecentByGameSessionId(): Promise<AgentMessageRecord[]> {
     return [...this.saved];
   }
+
+  async deleteById(messageId: string): Promise<void> {
+    this.saved = this.saved.filter((message) => message.id !== messageId);
+  }
 }
 
 class InMemoryAgentActionRepository implements AgentActionRepositoryPort {
@@ -126,6 +130,10 @@ class InMemoryAgentActionRepository implements AgentActionRepositoryPort {
 
   async findRecentByGameSessionId(): Promise<AgentActionRecord[]> {
     return [...this.saved];
+  }
+
+  async deleteById(actionId: string): Promise<void> {
+    this.saved = this.saved.filter((action) => action.id !== actionId);
   }
 }
 

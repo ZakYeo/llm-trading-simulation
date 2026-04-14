@@ -8,6 +8,14 @@ import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.serv
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 
+interface PatchedRunAgentCommunicationTurnUseCase {
+  agentActionExecutor: {
+    openMarketPositionUseCase: {
+      execute: (...args: unknown[]) => Promise<unknown>;
+    };
+  };
+}
+
 describe.runIf(Boolean(testDatabaseUrl))(
   'Agents consistency integration',
   () => {
@@ -147,13 +155,7 @@ describe.runIf(Boolean(testDatabaseUrl))(
       const createdSession = await createBankerTraderSession();
       const runAgentCommunicationTurnUseCase = app.get(
         RunAgentCommunicationTurnUseCase,
-      ) as RunAgentCommunicationTurnUseCase & {
-        agentActionExecutor: {
-          openMarketPositionUseCase: {
-            execute: (...args: unknown[]) => Promise<unknown>;
-          };
-        };
-      };
+      ) as unknown as PatchedRunAgentCommunicationTurnUseCase;
       const originalOpenMarketPositionUseCase =
         runAgentCommunicationTurnUseCase.agentActionExecutor
           .openMarketPositionUseCase;

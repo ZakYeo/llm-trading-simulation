@@ -1,3 +1,6 @@
 #!/usr/bin/env sh
 
+set -e
+
 corepack pnpm lint-staged
+corepack pnpm test:e2e:ui-smoke

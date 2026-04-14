@@ -24,10 +24,10 @@ function createMarketPersistenceDelegates() {
       async deleteMany() {},
       async upsert() {},
     },
-    marketPositionOpened: {
+    marketPositionOpen: {
       async create() {},
     },
-    marketPositionSettled: {
+    marketPositionSettlement: {
       async create() {},
     },
   };
