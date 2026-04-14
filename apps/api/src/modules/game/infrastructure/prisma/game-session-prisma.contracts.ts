@@ -215,11 +215,11 @@ export interface PrismaCustodyAccrualDelegate {
   createMany(args: { data: CustodyAccrualCreateData[] }): Promise<unknown>;
 }
 
-export interface PrismaMarketPositionOpenedDelegate {
+export interface PrismaMarketPositionOpenDelegate {
   create(args: { data: MarketPositionOpenedCreateData }): Promise<unknown>;
 }
 
-export interface PrismaMarketPositionSettledDelegate {
+export interface PrismaMarketPositionSettlementDelegate {
   create(args: { data: MarketPositionSettledCreateData }): Promise<unknown>;
 }
 
@@ -236,7 +236,7 @@ export interface PrismaClientLike {
   bankerCustodyPosition: PrismaBankerCustodyPositionDelegate;
   marketOpportunity: PrismaMarketOpportunityDelegate;
   marketPosition: PrismaMarketPositionDelegate;
-  marketPositionOpened: PrismaMarketPositionOpenedDelegate;
-  marketPositionSettled: PrismaMarketPositionSettledDelegate;
+  marketPositionOpen: PrismaMarketPositionOpenDelegate;
+  marketPositionSettlement: PrismaMarketPositionSettlementDelegate;
   $transaction<T>(callback: (tx: PrismaClientLike) => Promise<T>): Promise<T>;
 }

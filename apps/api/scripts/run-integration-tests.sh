@@ -32,4 +32,7 @@ vitest run --config vitest.integration.config.ts \
   src/modules/agents/presentation/rest/agents.http.integration.spec.ts
 
 vitest run --config vitest.integration.config.ts \
+  src/modules/agents/presentation/rest/agents.consistency.integration.spec.ts
+
+vitest run --config vitest.integration.config.ts \
   src/modules/agents/presentation/rest/agents.openai.integration.spec.ts

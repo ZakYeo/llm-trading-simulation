@@ -100,7 +100,7 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
             });
             break;
           case 'market_position_opened':
-            await tx.marketPositionOpened.create({
+            await tx.marketPositionOpen.create({
               data: {
                 gameSessionId: record.gameSessionId,
                 roundNumber: record.roundNumber,
@@ -112,7 +112,7 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
             });
             break;
           case 'market_position_settled':
-            await tx.marketPositionSettled.create({
+            await tx.marketPositionSettlement.create({
               data: {
                 gameSessionId: record.gameSessionId,
                 roundNumber: record.roundNumber,
