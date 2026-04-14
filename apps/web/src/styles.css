@@ -556,6 +556,111 @@ select {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.market-shell {
+  border-color: rgba(121, 178, 255, 0.16);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(121, 178, 255, 0.09),
+      rgba(244, 177, 94, 0.06)
+    ),
+    rgba(9, 22, 32, 0.7);
+}
+
+.market-layout,
+.market-section,
+.market-opportunity-grid,
+.market-position-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.market-opportunity-grid,
+.market-position-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.market-opportunity-card,
+.market-position-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(7, 18, 26, 0.76);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.market-card-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.market-card-topline strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.market-card-topline p {
+  margin: 0;
+  color: rgba(244, 239, 230, 0.8);
+}
+
+.market-detail-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.market-detail-grid div {
+  display: grid;
+  gap: 4px;
+}
+
+.market-detail-grid dt {
+  color: rgba(244, 239, 230, 0.62);
+  font-size: 0.82rem;
+}
+
+.market-detail-grid dd {
+  margin: 0;
+  font-family: 'IBM Plex Mono', 'SFMono-Regular', monospace;
+}
+
+.market-empty {
+  margin: 0;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(7, 18, 26, 0.76);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.risk-low {
+  border-color: rgba(244, 177, 94, 0.35);
+  background: rgba(244, 177, 94, 0.12);
+  color: #f4b15e;
+}
+
+.risk-high {
+  border-color: rgba(255, 120, 120, 0.28);
+  background: rgba(255, 120, 120, 0.14);
+  color: #ffb3a8;
+}
+
+.position-open {
+  border-color: rgba(129, 217, 164, 0.28);
+  background: rgba(129, 217, 164, 0.14);
+  color: #9be7b5;
+}
+
+.position-settled {
+  border-color: rgba(152, 193, 255, 0.24);
+  background: rgba(152, 193, 255, 0.11);
+  color: #b8d4ff;
+}
+
 .replay-panel {
   margin-top: 0;
 }
@@ -755,6 +860,7 @@ select {
   .agent-editor-row,
   .timeline-event,
   .event-topline,
+  .market-detail-grid,
   .filter-row,
   .panel-header-actions {
     grid-template-columns: 1fr;
@@ -777,5 +883,9 @@ select {
 
   .event-badge {
     min-width: 0;
+  }
+
+  .market-card-topline {
+    display: grid;
   }
 }

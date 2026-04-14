@@ -3,6 +3,7 @@ import { startTransition, useState } from 'react';
 
 import { AuditTrailCard } from './components/audit-trail-card';
 import { BalancesCard } from './components/balances-card';
+import { MarketVisibilityCard } from './components/market-visibility-card';
 import { OperateCard } from './components/operate-card';
 import { SessionOverviewCard } from './components/session-overview-card';
 import { SessionSetupCard } from './components/session-setup-card';
@@ -243,6 +244,7 @@ export function App() {
           />
           <BalancesCard selectedSession={selectedSession} />
           <TreasuryCard selectedSession={selectedSession} />
+          <MarketVisibilityCard selectedSession={selectedSession} />
           <AuditTrailCard
             replay={replay}
             selectedRound={selectedSession?.currentRound}

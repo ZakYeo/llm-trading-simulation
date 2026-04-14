@@ -17,6 +17,12 @@ export function formatTimestamp(value: string) {
   }).format(new Date(value));
 }
 
+export function formatBasisPoints(value: number) {
+  const sign = value > 0 ? '+' : '';
+
+  return `${sign}${value} bps`;
+}
+
 export function getReplayEventLabel(event: GameReplayRecord['events'][number]) {
   if (event.type === 'transfer') {
     return `${event.sourceAgentName} -> ${event.destinationAgentName}`;
