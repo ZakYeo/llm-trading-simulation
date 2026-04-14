@@ -3,6 +3,7 @@ import { agentActionSchema } from '@llm-sim/mcp-contracts';
 import type OpenAI from 'openai';
 
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
+import { Money } from '../../../shared/domain/value-objects/money.js';
 import type { AgentGatewayPort } from '../../application/ports/agent-gateway.port.js';
 import {
   defaultOpenAiAgentSystemPrompt,
@@ -129,6 +130,102 @@ function resolveRecipientAgentId(
   return rawRecipientAgentId;
 }
 
+function stripOpportunitySessionPrefix(opportunityId: string): string {
+  return opportunityId.replace(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/iu,
+    '',
+  );
+}
+
+function resolveOpportunityId(
+  rawOpportunityId: string | null,
+  context: AgentTurnContext,
+): string | null {
+  if (!rawOpportunityId) {
+    return null;
+  }
+
+  const visibleOpportunities = context.marketContext.visibleOpportunities;
+  const exactIdMatch = visibleOpportunities.find(
+    (opportunity) => opportunity.opportunityId === rawOpportunityId,
+  );
+
+  if (exactIdMatch) {
+    return exactIdMatch.opportunityId;
+  }
+
+  const exactTitleMatch = visibleOpportunities.find(
+    (opportunity) => opportunity.title === rawOpportunityId,
+  );
+
+  if (exactTitleMatch) {
+    return exactTitleMatch.opportunityId;
+  }
+
+  const normalizedRawOpportunityId =
+    stripOpportunitySessionPrefix(rawOpportunityId);
+  const suffixMatches = visibleOpportunities.filter(
+    (opportunity) =>
+      stripOpportunitySessionPrefix(opportunity.opportunityId) ===
+      normalizedRawOpportunityId,
+  );
+
+  if (suffixMatches.length === 1) {
+    return suffixMatches[0]?.opportunityId ?? null;
+  }
+
+  return rawOpportunityId;
+}
+
+function normalizeOpenMarketPositionAmount(
+  rawAmount: string | null,
+  opportunityId: string,
+  context: AgentTurnContext,
+): string | null {
+  if (!rawAmount) {
+    return null;
+  }
+
+  let amount: Money;
+
+  try {
+    amount = Money.fromDecimal(rawAmount);
+  } catch {
+    return rawAmount;
+  }
+
+  const opportunity = context.marketContext.visibleOpportunities.find(
+    (candidate) => candidate.opportunityId === opportunityId,
+  );
+
+  if (!opportunity) {
+    return rawAmount;
+  }
+
+  const minimumCommitment = Money.fromDecimal(opportunity.minCommitment);
+  const maximumCommitment = Money.fromDecimal(opportunity.maxCommitment);
+  const availableBalance = Money.fromDecimal(context.self.availableBalance);
+  let normalizedAmount = amount;
+
+  if (!normalizedAmount.greaterThanOrEqual(minimumCommitment)) {
+    normalizedAmount = minimumCommitment;
+  }
+
+  if (!maximumCommitment.greaterThanOrEqual(normalizedAmount)) {
+    normalizedAmount = maximumCommitment;
+  }
+
+  if (!availableBalance.greaterThanOrEqual(normalizedAmount)) {
+    normalizedAmount = availableBalance;
+  }
+
+  if (!normalizedAmount.greaterThan(Money.zero())) {
+    return rawAmount;
+  }
+
+  return normalizedAmount.toDecimal();
+}
+
 function normalizeAgentDecision(
   rawDecision: RawAgentDecision,
   context: AgentTurnContext,
@@ -136,6 +233,10 @@ function normalizeAgentDecision(
   const recipientAgentId = resolveRecipientAgentId(
     rawDecision.recipientAgentId,
     rawDecision.type,
+    context,
+  );
+  const opportunityId = resolveOpportunityId(
+    rawDecision.opportunityId,
     context,
   );
 
@@ -251,18 +352,32 @@ function normalizeAgentDecision(
         reasoning: rawDecision.reasoning ?? undefined,
       };
     case 'open_market_position':
-      if (!rawDecision.opportunityId || !rawDecision.amount) {
+      if (!opportunityId || !rawDecision.amount) {
         throw new DomainInvariantError(
           'open_market_position requires opportunityId and amount from the model.',
         );
       }
 
-      return {
-        type: rawDecision.type,
-        opportunityId: rawDecision.opportunityId,
-        amount: rawDecision.amount,
-        reasoning: rawDecision.reasoning ?? undefined,
-      };
+      {
+        const amount = normalizeOpenMarketPositionAmount(
+          rawDecision.amount,
+          opportunityId,
+          context,
+        );
+
+        if (!amount) {
+          throw new DomainInvariantError(
+            'open_market_position requires amount from the model.',
+          );
+        }
+
+        return {
+          type: rawDecision.type,
+          opportunityId,
+          amount,
+          reasoning: rawDecision.reasoning ?? undefined,
+        };
+      }
     case 'finalize_turn':
       return {
         type: rawDecision.type,
