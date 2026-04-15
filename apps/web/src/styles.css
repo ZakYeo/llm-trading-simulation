@@ -450,6 +450,15 @@ select {
   gap: 10px;
 }
 
+.agent-editor-card {
+  display: grid;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(244, 177, 94, 0.08);
+  border: 1px solid rgba(244, 177, 94, 0.12);
+}
+
 .agent-stack-header {
   display: flex;
   justify-content: space-between;
@@ -478,14 +487,48 @@ select {
   grid-template-columns: minmax(0, 3fr) minmax(96px, 0.55fr) auto;
   align-items: end;
   gap: 10px;
-  padding: 12px;
-  border-radius: 16px;
-  background: rgba(244, 177, 94, 0.08);
-  border: 1px solid rgba(244, 177, 94, 0.12);
 }
 
 .agent-editor-row > * {
   min-width: 0;
+}
+
+.agent-personality-panel {
+  display: grid;
+  gap: 12px;
+  padding-top: 2px;
+}
+
+.agent-personality-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.personality-summary-label {
+  color: rgba(244, 239, 230, 0.7);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.personality-toggle-button {
+  padding: 7px 11px;
+  font-size: 0.8rem;
+}
+
+.personality-slider-field {
+  gap: 8px;
+}
+
+.slider-legend {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(226, 232, 240, 0.64);
 }
 
 .action-button {
@@ -610,6 +653,7 @@ select {
 }
 
 .balance-card {
+  position: relative;
   padding: 16px;
   border-radius: 18px;
   background: rgba(11, 30, 46, 0.74);
@@ -617,17 +661,13 @@ select {
 }
 
 .summary-balance-card {
-  padding: 14px;
-  gap: 10px;
-}
-
-.summary-balance-card header {
-  margin-bottom: 10px;
+  display: grid;
 }
 
 .balance-card header {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 12px;
   margin-bottom: 14px;
 }
@@ -650,6 +690,77 @@ select {
 
 .balance-card dd {
   margin: 0;
+}
+
+.balance-info-button {
+  opacity: 0;
+  pointer-events: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease,
+    background 140ms ease;
+  transform: translateY(-2px);
+}
+
+.balance-card:hover .balance-info-button,
+.balance-card:focus-within .balance-info-button,
+.balance-card-inspecting .balance-info-button {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.balance-info-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.balance-info-section {
+  display: grid;
+  gap: 8px;
+}
+
+.balance-info-heading {
+  color: rgba(244, 239, 230, 0.68);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.balance-info-list {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.balance-info-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.balance-info-list dt,
+.balance-info-empty,
+.balance-info-note {
+  color: rgba(244, 239, 230, 0.66);
+}
+
+.balance-info-list dd {
+  margin: 0;
+  font-family: 'IBM Plex Mono', 'SFMono-Regular', monospace;
+}
+
+.balance-info-empty,
+.balance-info-note {
+  margin: 0;
+  font-size: 0.82rem;
 }
 
 .treasury-shell {
@@ -1217,6 +1328,7 @@ select {
 
   .topbar-metrics,
   .agent-editor-row,
+  .agent-editor-card,
   .timeline-event,
   .event-topline,
   .market-detail-grid,

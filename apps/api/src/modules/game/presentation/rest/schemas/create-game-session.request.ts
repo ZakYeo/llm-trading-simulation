@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { agentPersonalityProfileSchema } from '@llm-sim/mcp-contracts';
+
 const agentRoleSchema = z.enum([
   'banker',
   'analyst',
@@ -16,6 +18,7 @@ export const createGameSessionRequestSchema = z.object({
       z.object({
         name: z.string().trim().min(1),
         role: agentRoleSchema,
+        personality: agentPersonalityProfileSchema.optional(),
       }),
     )
     .min(1),

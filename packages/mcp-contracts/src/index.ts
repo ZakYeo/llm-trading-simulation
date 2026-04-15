@@ -1,5 +1,26 @@
 import { z } from 'zod';
 
+const personalitySliderSchema = z.number().int().min(0).max(10);
+
+export const bankerPersonalityProfileSchema = z.object({
+  kind: z.literal('banker'),
+  warmth: personalitySliderSchema,
+  salesAggression: personalitySliderSchema,
+  riskDiscipline: personalitySliderSchema,
+});
+
+export const traderPersonalityProfileSchema = z.object({
+  kind: z.literal('trader'),
+  assertiveness: personalitySliderSchema,
+  riskAppetite: personalitySliderSchema,
+  convictionThreshold: personalitySliderSchema,
+});
+
+export const agentPersonalityProfileSchema = z.discriminatedUnion('kind', [
+  bankerPersonalityProfileSchema,
+  traderPersonalityProfileSchema,
+]);
+
 export const gameStateSchema = z.object({
   gameId: z.string().min(1),
   round: z.number().int().nonnegative(),
@@ -49,6 +70,7 @@ export const agentTurnContextSchema = z.object({
     role: z.enum(['banker', 'analyst', 'lawyer', 'influencer', 'trader']),
     availableBalance: z.string(),
     depositPrincipal: z.string(),
+    personalityProfile: agentPersonalityProfileSchema.nullable(),
   }),
   peers: z.array(
     z.object({
@@ -260,3 +282,12 @@ export type RecentAgentMessage = z.infer<typeof recentAgentMessageSchema>;
 export type RecentAgentAction = z.infer<typeof recentAgentActionSchema>;
 export type AgentTurnContext = z.infer<typeof agentTurnContextSchema>;
 export type AgentAction = z.infer<typeof agentActionSchema>;
+export type BankerPersonalityProfile = z.infer<
+  typeof bankerPersonalityProfileSchema
+>;
+export type TraderPersonalityProfile = z.infer<
+  typeof traderPersonalityProfileSchema
+>;
+export type AgentPersonalityProfile = z.infer<
+  typeof agentPersonalityProfileSchema
+>;

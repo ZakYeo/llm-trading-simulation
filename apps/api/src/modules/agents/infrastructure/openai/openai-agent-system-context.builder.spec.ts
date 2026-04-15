@@ -20,6 +20,12 @@ function createContext(
       role: 'banker',
       availableBalance: '100.0000',
       depositPrincipal: '0.0000',
+      personalityProfile: {
+        kind: 'banker',
+        warmth: 8,
+        salesAggression: 7,
+        riskDiscipline: 9,
+      },
     },
     peers: [
       {
@@ -149,6 +155,7 @@ describe('OpenAiAgentSystemContextBuilder', () => {
       .addBaseSystemPrompt()
       .addPeerSummary()
       .addEconomicContextSummary()
+      .addPersonalityProfileSummary()
       .addTreasuryContextSummary()
       .addMarketContextSummary()
       .addActionSemanticsSummary()
@@ -161,6 +168,9 @@ describe('OpenAiAgentSystemContextBuilder', () => {
     expect(prompt).toContain(defaultOpenAiAgentSystemPrompt);
     expect(prompt).toContain(
       'Valid peer targets: [id=trader-1 name=Trader Bot role=trader]',
+    );
+    expect(prompt).toContain(
+      'Personality profile: banker warmth = 8 (high), sales aggression = 7 (high), risk discipline = 9 (high).',
     );
     expect(prompt).toContain(
       'Treasury context: banker id = banker-1 banker name = Banker Bot total custodied principal = 12.5000',
@@ -197,6 +207,12 @@ describe('OpenAiAgentSystemContextBuilder', () => {
           role: 'trader',
           availableBalance: '90.0000',
           depositPrincipal: '0.0000',
+          personalityProfile: {
+            kind: 'trader',
+            assertiveness: 6,
+            riskAppetite: 9,
+            convictionThreshold: 2,
+          },
         },
         peers: [
           {
@@ -265,10 +281,14 @@ describe('OpenAiAgentSystemContextBuilder', () => {
       }),
     )
       .addBaseSystemPrompt()
+      .addPersonalityProfileSummary()
       .addRoleDirective()
       .addTurnSignal()
       .build();
 
+    expect(prompt).toContain(
+      'Personality profile: trader assertiveness = 6 (balanced), risk appetite = 9 (high), conviction threshold = 2 (low).',
+    );
     expect(prompt).toContain(
       'Role economics: as the trader, you improve your outcome by deciding whether to place funds with banker banker-1',
     );

@@ -25,6 +25,12 @@ function createSession() {
         role: 'banker',
         balance: AccountBalance.open(Money.fromDecimal('100.0000')),
         depositAccount: DepositAccount.open(),
+        personalityProfile: {
+          kind: 'banker',
+          warmth: 8,
+          salesAggression: 7,
+          riskDiscipline: 9,
+        },
       }),
       new GameAgent({
         id: 'agent-2',
@@ -32,6 +38,12 @@ function createSession() {
         role: 'trader',
         balance: AccountBalance.open(Money.fromDecimal('100.0000')),
         depositAccount: DepositAccount.open(),
+        personalityProfile: {
+          kind: 'trader',
+          assertiveness: 6,
+          riskAppetite: 8,
+          convictionThreshold: 3,
+        },
       }),
       new GameAgent({
         id: 'agent-3',
@@ -148,6 +160,12 @@ describe('AgentTurnContextFactory', () => {
       name: 'Banker Bot',
       role: 'banker',
       availableBalance: '100.0000',
+      personalityProfile: {
+        kind: 'banker',
+        warmth: 8,
+        salesAggression: 7,
+        riskDiscipline: 9,
+      },
     });
     expect(context.peers).toEqual([
       {
@@ -237,6 +255,12 @@ describe('AgentTurnContextFactory', () => {
       agentId: 'agent-2',
       name: 'Trader Bot',
       role: 'trader',
+      personalityProfile: {
+        kind: 'trader',
+        assertiveness: 6,
+        riskAppetite: 8,
+        convictionThreshold: 3,
+      },
     });
     expect(context.actionableProposalsForSelf).toHaveLength(0);
     expect(context.treasuryContext).toMatchObject({

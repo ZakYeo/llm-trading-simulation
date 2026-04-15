@@ -45,6 +45,12 @@ export function buildBankerTraderSession(
         role: 'banker',
         availableBalance: '100.0000',
         reservedBalance: '0.0000',
+        personalityProfile: {
+          kind: 'banker',
+          warmth: 5,
+          salesAggression: 5,
+          riskDiscipline: 5,
+        },
       },
       {
         id: traderAgentId,
@@ -52,6 +58,12 @@ export function buildBankerTraderSession(
         role: 'trader',
         availableBalance: '100.0000',
         reservedBalance: '0.0000',
+        personalityProfile: {
+          kind: 'trader',
+          assertiveness: 5,
+          riskAppetite: 5,
+          convictionThreshold: 5,
+        },
       },
     ],
     bankerCustodyPositions: [],

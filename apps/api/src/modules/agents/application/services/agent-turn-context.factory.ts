@@ -480,6 +480,7 @@ export class AgentTurnContextFactory {
       role: agent.role,
       availableBalance: agent.balance.available.toDecimal(),
       depositPrincipal: agent.depositAccount.principal.toDecimal(),
+      personalityProfile: agent.personalityProfile,
     } satisfies AgentTurnContext['self'];
     const visibleRecentMessages = recentMessages.filter((message) =>
       isVisibleToAgent(message, agent.id),

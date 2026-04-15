@@ -15,6 +15,7 @@ export class GameSessionResponseMapper {
         role: agent.role,
         availableBalance: agent.balance.available.toDecimal(),
         reservedBalance: agent.balance.reserved.toDecimal(),
+        personalityProfile: agent.personalityProfile ?? undefined,
       })),
       bankerCustodyPositions: session.bankerCustodyPositions.map(
         (position) => ({

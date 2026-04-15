@@ -29,6 +29,10 @@ describe('App', () => {
     expect(html).toContain('Add bot');
     expect(html).toContain('Banker Bot');
     expect(html).toContain('Trader Bot');
+    expect(html).toContain('Personality');
+    expect(html).toContain('Edit');
+    expect(html).not.toContain('Sales aggression');
+    expect(html).not.toContain('Risk appetite');
     expect(html).toContain(
       'The rest of the workspace stays out of the way until a session is active.',
     );

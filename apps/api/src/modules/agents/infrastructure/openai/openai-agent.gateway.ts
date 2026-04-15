@@ -399,6 +399,7 @@ export class OpenAiAgentGateway implements AgentGatewayPort {
       .addBaseSystemPrompt()
       .addPeerSummary()
       .addEconomicContextSummary()
+      .addPersonalityProfileSummary()
       .addTreasuryContextSummary()
       .addMarketContextSummary()
       .addActionSemanticsSummary()

@@ -25,6 +25,12 @@ function createSessionFixture() {
           Money.fromDecimal('15.0000'),
           Money.zero(),
         ),
+        personalityProfile: {
+          kind: 'banker',
+          warmth: 7,
+          salesAggression: 6,
+          riskDiscipline: 8,
+        },
       }),
       new GameAgent({
         id: 'agent-2',
@@ -32,6 +38,12 @@ function createSessionFixture() {
         role: 'trader',
         balance: AccountBalance.open(Money.fromDecimal('85.0000')),
         depositAccount: DepositAccount.open(),
+        personalityProfile: {
+          kind: 'trader',
+          assertiveness: 6,
+          riskAppetite: 8,
+          convictionThreshold: 4,
+        },
       }),
     ],
     bankerCustodyPositions: [
@@ -74,8 +86,17 @@ describe('GameController', () => {
       initialBalance: '100.0000',
       agents: [
         { name: 'Banker Bot', role: 'banker' },
+        {
+          name: 'Trader Bot Alpha',
+          role: 'trader',
+          personality: {
+            kind: 'trader',
+            assertiveness: 9,
+            riskAppetite: 8,
+            convictionThreshold: 2,
+          },
+        },
         { name: 'Lawyer Bot', role: 'lawyer' },
-        { name: 'Trader Bot Alpha', role: 'trader' },
         { name: 'Trader Bot Beta', role: 'trader' },
       ],
     });
@@ -85,8 +106,17 @@ describe('GameController', () => {
       initialBalance: '100.0000',
       agents: [
         { name: 'Banker Bot', role: 'banker' },
+        {
+          name: 'Trader Bot Alpha',
+          role: 'trader',
+          personality: {
+            kind: 'trader',
+            assertiveness: 9,
+            riskAppetite: 8,
+            convictionThreshold: 2,
+          },
+        },
         { name: 'Lawyer Bot', role: 'lawyer' },
-        { name: 'Trader Bot Alpha', role: 'trader' },
         { name: 'Trader Bot Beta', role: 'trader' },
       ],
     });
@@ -102,6 +132,12 @@ describe('GameController', () => {
           role: 'banker',
           availableBalance: '100.0000',
           reservedBalance: '0.0000',
+          personalityProfile: {
+            kind: 'banker',
+            warmth: 7,
+            salesAggression: 6,
+            riskDiscipline: 8,
+          },
         },
         {
           id: 'agent-2',
@@ -109,6 +145,12 @@ describe('GameController', () => {
           role: 'trader',
           availableBalance: '85.0000',
           reservedBalance: '0.0000',
+          personalityProfile: {
+            kind: 'trader',
+            assertiveness: 6,
+            riskAppetite: 8,
+            convictionThreshold: 4,
+          },
         },
       ],
       bankerCustodyPositions: [

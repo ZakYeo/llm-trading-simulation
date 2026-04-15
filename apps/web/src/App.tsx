@@ -1,4 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type {
+  AgentPersonalityProfile,
+  GameSessionRecord,
+} from '@llm-sim/shared-types';
 import type { CSSProperties } from 'react';
 import { startTransition, useEffect, useRef, useState } from 'react';
 
@@ -24,12 +28,69 @@ interface AgentDraft {
   id: string;
   name: string;
   role: AgentRole;
+  personality: AgentPersonalityProfile;
 }
 
 const defaultAgentSetup: AgentDraft[] = [
-  { id: 'agent-draft-1', name: 'Banker Bot', role: 'banker' },
-  { id: 'agent-draft-2', name: 'Trader Bot', role: 'trader' },
+  {
+    id: 'agent-draft-1',
+    name: 'Banker Bot',
+    role: 'banker',
+    personality: {
+      kind: 'banker',
+      warmth: 5,
+      salesAggression: 5,
+      riskDiscipline: 5,
+    },
+  },
+  {
+    id: 'agent-draft-2',
+    name: 'Trader Bot',
+    role: 'trader',
+    personality: {
+      kind: 'trader',
+      assertiveness: 5,
+      riskAppetite: 5,
+      convictionThreshold: 5,
+    },
+  },
 ];
+
+function createDefaultPersonality(role: AgentRole): AgentPersonalityProfile {
+  if (role === 'banker') {
+    return {
+      kind: 'banker',
+      warmth: 5,
+      salesAggression: 5,
+      riskDiscipline: 5,
+    };
+  }
+
+  return {
+    kind: 'trader',
+    assertiveness: 5,
+    riskAppetite: 5,
+    convictionThreshold: 5,
+  };
+}
+
+function toAgentDrafts(session: GameSessionRecord): AgentDraft[] {
+  return session.agents
+    .filter(
+      (
+        agent,
+      ): agent is GameSessionRecord['agents'][number] & {
+        role: AgentRole;
+      } => agent.role === 'banker' || agent.role === 'trader',
+    )
+    .map((agent) => ({
+      id: agent.id,
+      name: agent.name,
+      role: agent.role,
+      personality:
+        agent.personalityProfile ?? createDefaultPersonality(agent.role),
+    }));
+}
 
 export function App() {
   const queryClient = useQueryClient();
@@ -77,6 +138,7 @@ export function App() {
         agents: agentDrafts.map((agent) => ({
           name: agent.name,
           role: agent.role,
+          personality: agent.personality,
         })),
       }),
     onSuccess: (session) => {
@@ -187,6 +249,15 @@ export function App() {
 
   useEffect(() => {
     if (!selectedSession) {
+      return;
+    }
+
+    setAgentDrafts(toAgentDrafts(selectedSession));
+    setNextAgentDraftId(selectedSession.agents.length + 1);
+  }, [selectedSession]);
+
+  useEffect(() => {
+    if (!selectedSession) {
       previousVisibleSessionId.current = null;
       setRevealedSessionId(null);
       setRevealedHeaderSessionId(null);
@@ -236,6 +307,7 @@ export function App() {
         id: `agent-draft-${nextIndex}`,
         name: `New Bot ${nextIndex}`,
         role: 'trader',
+        personality: createDefaultPersonality('trader'),
       },
     ]);
     setNextAgentDraftId(nextIndex + 1);

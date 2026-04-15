@@ -86,6 +86,7 @@ model Agent {
   gameSessionId String
   name          String
   role          AgentRole
+  personalityProfile Json?
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
   gameSession   GameSession        @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)

@@ -15,6 +15,12 @@ function createContext(): AgentTurnContext {
       role: 'trader',
       availableBalance: '100.0000',
       depositPrincipal: '0.0000',
+      personalityProfile: {
+        kind: 'trader',
+        assertiveness: 6,
+        riskAppetite: 8,
+        convictionThreshold: 3,
+      },
     },
     peers: [
       {

@@ -5,6 +5,24 @@ export type AgentRole =
   | 'influencer'
   | 'trader';
 
+export interface BankerPersonalityProfile {
+  kind: 'banker';
+  warmth: number;
+  salesAggression: number;
+  riskDiscipline: number;
+}
+
+export interface TraderPersonalityProfile {
+  kind: 'trader';
+  assertiveness: number;
+  riskAppetite: number;
+  convictionThreshold: number;
+}
+
+export type AgentPersonalityProfile =
+  | BankerPersonalityProfile
+  | TraderPersonalityProfile;
+
 export interface MoneyAmount {
   currency: 'SIM';
   amount: string;
@@ -37,6 +55,7 @@ export interface GameAgentRecord {
   role: AgentRole;
   availableBalance: string;
   reservedBalance: string;
+  personalityProfile?: AgentPersonalityProfile;
 }
 
 export interface BankerCustodyPositionRecord {

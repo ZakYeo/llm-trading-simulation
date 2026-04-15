@@ -1,4 +1,4 @@
-import type { AgentRole } from '@llm-sim/shared-types';
+import type { AgentPersonalityProfile, AgentRole } from '@llm-sim/shared-types';
 
 import { DepositAccount } from '../../../bank/domain/entities/deposit-account.js';
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
@@ -14,6 +14,7 @@ import { MarketOpportunityBoardFactory } from '../services/market-opportunity-bo
 export interface CreateGameSessionAgentInput {
   name: string;
   role: AgentRole;
+  personality?: AgentPersonalityProfile;
 }
 
 export interface CreateGameSessionInput {
@@ -52,6 +53,7 @@ export class CreateGameSessionUseCase {
           role: agent.role,
           balance: AccountBalance.open(initialBalance),
           depositAccount: DepositAccount.open(),
+          personalityProfile: agent.personality,
         }),
     );
 

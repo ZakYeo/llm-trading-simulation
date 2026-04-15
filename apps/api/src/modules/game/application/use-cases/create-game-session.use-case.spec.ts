@@ -123,6 +123,7 @@ describe('CreateGameSessionUseCase', () => {
       session.agents.map((agent) => ({
         id: agent.id,
         role: agent.role,
+        personalityProfile: agent.personalityProfile,
         available: agent.balance.available.toDecimal(),
         reserved: agent.balance.reserved.toDecimal(),
         principal: agent.depositAccount.principal.toDecimal(),
@@ -132,6 +133,12 @@ describe('CreateGameSessionUseCase', () => {
       {
         id: 'agent-1',
         role: 'banker',
+        personalityProfile: {
+          kind: 'banker',
+          warmth: 5,
+          salesAggression: 5,
+          riskDiscipline: 5,
+        },
         available: '100.0000',
         reserved: '0.0000',
         principal: '0.0000',
@@ -140,6 +147,7 @@ describe('CreateGameSessionUseCase', () => {
       {
         id: 'agent-2',
         role: 'analyst',
+        personalityProfile: null,
         available: '100.0000',
         reserved: '0.0000',
         principal: '0.0000',
@@ -148,6 +156,7 @@ describe('CreateGameSessionUseCase', () => {
       {
         id: 'agent-3',
         role: 'lawyer',
+        personalityProfile: null,
         available: '100.0000',
         reserved: '0.0000',
         principal: '0.0000',
@@ -156,6 +165,7 @@ describe('CreateGameSessionUseCase', () => {
       {
         id: 'agent-4',
         role: 'influencer',
+        personalityProfile: null,
         available: '100.0000',
         reserved: '0.0000',
         principal: '0.0000',
@@ -164,6 +174,12 @@ describe('CreateGameSessionUseCase', () => {
       {
         id: 'agent-5',
         role: 'trader',
+        personalityProfile: {
+          kind: 'trader',
+          assertiveness: 5,
+          riskAppetite: 5,
+          convictionThreshold: 5,
+        },
         available: '100.0000',
         reserved: '0.0000',
         principal: '0.0000',
@@ -222,6 +238,58 @@ describe('CreateGameSessionUseCase', () => {
         (opportunity) => opportunity.riskLevel === 'high',
       ),
     ).toBe(true);
+  });
+
+  it('preserves custom banker and trader personality profiles', async () => {
+    const repository = new InMemoryGameSessionRepository();
+    const idGenerator = new SequenceIdGenerator([
+      'agent-1',
+      'agent-2',
+      'game-1',
+    ]);
+    const useCase = new CreateGameSessionUseCase(repository, idGenerator);
+
+    const session = await useCase.execute({
+      name: 'Custom Personality Table',
+      initialBalance: '100.0000',
+      agents: [
+        {
+          name: 'Banker Bot',
+          role: 'banker',
+          personality: {
+            kind: 'banker',
+            warmth: 8,
+            salesAggression: 7,
+            riskDiscipline: 9,
+          },
+        },
+        {
+          name: 'Trader Bot',
+          role: 'trader',
+          personality: {
+            kind: 'trader',
+            assertiveness: 6,
+            riskAppetite: 8,
+            convictionThreshold: 3,
+          },
+        },
+      ],
+    });
+
+    expect(session.agents.map((agent) => agent.personalityProfile)).toEqual([
+      {
+        kind: 'banker',
+        warmth: 8,
+        salesAggression: 7,
+        riskDiscipline: 9,
+      },
+      {
+        kind: 'trader',
+        assertiveness: 6,
+        riskAppetite: 8,
+        convictionThreshold: 3,
+      },
+    ]);
   });
 
   it('rejects empty agent rosters', async () => {

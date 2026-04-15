@@ -16,6 +16,18 @@ function hasPriorPrivateMessage(
   );
 }
 
+function describeSliderBand(value: number): 'low' | 'balanced' | 'high' {
+  if (value <= 3) {
+    return 'low';
+  }
+
+  if (value >= 7) {
+    return 'high';
+  }
+
+  return 'balanced';
+}
+
 export class OpenAiAgentSystemContextBuilder {
   private readonly segments: string[] = [];
 
@@ -45,6 +57,29 @@ export class OpenAiAgentSystemContextBuilder {
   addEconomicContextSummary() {
     this.segments.push(
       `Economic context: objective = ${this.context.economicContext.objective} self available balance = ${this.context.self.availableBalance} self deposited principal = ${this.context.self.depositPrincipal} unresolved incoming proposals = ${this.context.economicContext.unresolvedIncomingProposalCount} unresolved outgoing proposals = ${this.context.economicContext.unresolvedOutgoingProposalCount} messages do not move money = ${String(this.context.economicContext.messagesDoNotMoveMoney)} proposals can move money = ${String(this.context.economicContext.proposalsCanMoveMoney)} accepted proposal changes balances = ${String(this.context.economicContext.acceptedProposalChangesBalances)} finalize does not change state = ${String(this.context.economicContext.finalizeDoesNotChangeState)}.`,
+    );
+    return this;
+  }
+
+  addPersonalityProfileSummary() {
+    const personalityProfile = this.context.self.personalityProfile;
+
+    if (!personalityProfile) {
+      this.segments.push(
+        'Personality profile: none configured. Use a balanced, neutral communication and decision style.',
+      );
+      return this;
+    }
+
+    if (personalityProfile.kind === 'banker') {
+      this.segments.push(
+        `Personality profile: banker warmth = ${personalityProfile.warmth} (${describeSliderBand(personalityProfile.warmth)}), sales aggression = ${personalityProfile.salesAggression} (${describeSliderBand(personalityProfile.salesAggression)}), risk discipline = ${personalityProfile.riskDiscipline} (${describeSliderBand(personalityProfile.riskDiscipline)}). Low warmth means terse and transactional; high warmth means relationship-led and reassuring. Low sales aggression means a soft custody pitch and fewer follow-ups; high sales aggression means proactive treasury selling and stronger follow-through. Low risk discipline means you can emphasize growth and deployment more freely; high risk discipline means emphasize liquidity, obligations, and conservative treasury framing.`,
+      );
+      return this;
+    }
+
+    this.segments.push(
+      `Personality profile: trader assertiveness = ${personalityProfile.assertiveness} (${describeSliderBand(personalityProfile.assertiveness)}), risk appetite = ${personalityProfile.riskAppetite} (${describeSliderBand(personalityProfile.riskAppetite)}), conviction threshold = ${personalityProfile.convictionThreshold} (${describeSliderBand(personalityProfile.convictionThreshold)}). Low assertiveness means cautious, hedged communication; high assertiveness means direct, decisive communication. Low risk appetite means prefer downside protection, cash, or custody unless trade quality is clearly strong; high risk appetite means tolerate variance and lean more readily into high-upside opportunities. High conviction threshold means require a clearly superior edge before opening a market position; low conviction threshold means a thinner but still positive edge can justify acting.`,
     );
     return this;
   }

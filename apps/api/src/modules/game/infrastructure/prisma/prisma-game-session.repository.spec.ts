@@ -140,6 +140,12 @@ describe('PrismaGameSessionRepository', () => {
                 id: 'agent-1',
                 name: 'Banker Bot',
                 role: 'BANKER',
+                personalityProfile: {
+                  kind: 'banker',
+                  warmth: 5,
+                  salesAggression: 5,
+                  riskDiscipline: 5,
+                },
                 balance: {
                   create: {
                     available: '100.0000',
@@ -276,6 +282,12 @@ describe('PrismaGameSessionRepository', () => {
         gameSessionId: 'game-1',
         name: 'Banker Bot',
         role: 'BANKER',
+        personalityProfile: {
+          kind: 'banker',
+          warmth: 5,
+          salesAggression: 5,
+          riskDiscipline: 5,
+        },
         balance: {
           create: {
             available: '100.0000',
@@ -292,6 +304,12 @@ describe('PrismaGameSessionRepository', () => {
       update: {
         name: 'Banker Bot',
         role: 'BANKER',
+        personalityProfile: {
+          kind: 'banker',
+          warmth: 5,
+          salesAggression: 5,
+          riskDiscipline: 5,
+        },
         balance: {
           upsert: {
             create: {

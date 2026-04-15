@@ -1,4 +1,5 @@
 import type {
+  AgentPersonalityProfile,
   GameReplayRecord,
   GameSessionRecord,
   GameSessionSummary,
@@ -23,6 +24,7 @@ interface CreateSessionInput {
   agents: Array<{
     name: string;
     role: string;
+    personality?: AgentPersonalityProfile;
   }>;
 }
 

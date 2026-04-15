@@ -6,6 +6,7 @@ import { GameAgent } from '../../domain/entities/game-agent.js';
 import { GameSession } from '../../domain/entities/game-session.js';
 import { MarketOpportunity } from '../../domain/entities/market-opportunity.js';
 import { MarketPosition } from '../../domain/entities/market-position.js';
+import type { AgentPersonalityProfile } from '@llm-sim/shared-types';
 
 export interface PersistedGameSessionRecord {
   id: string;
@@ -16,6 +17,7 @@ export interface PersistedGameSessionRecord {
     id: string;
     name: string;
     role: 'BANKER' | 'ANALYST' | 'LAWYER' | 'INFLUENCER' | 'TRADER';
+    personalityProfile?: AgentPersonalityProfile | null;
     balance: {
       available: string | { toString(): string };
       reserved: string | { toString(): string };
@@ -194,6 +196,7 @@ export class GameSessionPrismaMapper {
       gameSessionId: session.id,
       name: agent.name,
       role: roleToPersistence[agent.role],
+      personalityProfile: agent.personalityProfile,
       balance: {
         create: {
           available: agent.balance.available.toDecimal(),
@@ -217,6 +220,7 @@ export class GameSessionPrismaMapper {
         gameSessionId: session.id,
         name: agent.name,
         role: roleToPersistence[agent.role],
+        personalityProfile: agent.personalityProfile,
         balance: {
           create: {
             available: agent.balance.available.toDecimal(),
@@ -233,6 +237,7 @@ export class GameSessionPrismaMapper {
       update: {
         name: agent.name,
         role: roleToPersistence[agent.role],
+        personalityProfile: agent.personalityProfile,
         balance: {
           upsert: {
             create: {
@@ -315,6 +320,7 @@ export class GameSessionPrismaMapper {
       id: agent.id,
       name: agent.name,
       role: roleToPersistence[agent.role],
+      personalityProfile: agent.personalityProfile,
       balance: {
         create: {
           available: agent.balance.available.toDecimal(),
@@ -352,6 +358,7 @@ export class GameSessionPrismaMapper {
             Money.fromDecimal(decimalLikeToString(depositAccount?.principal)),
             Money.fromDecimal(decimalLikeToString(depositAccount?.accrued)),
           ),
+          personalityProfile: agent.personalityProfile ?? null,
         });
       }),
       bankerCustodyPositions: (record.bankerCustodyPositions ?? []).map(

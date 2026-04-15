@@ -31,6 +31,12 @@ describe('GameSessionPrismaMapper', () => {
           depositAccount: DepositAccount.open().deposit(
             Money.fromDecimal('10.0000'),
           ),
+          personalityProfile: {
+            kind: 'banker',
+            warmth: 8,
+            salesAggression: 6,
+            riskDiscipline: 9,
+          },
         }),
       ],
       bankerCustodyPositions: [
@@ -82,6 +88,12 @@ describe('GameSessionPrismaMapper', () => {
             id: 'agent-1',
             name: 'Banker Bot',
             role: 'BANKER',
+            personalityProfile: {
+              kind: 'banker',
+              warmth: 8,
+              salesAggression: 6,
+              riskDiscipline: 9,
+            },
             balance: {
               create: {
                 available: '75.0000',
@@ -153,6 +165,12 @@ describe('GameSessionPrismaMapper', () => {
           id: 'agent-1',
           name: 'Trader Bot',
           role: 'TRADER',
+          personalityProfile: {
+            kind: 'trader',
+            assertiveness: 7,
+            riskAppetite: 8,
+            convictionThreshold: 3,
+          },
           balance: {
             available: '80.0000',
             reserved: '20.0000',
@@ -206,6 +224,12 @@ describe('GameSessionPrismaMapper', () => {
     expect(session.status).toBe('active');
     expect(session.currentRound).toBe(2);
     expect(session.agents[0]?.role).toBe('trader');
+    expect(session.agents[0]?.personalityProfile).toEqual({
+      kind: 'trader',
+      assertiveness: 7,
+      riskAppetite: 8,
+      convictionThreshold: 3,
+    });
     expect(session.agents[0]?.balance.available.toDecimal()).toBe('80.0000');
     expect(session.agents[0]?.balance.reserved.toDecimal()).toBe('20.0000');
     expect(session.agents[0]?.depositAccount.principal.toDecimal()).toBe(
