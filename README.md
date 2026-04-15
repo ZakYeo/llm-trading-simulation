@@ -1,128 +1,139 @@
 # llm-trading-simulation
 
-A backend-first multi-agent trading and treasury simulation platform.
+A pnpm workspace for a backend-driven multi-agent trading simulation.
 
-The project combines:
+The current codebase consists of:
 
-- a NestJS API for orchestration and game state management
-- a React/Vite frontend for operating sessions and inspecting replay data
-- Prisma/Postgres persistence for sessions, balances, rounds, messages, and actions
-- OpenAI-backed and mock agent runtimes for negotiation behavior
+- `apps/api`: a NestJS API for session state, agent orchestration, replay reads, and SSE session events
+- `apps/web`: a React + Vite operator UI for creating sessions, running turns, advancing rounds, and inspecting state
+- `packages/shared-types`: shared transport DTOs and enums used across API and web
+- `packages/mcp-contracts`: Zod schemas and contract types for agent-facing actions and turn context
 
-The current MVP focus is fake-money agent interaction: agents communicate, propose transfers, accept or reject proposals, and mutate persisted session state.
+The active simulation loop is centered on a banker and trader. Agents negotiate, propose or accept transfers, place funds into banker custody, open market positions, and persist each state change for replay and audit.
 
 ## Features
 
-- Create and inspect game sessions
-- Track agent balances, deposits, withdrawals, and transfers
-- Advance rounds and accrue interest
-- Run backend-driven multi-agent communication turns
-- Persist agent messages and action history
-- Replay session events through a replay-oriented API
-- Switch between deterministic mock agents and a real OpenAI-backed runtime
-- Run locally or in Docker
+- Create and reconnect to saved sessions from the operator UI
+- Configure a banker and trader with editable personality sliders at session startup
+- Run orchestrated communication turns through mock or OpenAI-backed runtimes
+- Stream live session activity over SSE while agent turns are running
+- Track balances, banker custody positions, accrued interest, and market exposure
+- Advance rounds explicitly to apply custody interest and settle eligible market positions
+- Persist replay history for transfers, messages, actions, custody events, market listings, and settlements
+- Run unit, integration, and Playwright coverage from the workspace root
 
 ## Tech Stack
 
-- Backend: NestJS, TypeScript
-- Frontend: React, Vite, TanStack Query, Vitest
-- Database: PostgreSQL, Prisma ORM 7
-- Tooling: pnpm workspace, ESLint, Prettier, Husky
+- Backend: NestJS, TypeScript, Prisma, PostgreSQL
+- Frontend: React 19, Vite, TanStack Query, Zustand
+- Shared contracts: TypeScript, Zod
+- Tooling: pnpm workspace, Vitest, Playwright, ESLint, Prettier, Husky
 
 ## Repository Structure
 
 ```text
 .
 ├── apps
-│   ├── api                  # NestJS backend
-│   │   ├── prisma           # Prisma schema and migrations
+│   ├── api
+│   │   ├── prisma
 │   │   └── src
 │   │       ├── modules
-│   │       │   ├── agents   # Agent orchestration and runtime adapters
-│   │       │   ├── game     # Sessions, balances, transfers, rounds
-│   │       │   ├── replay   # Replay read model and API
-│   │       │   └── shared   # Shared infrastructure and domain utilities
-│   └── web                  # React frontend
+│   │       │   ├── agents
+│   │       │   ├── bank
+│   │       │   ├── game
+│   │       │   ├── replay
+│   │       │   └── shared
+│   └── web
+│       ├── e2e
 │       └── src
-│           ├── lib          # Frontend API client
-│           └── ...          # Dashboard UI
 ├── packages
-│   ├── eslint-config        # Shared lint config
-│   ├── mcp-contracts        # Shared contracts for agent actions/messages
-│   └── shared-types         # Shared TypeScript types
-├── scripts                  # Project-level helper scripts
-├── plan.md                  # Active planning document
-└── steps.md                 # Milestone notes
+│   ├── eslint-config
+│   ├── mcp-contracts
+│   ├── shared-types
+│   └── tsconfig
+├── scripts
+├── docker-compose.yml
+├── plan.md
+└── steps.md
 ```
 
 ## Architecture
 
 ### Backend
 
-The API follows a modular structure:
+The API is served under `/api` and is organized into modules:
 
-- `game`: core session state, balances, deposits, transfers, rounds
-- `agents`: agent communication, action persistence, orchestration, runtime adapters
-- `replay`: replay-oriented projections over stored events
-- `shared`: Prisma, IDs, filters, value objects, and cross-cutting utilities
+- `game`: session lifecycle, balances, transfers, custody placement and redemption, market position opening, and round advancement
+- `agents`: communication turns, orchestrated rounds, agent runtime adapters, and per-session SSE event streaming
+- `bank`: bank-domain entities used by treasury and deposit flows
+- `replay`: replay-oriented reads over persisted rounds and events
+- `shared`: Prisma integration, tokens, filters, and cross-cutting utilities
 
-The backend currently supports:
+Current HTTP surface, at a high level:
 
-- session creation and read APIs
-- deposit, withdrawal, and transfer APIs
-- round advancement with interest accrual
-- agent round orchestration
-- replay APIs over persisted history
-- state-grounded banker and trader context built from current balances, custody positions, and currently open market positions
+- `/api/game/health`
+- `/api/game/sessions`
+- `/api/game/sessions/:id/deposit`
+- `/api/game/sessions/:id/withdraw`
+- `/api/game/sessions/:id/transfer`
+- `/api/game/sessions/:id/custody/place`
+- `/api/game/sessions/:id/custody/redeem`
+- `/api/game/sessions/:id/market/open`
+- `/api/game/sessions/:id/rounds/advance`
+- `/api/agents/sessions/:id/turns/communicate`
+- `/api/agents/sessions/:id/rounds/orchestrate`
+- `/api/agents/sessions/:id/events`
+- `/api/replay/health`
+- `/api/replay/sessions/:id`
 
 ### Frontend
 
-The frontend is an operator dashboard that currently supports:
+The web app is an operator dashboard that currently supports:
 
-- creating sessions
-- selecting an active session
-- running agent rounds for a chosen number of turns
-- explicitly advancing rounds from the UI
-- inspecting balances and current session state
-- viewing replay events
-- reviewing the audit trail to compare agent narration against persisted actions, custody events, and market settlements
+- creating a new session with a configurable banker and trader
+- reconnecting to existing sessions
+- running the next 1-10 orchestrated turns
+- advancing the current round with an optional custody interest rate
+- inspecting balances, custody totals, market opportunities, open positions, and replay history
+- watching live streamed activity while turns are in progress
 
-## Agent Decision Model
+## Session Model
 
-Agent runtimes operate on a backend-built turn context rather than raw replay history alone. In practice this means:
+The persisted session state is the source of truth for both replay and agent context.
 
-- current balances, custody totals, and currently open market positions are treated as authoritative session state
-- settled positions are removed from the open-position view used for subsequent agent turns
-- banker guidance about liquidity, exposure, and custody should reflect the latest persisted session state rather than prior conversational plans
+Important behaviors in the current codebase:
 
-This state-grounded context is built in the API before each agent action and is shared across both mock and OpenAI-backed runtimes.
+- communication turns do not advance the round by themselves
+- round advancement is explicit and applies custody interest
+- market positions remain visible until their settlement round is reached
+- agent turn context is built from current balances, custody totals, recent actions, recent messages, visible market opportunities, and open positions
+- replay data includes operational events such as custody placements, custody redemptions, market openings, market settlements, and message/action history
 
-## Environment Configuration
+## Environment
 
-Copy the example env file and adjust values as needed:
+Copy the example file first:
 
 ```bash
 cp .env.example .env
 ```
 
-Main environment variables:
+Main variables:
 
 - `DATABASE_URL`: primary Postgres connection string
-- `TEST_DATABASE_URL`: integration-test database connection string
-- `PORT`: API port
+- `TEST_DATABASE_URL`: Postgres connection string used by integration tests
+- `PORT`: API port, default `3000`
 - `VITE_API_BASE_URL`: frontend API base URL, usually `http://localhost:3000/api`
 - `AGENT_RUNTIME_PROVIDER`: `openai` or `mock`
 - `OPENAI_API_KEY`: required for live OpenAI-backed agent runs
-- `OPENAI_MODEL`: OpenAI model used by the backend agent gateway
+- `OPENAI_MODEL`: backend model name, default `gpt-5.2`
 - `OPENAI_AGENT_SYSTEM_PROMPT`: optional prompt override
 - `OPENAI_AGENT_STRICT_MODE`: optional stricter output handling flag
-- `DEFAULT_INTEREST_RATE_BPS`: optional backend default for round advancement when `interestRateBps` is omitted; defaults to `250`
 
 ## Prerequisites
 
 - Node.js 20+ or 22+
 - Corepack enabled
-- Docker and Docker Compose for containerized runs or local Postgres
+- Docker and Docker Compose for local Postgres and containerized runs
 
 Enable pnpm through Corepack:
 
@@ -133,33 +144,31 @@ corepack prepare pnpm@9.12.3 --activate
 
 ## Getting Started
 
-### Local Development
-
-1. Install dependencies:
+1. Install dependencies.
 
 ```bash
 corepack pnpm install
 ```
 
-2. Start Postgres:
+2. Start Postgres.
 
 ```bash
 docker compose up -d postgres
 ```
 
-3. Generate the Prisma client:
+3. Generate the Prisma client.
 
 ```bash
 corepack pnpm db:generate
 ```
 
-4. Apply migrations:
+4. Apply migrations.
 
 ```bash
 corepack pnpm db:migrate:deploy
 ```
 
-5. Start the backend and frontend:
+5. Start the API and web app together.
 
 ```bash
 corepack pnpm dev
@@ -167,30 +176,24 @@ corepack pnpm dev
 
 Local URLs:
 
-- Frontend: `http://localhost:5173`
+- Web: `http://localhost:5173`
 - API: `http://localhost:3000/api`
 
-Round advancement is explicit. Communication turns do not change the round. Use the frontend `Advance Round` control or call `PATCH /api/game/sessions/:id/rounds/advance` to apply custody interest and increment the round.
-
-### Run Frontend Only
-
-If the API is already running:
-
-```bash
-corepack pnpm --filter @llm-sim/web dev
-```
-
-### Run API Only
-
-If Postgres is already running:
+Backend-only development:
 
 ```bash
 corepack pnpm --filter @llm-sim/api dev
 ```
 
+Frontend-only development:
+
+```bash
+corepack pnpm --filter @llm-sim/web dev
+```
+
 ## Docker
 
-Run the full stack:
+Start the full stack:
 
 ```bash
 corepack pnpm docker:up
@@ -202,27 +205,13 @@ Stop it:
 corepack pnpm docker:down
 ```
 
-Docker services:
+Services:
 
-- frontend: `http://localhost:5173`
-- API: `http://localhost:3000/api`
 - Postgres: `localhost:5432`
+- API: `http://localhost:3000/api`
+- Web: `http://localhost:5173`
 
-The API container reads OpenAI and runtime settings from `.env`.
-The Docker API and frontend services now run in watch mode with bind-mounted source directories, so local code edits refresh the live containers without a full rebuild.
-
-Typical Docker dev loop:
-
-1. Start the stack with `corepack pnpm docker:up`
-2. Edit files under `apps/` or `packages/`
-3. Let the running containers hot reload automatically
-
-If you change dependency manifests or Dockerfiles, restart the stack:
-
-```bash
-corepack pnpm docker:down
-corepack pnpm docker:up
-```
+The Docker setup runs the API and frontend in watch mode with bind mounts, so code changes under `apps/` and `packages/` are picked up without rebuilding the whole image. If you change dependency manifests or Dockerfiles, restart the stack.
 
 ## Database Workflow
 
@@ -232,82 +221,36 @@ Generate Prisma client:
 corepack pnpm db:generate
 ```
 
-Run migrations in development:
+Create or apply development migrations:
 
 ```bash
 corepack pnpm db:migrate
 ```
 
-Deploy migrations:
+Apply committed migrations without prompts:
 
 ```bash
 corepack pnpm db:migrate:deploy
 ```
 
-Prepare the test database:
+Prepare the integration test database:
 
 ```bash
 corepack pnpm db:test:prepare
 ```
 
-By default this prepares:
+If `TEST_DATABASE_URL` is not set, the helper script falls back to the conventional local test database:
 
 ```text
 postgresql://postgres:postgres@localhost:5432/llm_trading_simulation_test?schema=public
 ```
 
-If `TEST_DATABASE_URL` is present in `.env` or your shell, that value is used instead.
-
 ## Testing
 
-Run all unit tests:
+Run workspace unit tests:
 
 ```bash
 corepack pnpm test
-```
-
-Run all unit and integration tests:
-
-```bash
-corepack pnpm test:all
-```
-
-Run integration tests:
-
-```bash
-corepack pnpm test:integration
-```
-
-`test:integration` automatically prepares the test database first. It loads `.env` when present and defaults `TEST_DATABASE_URL` to the conventional local test database shown above.
-
-Run the full Playwright suite:
-
-```bash
-corepack pnpm test:e2e
-```
-
-Run the deterministic frontend state suite:
-
-```bash
-corepack pnpm test:e2e:deterministic
-```
-
-This suite keeps the browser, React app, and TanStack Query behavior real, but fulfills the frontend API requests with controlled Playwright route mocks so UI updates can be asserted against exact backend snapshots.
-
-Run the thinner real-stack smoke suite:
-
-```bash
-corepack pnpm test:e2e:ui-smoke
-```
-
-Use `test:e2e:ui-smoke` to verify the Docker/Postgres-backed API and Vite frontend still boot and wire together correctly. Use `test:e2e:deterministic` when you want stable coverage of frontend updates such as custody totals, interest accrual, market-position opening, settlement visibility, and replay synchronization.
-
-Round-advance requests can omit `interestRateBps`. In that case the backend uses `DEFAULT_INTEREST_RATE_BPS` or falls back to `250`.
-
-Run linting:
-
-```bash
-corepack pnpm lint
 ```
 
 Run typechecks:
@@ -322,60 +265,65 @@ Run builds:
 corepack pnpm build
 ```
 
-### Live OpenAI Integration Test
+Run integration tests:
 
-The live OpenAI integration test is gated and not part of the default deterministic suite.
+```bash
+corepack pnpm test:integration
+```
 
-Convenience command:
+`test:integration` prepares the test database first and then runs package integration suites.
+
+Run the gated live OpenAI integration suite:
 
 ```bash
 corepack pnpm test:integration:openai
 ```
 
-This command uses a separate default test database name, `llm_trading_simulation_openai_test`, so it can run without colliding with the standard integration suite.
+This uses a separate default test database name and requires `OPENAI_API_KEY`.
 
-Equivalent explicit example:
+Run the full Playwright suite:
 
 ```bash
-ENABLE_OPENAI_LIVE_TESTS=1 \
-OPENAI_LIVE_TEST_RUN_COUNT=2 \
-OPENAI_LIVE_TEST_TURN_COUNT=2 \
-OPENAI_MODEL="gpt-4.1-mini" \
-corepack pnpm test:integration
+corepack pnpm test:e2e
 ```
 
-This test uses the real OpenAI API and requires `OPENAI_API_KEY` to be present in `.env` or your shell environment. The integration runner also loads `.env` automatically and prepares the test database before running.
+Run the deterministic frontend-state suite:
 
-## Useful Scripts
+```bash
+corepack pnpm test:e2e:deterministic
+```
 
-- `corepack pnpm dev`: run API and frontend together
-- `corepack pnpm docker:up`: build and run the full Docker stack
-- `corepack pnpm docker:down`: stop the Docker stack
-- `corepack pnpm db:generate`: generate Prisma client
-- `corepack pnpm db:migrate`: create/apply development migrations
-- `corepack pnpm db:migrate:deploy`: apply migrations without prompts
-- `corepack pnpm db:test:prepare`: reset and prepare the test database
-- `corepack pnpm test:all`: run unit tests, then integration tests
-- `corepack pnpm test:e2e`: run the full Playwright suite
-- `corepack pnpm test:e2e:deterministic`: run the deterministic frontend-state Playwright suite
-- `corepack pnpm test:e2e:ui-smoke`: run the real-stack Playwright smoke suite
-- `corepack pnpm test:integration`: prepare the test database and run integration tests
-- `corepack pnpm test:integration:openai`: run integration tests with the live OpenAI suite enabled
+This keeps the real browser and frontend runtime, but mocks API responses at the Playwright layer for stable UI assertions.
 
-## Current Scope
+Run the thinner real-stack smoke suite:
 
-The current MVP scope is backend-driven agent interaction with a lightweight frontend operator surface.
+```bash
+corepack pnpm test:e2e:ui-smoke
+```
 
-Implemented behavior includes:
+Use `test:e2e:ui-smoke` when you want to verify that the real Docker/Postgres-backed stack still boots and wires together correctly.
 
-- fake-money session lifecycle
-- transfer, deposit, and withdrawal flows
-- round advancement and interest accrual
-- persisted agent messaging and actions
-- proposal, counter-proposal, acceptance, and rejection flows for direct transfers
-- replay-oriented read models
-- mock and OpenAI-backed agent runtime support
+## Useful Commands
 
-## Roadmap
+- `corepack pnpm dev`
+- `corepack pnpm build`
+- `corepack pnpm lint`
+- `corepack pnpm typecheck`
+- `corepack pnpm test`
+- `corepack pnpm test:all`
+- `corepack pnpm test:integration`
+- `corepack pnpm test:integration:openai`
+- `corepack pnpm test:e2e`
+- `corepack pnpm test:e2e:deterministic`
+- `corepack pnpm test:e2e:ui-smoke`
+- `corepack pnpm db:generate`
+- `corepack pnpm db:migrate`
+- `corepack pnpm db:migrate:deploy`
+- `corepack pnpm db:test:prepare`
+- `corepack pnpm docker:up`
+- `corepack pnpm docker:down`
 
-See [plan.md](./plan.md) for active priorities and [steps.md](./steps.md) for milestone notes.
+## Notes
+
+- The active workspace packages are `apps/api`, `apps/web`, `packages/shared-types`, and `packages/mcp-contracts`, alongside shared tooling packages.
+- `plan.md` and `steps.md` track planning and milestone notes; they are not the source of truth for the current implementation.
