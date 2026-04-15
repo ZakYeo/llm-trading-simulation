@@ -410,6 +410,10 @@ describe('AgentTurnContextFactory', () => {
           principal: Money.fromDecimal('9.0000'),
           entryRound: 2,
           settlementRound: 3,
+          entryFeeBps: 20,
+          entryFeeAmount: Money.fromDecimal('0.0180'),
+          entrySlippageBps: 24,
+          effectiveResolutionReturnBps: 1176,
         }),
       ]);
 
@@ -423,6 +427,9 @@ describe('AgentTurnContextFactory', () => {
         principal: '9.0000',
         entryRound: 2,
         settlementRound: 3,
+        entryFeeAmount: '0.0180',
+        entrySlippageBps: 24,
+        effectiveResolutionReturnBps: 1176,
       },
     ]);
     expect(context.marketContext.exposureSummary).toMatchObject({
@@ -434,6 +441,11 @@ describe('AgentTurnContextFactory', () => {
       primaryCounterpartyLiquidBalance: '78.0000',
       primaryCounterpartyReservedBalance: '9.0000',
       primaryCounterpartyCustodiedBalance: '13.5000',
+    });
+    expect(context.marketContext.executionCostModel).toEqual({
+      entryFeeBps: 20,
+      slippageRuleSummary:
+        'Opening a market position charges a percentage entry fee and applies deterministic adverse slippage. Higher-risk, weaker-signal, and larger positions slip more.',
     });
   });
 

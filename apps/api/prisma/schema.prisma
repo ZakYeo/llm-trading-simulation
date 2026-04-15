@@ -288,6 +288,10 @@ model MarketPosition {
   principal        Decimal  @db.Decimal(18, 4)
   entryRound       Int
   settlementRound  Int
+  entryFeeBps      Int      @default(0)
+  entryFeeAmount   Decimal  @db.Decimal(18, 4) @default(0)
+  entrySlippageBps Int      @default(0)
+  effectiveResolutionReturnBps Int
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   gameSession      GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
@@ -305,6 +309,10 @@ model MarketPositionOpen {
   opportunityTitle String
   ownerAgentId      String
   amount           Decimal  @db.Decimal(18, 4)
+  entryFeeBps      Int      @default(0)
+  entryFeeAmount   Decimal  @db.Decimal(18, 4) @default(0)
+  entrySlippageBps Int      @default(0)
+  effectiveResolutionReturnBps Int @default(0)
   createdAt        DateTime @default(now())
   gameSession      GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
   ownerAgent       Agent @relation(fields: [ownerAgentId], references: [id], onDelete: Cascade)

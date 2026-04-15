@@ -120,7 +120,21 @@ export function getReplayEventDetail(
   }
 
   if (event.type === 'market_position_opened') {
-    return event.amount ? `Principal ${formatCurrency(event.amount)}` : null;
+    return [
+      event.amount ? `Principal ${formatCurrency(event.amount)}` : null,
+      event.entryFeeAmount
+        ? `Fee ${formatCurrency(event.entryFeeAmount)}${
+            event.entryFeeBps === undefined
+              ? ''
+              : ` (${formatBasisPoints(event.entryFeeBps)})`
+          }`
+        : null,
+      event.entrySlippageBps === undefined
+        ? null
+        : `Slippage ${formatBasisPoints(event.entrySlippageBps)}`,
+    ]
+      .filter(Boolean)
+      .join(' · ');
   }
 
   if (event.type === 'market_position_settled') {

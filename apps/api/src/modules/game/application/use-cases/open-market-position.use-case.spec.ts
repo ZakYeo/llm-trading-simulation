@@ -101,7 +101,7 @@ describe('OpenMarketPositionUseCase', () => {
       amount: '5.0000',
     });
 
-    expect(session.agents[1]?.balance.available.toDecimal()).toBe('95.0000');
+    expect(session.agents[1]?.balance.available.toDecimal()).toBe('94.9900');
     expect(session.agents[1]?.balance.reserved.toDecimal()).toBe('5.0000');
     expect(session.marketPositions).toHaveLength(1);
     expect(session.marketPositions[0]).toMatchObject({
@@ -109,7 +109,13 @@ describe('OpenMarketPositionUseCase', () => {
       ownerAgentId: 'agent-2',
       entryRound: 0,
       settlementRound: 1,
+      entryFeeBps: 20,
+      entrySlippageBps: 24,
+      effectiveResolutionReturnBps: 1176,
     });
+    expect(session.marketPositions[0]?.entryFeeAmount.toDecimal()).toBe(
+      '0.0100',
+    );
     expect(repository.history).toContainEqual({
       type: 'market_position_opened',
       gameSessionId: 'game-1',
@@ -118,6 +124,10 @@ describe('OpenMarketPositionUseCase', () => {
       opportunityTitle: 'Binary Event Volatility',
       ownerAgentId: 'agent-2',
       amount: '5.0000',
+      entryFeeBps: 20,
+      entryFeeAmount: '0.0100',
+      entrySlippageBps: 24,
+      effectiveResolutionReturnBps: 1176,
     });
   });
 

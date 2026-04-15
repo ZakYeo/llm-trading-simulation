@@ -8,6 +8,7 @@ import type { GameSessionRepositoryPort } from '../../../game/application/ports/
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import type { AgentActionRecord } from '../ports/agent-action-repository.port.js';
 import type { AgentMessageRecord } from '../ports/agent-message-repository.port.js';
+import { DEFAULT_MARKET_POSITION_ENTRY_FEE_BPS } from '../../../game/application/services/market-position-entry-cost.service.js';
 
 function isTransferProposalActionType(
   actionType: AgentActionRecord['actionType'],
@@ -311,6 +312,9 @@ function buildMarketContext(
       principal: position.principal.toDecimal(),
       entryRound: position.entryRound,
       settlementRound: position.settlementRound,
+      entryFeeAmount: position.entryFeeAmount.toDecimal(),
+      entrySlippageBps: position.entrySlippageBps,
+      effectiveResolutionReturnBps: position.effectiveResolutionReturnBps,
     }));
   const primaryCounterpartyOpenPositions = primaryCounterparty
     ? session.marketPositions
@@ -321,6 +325,9 @@ function buildMarketContext(
           principal: position.principal.toDecimal(),
           entryRound: position.entryRound,
           settlementRound: position.settlementRound,
+          entryFeeAmount: position.entryFeeAmount.toDecimal(),
+          entrySlippageBps: position.entrySlippageBps,
+          effectiveResolutionReturnBps: position.effectiveResolutionReturnBps,
         }))
     : [];
   const summarizeExposure = (ownerAgentId: string, custodiedBalance: Money) => {
@@ -457,6 +464,11 @@ function buildMarketContext(
       primaryCounterpartyCustodiedBalance:
         primaryCounterpartyExposureSummary.custodiedBalance,
     },
+    executionCostModel: {
+      entryFeeBps: DEFAULT_MARKET_POSITION_ENTRY_FEE_BPS,
+      slippageRuleSummary:
+        'Opening a market position charges a percentage entry fee and applies deterministic adverse slippage. Higher-risk, weaker-signal, and larger positions slip more.',
+    },
   };
 }
 
@@ -569,7 +581,7 @@ export class AgentTurnContextFactory {
         redeemFundsFromBanker:
           'Redeems your own custodial balance back from the targeted banker agent. Use recipientAgentId as the banker id.',
         openMarketPosition:
-          'Commits part of your own available balance into a listed market opportunity. Use opportunityId and amount. This reserves capital until settlement.',
+          'Commits part of your own available balance into a listed market opportunity. Use opportunityId and amount. This reserves capital until settlement, charges the configured percentage entry fee immediately, and applies deterministic adverse slippage that worsens realized return bps.',
         finalizeTurn:
           'Take no further action this turn. This does not move money or improve information by itself.',
       },

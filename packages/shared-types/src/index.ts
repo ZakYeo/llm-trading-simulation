@@ -98,6 +98,10 @@ export interface MarketPositionRecord {
   principal: string;
   entryRound: number;
   settlementRound: number;
+  entryFeeBps: number;
+  entryFeeAmount: string;
+  entrySlippageBps: number;
+  effectiveResolutionReturnBps: number;
 }
 
 export interface GameSessionRecord extends GameSessionSummary {
@@ -172,6 +176,10 @@ export interface ReplayEventRecord {
   actionType?: AgentActionType;
   relatedProposalActionId?: string;
   profitOrLoss?: string;
+  entryFeeBps?: number;
+  entryFeeAmount?: string;
+  entrySlippageBps?: number;
+  effectiveResolutionReturnBps?: number;
 }
 
 export interface GameReplayRecord {

@@ -73,6 +73,10 @@ describe('GameSessionPrismaMapper', () => {
           principal: Money.fromDecimal('12.0000'),
           entryRound: 0,
           settlementRound: 1,
+          entryFeeBps: 20,
+          entryFeeAmount: Money.fromDecimal('0.0240'),
+          entrySlippageBps: 30,
+          effectiveResolutionReturnBps: 1170,
         }),
       ],
     });
@@ -148,6 +152,10 @@ describe('GameSessionPrismaMapper', () => {
             principal: '12.0000',
             entryRound: 0,
             settlementRound: 1,
+            entryFeeBps: 20,
+            entryFeeAmount: '0.0240',
+            entrySlippageBps: 30,
+            effectiveResolutionReturnBps: 1170,
           },
         ],
       },
@@ -215,6 +223,10 @@ describe('GameSessionPrismaMapper', () => {
           principal: '9.0000',
           entryRound: 2,
           settlementRound: 3,
+          entryFeeBps: 20,
+          entryFeeAmount: '0.0180',
+          entrySlippageBps: 12,
+          effectiveResolutionReturnBps: -112,
         },
       ],
     };
@@ -248,5 +260,10 @@ describe('GameSessionPrismaMapper', () => {
     );
     expect(session.marketOpportunities[0]?.riskLevel).toBe('low');
     expect(session.marketPositions[0]?.principal.toDecimal()).toBe('9.0000');
+    expect(session.marketPositions[0]?.entryFeeAmount.toDecimal()).toBe(
+      '0.0180',
+    );
+    expect(session.marketPositions[0]?.entrySlippageBps).toBe(12);
+    expect(session.marketPositions[0]?.effectiveResolutionReturnBps).toBe(-112);
   });
 });

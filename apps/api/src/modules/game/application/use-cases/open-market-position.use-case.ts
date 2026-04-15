@@ -2,6 +2,7 @@ import { DomainInvariantError } from '../../../shared/domain/errors/domain-invar
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import { MarketPosition } from '../../domain/entities/market-position.js';
 import type { GameSessionRepositoryPort } from '../ports/game-session-repository.port.js';
+import { MarketPositionEntryCostService } from '../services/market-position-entry-cost.service.js';
 
 export interface OpenMarketPositionInput {
   gameSessionId: string;
@@ -11,7 +12,10 @@ export interface OpenMarketPositionInput {
 }
 
 export class OpenMarketPositionUseCase {
-  constructor(private readonly repository: GameSessionRepositoryPort) {}
+  constructor(
+    private readonly repository: GameSessionRepositoryPort,
+    private readonly entryCostService = new MarketPositionEntryCostService(),
+  ) {}
 
   async execute(input: OpenMarketPositionInput) {
     const session = await this.repository.findById(input.gameSessionId);
@@ -83,12 +87,18 @@ export class OpenMarketPositionUseCase {
       );
     }
 
+    const entryCosts = this.entryCostService.calculate({
+      opportunity,
+      principal: amount,
+      availableBalance: ownerAgent.balance.available,
+    });
+
     const updatedSession = session
       .withAgents(
         session.agents.map((agent) =>
           agent.id === ownerAgent.id
             ? agent.withAccounts(
-                agent.balance.reserve(amount),
+                agent.balance.reserve(amount).debit(entryCosts.entryFeeAmount),
                 agent.depositAccount,
               )
             : agent,
@@ -103,6 +113,10 @@ export class OpenMarketPositionUseCase {
           principal: amount,
           entryRound: session.currentRound,
           settlementRound: opportunity.settlementRound,
+          entryFeeBps: entryCosts.entryFeeBps,
+          entryFeeAmount: entryCosts.entryFeeAmount,
+          entrySlippageBps: entryCosts.entrySlippageBps,
+          effectiveResolutionReturnBps: entryCosts.effectiveResolutionReturnBps,
         }),
       ]);
 
@@ -115,6 +129,10 @@ export class OpenMarketPositionUseCase {
         opportunityTitle: opportunity.title,
         ownerAgentId: ownerAgent.id,
         amount: amount.toDecimal(),
+        entryFeeBps: entryCosts.entryFeeBps,
+        entryFeeAmount: entryCosts.entryFeeAmount.toDecimal(),
+        entrySlippageBps: entryCosts.entrySlippageBps,
+        effectiveResolutionReturnBps: entryCosts.effectiveResolutionReturnBps,
       },
     ]);
 

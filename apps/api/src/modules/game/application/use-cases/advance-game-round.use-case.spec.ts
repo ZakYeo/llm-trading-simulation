@@ -149,7 +149,7 @@ describe('AdvanceGameRoundUseCase', () => {
             name: 'Trader Bot',
             role: 'trader',
             balance: AccountBalance.restore(
-              Money.fromDecimal('95.0000'),
+              Money.fromDecimal('94.9900'),
               Money.fromDecimal('5.0000'),
             ),
             depositAccount: DepositAccount.open(),
@@ -181,6 +181,10 @@ describe('AdvanceGameRoundUseCase', () => {
             principal: Money.fromDecimal('5.0000'),
             entryRound: 0,
             settlementRound: 1,
+            entryFeeBps: 20,
+            entryFeeAmount: Money.fromDecimal('0.0100'),
+            entrySlippageBps: 24,
+            effectiveResolutionReturnBps: 1176,
           }),
         ],
       }),
@@ -193,7 +197,7 @@ describe('AdvanceGameRoundUseCase', () => {
     });
 
     expect(session.currentRound).toBe(1);
-    expect(session.agents[1]?.balance.available.toDecimal()).toBe('100.6000');
+    expect(session.agents[1]?.balance.available.toDecimal()).toBe('100.5780');
     expect(session.agents[1]?.balance.reserved.toDecimal()).toBe('0.0000');
     expect(session.marketPositions).toEqual([]);
     expect(session.marketOpportunities.length).toBeGreaterThanOrEqual(2);
@@ -211,7 +215,7 @@ describe('AdvanceGameRoundUseCase', () => {
       opportunityTitle: 'Binary Event Volatility',
       ownerAgentId: 'agent-2',
       principal: '5.0000',
-      profitOrLoss: '0.6000',
+      profitOrLoss: '0.5880',
     });
     expect(repository.history).toContainEqual({
       type: 'market_opportunity_resolved',
@@ -231,7 +235,7 @@ describe('AdvanceGameRoundUseCase', () => {
       bestCaseReturnBps: 1200,
       participantCount: 1,
       totalPrincipal: '5.0000',
-      totalProfitOrLoss: '0.6000',
+      totalProfitOrLoss: '0.5880',
     });
     expect(
       repository.history.some(

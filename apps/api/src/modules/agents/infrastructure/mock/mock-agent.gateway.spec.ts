@@ -104,6 +104,11 @@ function createTraderContext(): AgentTurnContext {
         primaryCounterpartyReservedBalance: '0.0000',
         primaryCounterpartyCustodiedBalance: '0.0000',
       },
+      executionCostModel: {
+        entryFeeBps: 20,
+        slippageRuleSummary:
+          'Opening a market position charges a percentage entry fee and applies deterministic adverse slippage. Higher-risk, weaker-signal, and larger positions slip more.',
+      },
     },
     economicContext: {
       objective: 'Maximize expected fake-money outcome.',

@@ -50,6 +50,10 @@ export class GameSessionResponseMapper {
         principal: position.principal.toDecimal(),
         entryRound: position.entryRound,
         settlementRound: position.settlementRound,
+        entryFeeBps: position.entryFeeBps,
+        entryFeeAmount: position.entryFeeAmount.toDecimal(),
+        entrySlippageBps: position.entrySlippageBps,
+        effectiveResolutionReturnBps: position.effectiveResolutionReturnBps,
       })),
     };
   }

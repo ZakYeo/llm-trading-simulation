@@ -63,6 +63,10 @@ export interface PersistedGameSessionRecord {
     principal: string | { toString(): string };
     entryRound: number;
     settlementRound: number;
+    entryFeeBps: number;
+    entryFeeAmount: string | { toString(): string };
+    entrySlippageBps: number;
+    effectiveResolutionReturnBps: number;
   }>;
 }
 
@@ -178,6 +182,10 @@ export class GameSessionPrismaMapper {
           principal: position.principal.toDecimal(),
           entryRound: position.entryRound,
           settlementRound: position.settlementRound,
+          entryFeeBps: position.entryFeeBps,
+          entryFeeAmount: position.entryFeeAmount.toDecimal(),
+          entrySlippageBps: position.entrySlippageBps,
+          effectiveResolutionReturnBps: position.effectiveResolutionReturnBps,
         })),
       },
     };
@@ -313,6 +321,10 @@ export class GameSessionPrismaMapper {
       principal: position.principal.toDecimal(),
       entryRound: position.entryRound,
       settlementRound: position.settlementRound,
+      entryFeeBps: position.entryFeeBps,
+      entryFeeAmount: position.entryFeeAmount.toDecimal(),
+      entrySlippageBps: position.entrySlippageBps,
+      effectiveResolutionReturnBps: position.effectiveResolutionReturnBps,
     }));
   }
 
@@ -408,6 +420,12 @@ export class GameSessionPrismaMapper {
             ),
             entryRound: position.entryRound,
             settlementRound: position.settlementRound,
+            entryFeeBps: position.entryFeeBps,
+            entryFeeAmount: Money.fromDecimal(
+              decimalLikeToString(position.entryFeeAmount),
+            ),
+            entrySlippageBps: position.entrySlippageBps,
+            effectiveResolutionReturnBps: position.effectiveResolutionReturnBps,
           }),
       ),
     });

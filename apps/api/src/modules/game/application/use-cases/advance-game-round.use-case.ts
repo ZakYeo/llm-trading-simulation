@@ -4,7 +4,6 @@ import type { MarketOpportunity } from '../../domain/entities/market-opportunity
 import type { MarketPosition } from '../../domain/entities/market-position.js';
 import type { GameSessionRepositoryPort } from '../ports/game-session-repository.port.js';
 import { MarketOpportunityBoardFactory } from '../services/market-opportunity-board.factory.js';
-import { MarketOpportunityResolutionService } from '../services/market-opportunity-resolution.service.js';
 
 export interface AdvanceGameRoundInput {
   gameSessionId: string;
@@ -16,7 +15,6 @@ export class AdvanceGameRoundUseCase {
     private readonly repository: GameSessionRepositoryPort,
     private readonly defaultInterestRateBps = 250,
     private readonly marketOpportunityBoardFactory = new MarketOpportunityBoardFactory(),
-    private readonly marketOpportunityResolutionService = new MarketOpportunityResolutionService(),
   ) {}
 
   async execute(input: AdvanceGameRoundInput) {
@@ -134,10 +132,7 @@ export class AdvanceGameRoundUseCase {
         );
       }
 
-      const resolutionReturnBps =
-        this.marketOpportunityResolutionService.getResolutionReturnBps(
-          opportunity,
-        );
+      const resolutionReturnBps = position.effectiveResolutionReturnBps;
       const absoluteProfitOrLoss = position.principal.multiplyBps(
         Math.abs(resolutionReturnBps),
       );

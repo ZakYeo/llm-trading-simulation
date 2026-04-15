@@ -126,6 +126,11 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
                 opportunityTitle: record.opportunityTitle,
                 ownerAgentId: record.ownerAgentId,
                 amount: record.amount,
+                entryFeeBps: record.entryFeeBps,
+                entryFeeAmount: record.entryFeeAmount,
+                entrySlippageBps: record.entrySlippageBps,
+                effectiveResolutionReturnBps:
+                  record.effectiveResolutionReturnBps,
               },
             });
             break;
@@ -500,6 +505,10 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
           principal: position.principal,
           entryRound: position.entryRound,
           settlementRound: position.settlementRound,
+          entryFeeBps: position.entryFeeBps,
+          entryFeeAmount: position.entryFeeAmount,
+          entrySlippageBps: position.entrySlippageBps,
+          effectiveResolutionReturnBps: position.effectiveResolutionReturnBps,
         },
       });
     }

@@ -96,6 +96,9 @@ function createContext(
           principal: '9.0000',
           entryRound: 0,
           settlementRound: 1,
+          entryFeeAmount: '0.0180',
+          entrySlippageBps: 24,
+          effectiveResolutionReturnBps: 1176,
         },
       ],
       recentSettlements: [],
@@ -117,6 +120,11 @@ function createContext(
         primaryCounterpartyLiquidBalance: '78.0000',
         primaryCounterpartyReservedBalance: '9.0000',
         primaryCounterpartyCustodiedBalance: '13.0000',
+      },
+      executionCostModel: {
+        entryFeeBps: 20,
+        slippageRuleSummary:
+          'Opening a market position charges a percentage entry fee and applies deterministic adverse slippage. Higher-risk, weaker-signal, and larger positions slip more.',
       },
     },
     economicContext: {
@@ -282,6 +290,11 @@ describe('OpenAiAgentSystemContextBuilder', () => {
             primaryCounterpartyLiquidBalance: '100.0000',
             primaryCounterpartyReservedBalance: '0.0000',
             primaryCounterpartyCustodiedBalance: '13.0000',
+          },
+          executionCostModel: {
+            entryFeeBps: 20,
+            slippageRuleSummary:
+              'Opening a market position charges a percentage entry fee and applies deterministic adverse slippage. Higher-risk, weaker-signal, and larger positions slip more.',
           },
         },
       }),

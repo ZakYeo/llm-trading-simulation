@@ -150,6 +150,9 @@ export const agentTurnContextSchema = z.object({
         principal: z.string(),
         entryRound: z.number().int().nonnegative(),
         settlementRound: z.number().int().nonnegative(),
+        entryFeeAmount: z.string(),
+        entrySlippageBps: z.number().int().nonnegative(),
+        effectiveResolutionReturnBps: z.number().int(),
       }),
     ),
     primaryCounterpartyOpenPositions: z.array(
@@ -159,6 +162,9 @@ export const agentTurnContextSchema = z.object({
         principal: z.string(),
         entryRound: z.number().int().nonnegative(),
         settlementRound: z.number().int().nonnegative(),
+        entryFeeAmount: z.string(),
+        entrySlippageBps: z.number().int().nonnegative(),
+        effectiveResolutionReturnBps: z.number().int(),
       }),
     ),
     recentSettlements: z.array(
@@ -192,6 +198,10 @@ export const agentTurnContextSchema = z.object({
       primaryCounterpartyLiquidBalance: z.string(),
       primaryCounterpartyReservedBalance: z.string(),
       primaryCounterpartyCustodiedBalance: z.string(),
+    }),
+    executionCostModel: z.object({
+      entryFeeBps: z.number().int().nonnegative(),
+      slippageRuleSummary: z.string().min(1),
     }),
   }),
   economicContext: z.object({

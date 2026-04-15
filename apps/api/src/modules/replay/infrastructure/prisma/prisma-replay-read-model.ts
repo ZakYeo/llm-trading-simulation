@@ -225,6 +225,10 @@ function mapMarketPositionOpenEvents(
     opportunityTitle: marketOpen.opportunityTitle,
     ownerAgentId: marketOpen.ownerAgentId,
     ownerAgentName: marketOpen.ownerAgent.name,
+    entryFeeBps: marketOpen.entryFeeBps,
+    entryFeeAmount: toAmountString(marketOpen.entryFeeAmount),
+    entrySlippageBps: marketOpen.entrySlippageBps,
+    effectiveResolutionReturnBps: marketOpen.effectiveResolutionReturnBps,
   }));
 }
 

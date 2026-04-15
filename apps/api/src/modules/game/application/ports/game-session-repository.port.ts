@@ -59,6 +59,10 @@ export interface MarketPositionOpenedHistoryRecord {
   opportunityTitle: string;
   ownerAgentId: string;
   amount: string;
+  entryFeeBps: number;
+  entryFeeAmount: string;
+  entrySlippageBps: number;
+  effectiveResolutionReturnBps: number;
 }
 
 export interface MarketPositionSettledHistoryRecord {
