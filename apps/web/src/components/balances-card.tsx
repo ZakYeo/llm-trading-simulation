@@ -114,24 +114,8 @@ export function BalancesCard({
         {isInspecting ? (
           <div className="balance-info-panel">
             <div className="balance-info-section">
-              <span className="balance-info-heading">Account</span>
-              <dl className="balance-info-list">
-                <div>
-                  <dt>Available</dt>
-                  <dd>{formatCurrency(agent.availableBalance)}</dd>
-                </div>
-                <div>
-                  <dt>Reserved</dt>
-                  <dd>{formatCurrency(agent.reservedBalance)}</dd>
-                </div>
-              </dl>
-            </div>
-            <div className="balance-info-section">
               <span className="balance-info-heading">Personality</span>
               {renderPersonality(agent)}
-              <p className="balance-info-note">
-                Personality is locked after session creation.
-              </p>
             </div>
           </div>
         ) : null}
