@@ -19,6 +19,7 @@ The active simulation loop is centered on a banker and trader. Agents negotiate,
 - Stream live session activity over SSE while agent turns are running
 - Track balances, banker custody positions, accrued interest, and market exposure
 - Advance rounds explicitly to apply custody interest and settle eligible market positions
+- Apply percentage-based entry fees and deterministic adverse slippage when traders open market positions
 - Persist replay history for transfers, messages, actions, custody events, market listings, and settlements
 - Run unit, integration, and Playwright coverage from the workspace root
 
@@ -106,8 +107,12 @@ Important behaviors in the current codebase:
 - communication turns do not advance the round by themselves
 - round advancement is explicit and applies custody interest
 - market positions remain visible until their settlement round is reached
+- opening a market position charges an immediate percentage-based entry fee
+- opening a market position also applies deterministic adverse slippage based on trade risk, signal quality, and size
+- slippage worsens the position's effective settlement return bps rather than changing principal
 - agent turn context is built from current balances, custody totals, recent actions, recent messages, visible market opportunities, and open positions
 - replay data includes operational events such as custody placements, custody redemptions, market openings, market settlements, and message/action history
+- market-open replay entries include principal, entry fee, and slippage details so the audit trail shows why a trade underperformed the headline opportunity
 
 ## Environment
 
