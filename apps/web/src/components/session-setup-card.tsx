@@ -1,16 +1,12 @@
-import type { AgentPersonalityProfile } from '@llm-sim/shared-types';
 import { useEffect, useState } from 'react';
 
 import type { GameSessionSummary } from '../lib/api';
+import {
+  createDefaultPersonality,
+  type AgentDraft,
+} from '../features/session-setup/model/agent-drafts';
 
 import { CardCollapseButton, CardHeader, CardShell } from './card-shell';
-
-interface AgentDraft {
-  id: string;
-  name: string;
-  role: 'banker' | 'trader';
-  personality: AgentPersonalityProfile;
-}
 
 const bankerSliderFields = [
   {
@@ -84,26 +80,6 @@ interface SessionSetupCardProps {
 }
 
 const agentRoleOptions = ['banker', 'trader'] as const;
-
-function createDefaultPersonality(
-  role: AgentDraft['role'],
-): AgentPersonalityProfile {
-  if (role === 'banker') {
-    return {
-      kind: 'banker',
-      warmth: 5,
-      salesAggression: 5,
-      riskDiscipline: 5,
-    };
-  }
-
-  return {
-    kind: 'trader',
-    assertiveness: 5,
-    riskAppetite: 5,
-    convictionThreshold: 5,
-  };
-}
 
 export function SessionSetupCard({
   mode,

@@ -5,7 +5,7 @@ import {
   createAgentSessionEventSource,
   type AgentSessionEventRecord,
   type GameReplayRecord,
-} from '../lib/api';
+} from '../../../lib/api';
 
 export interface StreamedAuditMessageRecord {
   streamId: string;
@@ -58,6 +58,13 @@ export function createSessionEventHandlers({
   setLatestRunSummary,
   setStreamedMessages,
 }: Omit<UseSessionEventsInput, 'replay'>) {
+  function isSendMessageAction(actionType: string | undefined) {
+    return (
+      actionType === 'send_private_message' ||
+      actionType === 'send_public_message'
+    );
+  }
+
   function refreshLiveState() {
     void Promise.all([
       queryClient.invalidateQueries({
@@ -185,7 +192,9 @@ export function createSessionEventHandlers({
       );
     }
 
-    refreshLiveState();
+    if (!isSendMessageAction(payload.actionType)) {
+      refreshLiveState();
+    }
   }
 
   function handleTransferSettled(event: MessageEvent<string>) {
@@ -260,8 +269,6 @@ function hasPersistedReplayMessage(
       event.roundNumber === streamedMessage.roundNumber &&
       event.turnNumber === streamedMessage.turnNumber &&
       event.senderAgentId === streamedMessage.senderAgentId &&
-      event.recipientAgentId === streamedMessage.recipientAgentId &&
-      event.visibility === streamedMessage.visibility &&
       event.content === streamedMessage.content
     );
   });
@@ -275,31 +282,21 @@ export function useSessionEvents({
   setStreamedMessages,
 }: UseSessionEventsInput) {
   useEffect(() => {
-    setStreamedMessages((current) =>
-      current.filter(
-        (message) =>
-          message.gameSessionId === selectedSessionId &&
-          !hasPersistedReplayMessage(replay, message),
-      ),
-    );
-  }, [replay, selectedSessionId, setStreamedMessages]);
-
-  useEffect(() => {
     if (!selectedSessionId) {
-      return undefined;
+      setStreamedMessages([]);
+      return;
     }
 
+    setStreamedMessages((current) =>
+      current.filter(
+        (streamedMessage) =>
+          streamedMessage.gameSessionId === selectedSessionId &&
+          !hasPersistedReplayMessage(replay, streamedMessage),
+      ),
+    );
+
     const eventSource = createAgentSessionEventSource(selectedSessionId);
-    const {
-      handleActionProgressed,
-      handleMessageStreamAborted,
-      handleMessageStreamCompleted,
-      handleMessageStreamDelta,
-      handleMessageStreamStarted,
-      handleTransferSettled,
-      handleTurnCompleted,
-      handleRoundCompleted,
-    } = createSessionEventHandlers({
+    const handlers = createSessionEventHandlers({
       queryClient,
       selectedSessionId,
       setLatestRunSummary,
@@ -308,74 +305,43 @@ export function useSessionEvents({
 
     eventSource.addEventListener(
       'message_stream_started',
-      handleMessageStreamStarted as EventListener,
+      handlers.handleMessageStreamStarted as EventListener,
     );
     eventSource.addEventListener(
       'message_stream_delta',
-      handleMessageStreamDelta as EventListener,
+      handlers.handleMessageStreamDelta as EventListener,
     );
     eventSource.addEventListener(
       'message_stream_completed',
-      handleMessageStreamCompleted as EventListener,
+      handlers.handleMessageStreamCompleted as EventListener,
     );
     eventSource.addEventListener(
       'message_stream_aborted',
-      handleMessageStreamAborted as EventListener,
+      handlers.handleMessageStreamAborted as EventListener,
     );
     eventSource.addEventListener(
       'action_progressed',
-      handleActionProgressed as EventListener,
+      handlers.handleActionProgressed as EventListener,
     );
     eventSource.addEventListener(
       'transfer_settled',
-      handleTransferSettled as EventListener,
+      handlers.handleTransferSettled as EventListener,
     );
     eventSource.addEventListener(
       'turn_completed',
-      handleTurnCompleted as EventListener,
+      handlers.handleTurnCompleted as EventListener,
     );
     eventSource.addEventListener(
       'round_completed',
-      handleRoundCompleted as EventListener,
+      handlers.handleRoundCompleted as EventListener,
     );
 
     return () => {
-      eventSource.removeEventListener(
-        'message_stream_started',
-        handleMessageStreamStarted as EventListener,
-      );
-      eventSource.removeEventListener(
-        'message_stream_delta',
-        handleMessageStreamDelta as EventListener,
-      );
-      eventSource.removeEventListener(
-        'message_stream_completed',
-        handleMessageStreamCompleted as EventListener,
-      );
-      eventSource.removeEventListener(
-        'message_stream_aborted',
-        handleMessageStreamAborted as EventListener,
-      );
-      eventSource.removeEventListener(
-        'action_progressed',
-        handleActionProgressed as EventListener,
-      );
-      eventSource.removeEventListener(
-        'transfer_settled',
-        handleTransferSettled as EventListener,
-      );
-      eventSource.removeEventListener(
-        'turn_completed',
-        handleTurnCompleted as EventListener,
-      );
-      eventSource.removeEventListener(
-        'round_completed',
-        handleRoundCompleted as EventListener,
-      );
       eventSource.close();
     };
   }, [
     queryClient,
+    replay,
     selectedSessionId,
     setLatestRunSummary,
     setStreamedMessages,

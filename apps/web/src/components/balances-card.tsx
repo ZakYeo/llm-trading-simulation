@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import type { GameSessionRecord } from '../lib/api';
+import type { BalanceAccountViewData } from '../features/session-overview/model/session-overview';
 import { formatCurrency } from '../lib/formatters';
 
 import {
@@ -11,18 +11,18 @@ import {
 } from './card-shell';
 
 interface BalancesCardProps {
-  selectedSession?: GameSessionRecord;
+  accounts?: BalanceAccountViewData[];
   variant?: 'default' | 'compact';
 }
 
 export function BalancesCard({
-  selectedSession,
+  accounts = [],
   variant = 'default',
 }: BalancesCardProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [inspectedAgentIds, setInspectedAgentIds] = useState<string[]>([]);
 
-  if (!selectedSession) {
+  if (accounts.length === 0) {
     return null;
   }
 
@@ -34,7 +34,7 @@ export function BalancesCard({
     );
   }
 
-  function renderPersonality(agent: GameSessionRecord['agents'][number]) {
+  function renderPersonality(agent: BalanceAccountViewData) {
     if (!agent.personalityProfile) {
       return <p className="balance-info-empty">No custom personality saved.</p>;
     }
@@ -77,7 +77,7 @@ export function BalancesCard({
   }
 
   function renderBalanceCard(
-    agent: GameSessionRecord['agents'][number],
+    agent: BalanceAccountViewData,
     extraClassName = '',
   ) {
     const isInspecting = inspectedAgentIds.includes(agent.id);
@@ -129,7 +129,7 @@ export function BalancesCard({
         <CardHeader kicker="Balances" title="Agent Accounts" compact />
 
         <div className="summary-stack">
-          {selectedSession.agents.map((agent) =>
+          {accounts.map((agent) =>
             renderBalanceCard(agent, 'summary-balance-card'),
           )}
         </div>
@@ -154,7 +154,7 @@ export function BalancesCard({
 
       <CardBody isExpanded={isExpanded}>
         <div className="agent-balance-grid">
-          {selectedSession.agents.map((agent) => renderBalanceCard(agent))}
+          {accounts.map((agent) => renderBalanceCard(agent))}
         </div>
       </CardBody>
     </CardShell>

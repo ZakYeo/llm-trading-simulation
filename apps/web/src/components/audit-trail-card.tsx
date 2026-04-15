@@ -2,6 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { GameReplayRecord } from '../lib/api';
 import {
+  createAuditTrailViewData,
+  replayFilters,
+  type ReplayFilter,
+  type ReplayRoundWindow,
+  type ReplayWindow,
+} from '../features/audit-trail/model/audit-trail';
+import {
   formatBasisPoints,
   formatCurrency,
   formatSignedCurrency,
@@ -9,7 +16,7 @@ import {
   getReplayEventDetail,
   getReplayEventLabel,
 } from '../lib/formatters';
-import type { StreamedAuditMessageRecord } from '../hooks/use-session-events';
+import type { StreamedAuditMessageRecord } from '../features/audit-trail/view-model/use-session-events';
 
 import {
   CardBody,
@@ -26,70 +33,6 @@ interface AuditTrailCardProps {
   isTurnFlowInProgress: boolean;
   inProgressLabel?: string;
   latestRunSummary: string;
-}
-
-type AuditTrailEvent = GameReplayRecord['events'][number] & {
-  isStreaming?: boolean;
-  streamingStatus?: StreamedAuditMessageRecord['status'];
-};
-
-type ReplayFilter =
-  | 'all'
-  | 'treasury'
-  | 'market'
-  | 'messages'
-  | 'actions'
-  | 'transfers';
-type ReplayWindow = '5' | '10' | '20' | 'all';
-type ReplayRoundWindow = '1' | '3' | '5' | 'all';
-
-const replayFilters: ReplayFilter[] = [
-  'all',
-  'treasury',
-  'market',
-  'messages',
-  'actions',
-  'transfers',
-];
-
-function matchesFilter(
-  filter: ReplayFilter,
-  event: GameReplayRecord['events'][number],
-) {
-  if (filter === 'all') {
-    return true;
-  }
-
-  if (filter === 'treasury') {
-    return (
-      event.type === 'custody_placement' ||
-      event.type === 'custody_redemption' ||
-      event.type === 'custody_accrual'
-    );
-  }
-
-  if (filter === 'messages') {
-    return event.type === 'message';
-  }
-
-  if (filter === 'actions') {
-    return event.type === 'action';
-  }
-
-  if (filter === 'market') {
-    return (
-      event.type === 'market_opportunity_listed' ||
-      event.type === 'market_position_opened' ||
-      event.type === 'market_position_settled' ||
-      event.type === 'market_opportunity_resolved'
-    );
-  }
-
-  return (
-    event.type === 'transfer' ||
-    event.type === 'deposit' ||
-    event.type === 'withdrawal'
-  );
 }
 
 export function AuditTrailCard({
@@ -110,141 +53,36 @@ export function AuditTrailCard({
   const timelineScrollRef = useRef<HTMLDivElement | null>(null);
   const previousVisibleEventIds = useRef<string[]>([]);
 
-  const persistedEvents = replay?.events ?? [];
-  const hasPersistedStreamAction = (
-    streamedMessage: StreamedAuditMessageRecord,
-  ) =>
-    persistedEvents.some((event) => {
-      if (event.type !== 'action') {
-        return false;
-      }
-
-      return (
-        event.roundNumber === streamedMessage.roundNumber &&
-        event.turnNumber === streamedMessage.turnNumber &&
-        event.agentId === streamedMessage.senderAgentId &&
-        event.actionType ===
-          (streamedMessage.visibility === 'private'
-            ? 'send_private_message'
-            : 'send_public_message') &&
-        event.content === streamedMessage.content
-      );
-    });
-  const visibleStreamedMessages = streamedMessages.filter(
-    (streamedMessage) =>
-      !persistedEvents.some((event) => event.id === streamedMessage.messageId),
-  );
-  const mergedEvents: AuditTrailEvent[] = [
-    ...persistedEvents,
-    ...visibleStreamedMessages.flatMap((streamedMessage) => {
-      const events: AuditTrailEvent[] = [];
-
-      if (!hasPersistedStreamAction(streamedMessage)) {
-        events.push({
-          id: `stream-action-${streamedMessage.streamId}`,
-          type: 'action',
-          createdAt: streamedMessage.occurredAt,
-          roundNumber: streamedMessage.roundNumber,
-          turnNumber: streamedMessage.turnNumber,
-          agentId: streamedMessage.senderAgentId,
-          agentName: streamedMessage.senderAgentName,
-          recipientAgentId: streamedMessage.recipientAgentId,
-          content: streamedMessage.content,
-          actionType:
-            streamedMessage.visibility === 'private'
-              ? 'send_private_message'
-              : 'send_public_message',
-          isStreaming: true,
-          streamingStatus: streamedMessage.status,
-        });
-      }
-
-      if (
-        streamedMessage.content.length > 0 ||
-        streamedMessage.status === 'completed'
-      ) {
-        events.push({
-          id: `stream-message-${streamedMessage.streamId}`,
-          type: 'message',
-          createdAt: streamedMessage.occurredAt,
-          roundNumber: streamedMessage.roundNumber,
-          turnNumber: streamedMessage.turnNumber,
-          senderAgentId: streamedMessage.senderAgentId,
-          senderAgentName: streamedMessage.senderAgentName,
-          recipientAgentId: streamedMessage.recipientAgentId,
-          recipientAgentName: streamedMessage.recipientAgentName,
-          visibility: streamedMessage.visibility,
-          content: streamedMessage.content,
-          isStreaming: true,
-          streamingStatus: streamedMessage.status,
-        });
-      }
-
-      return events;
-    }),
-  ].sort((left, right) => {
-    const createdAtCompare = left.createdAt.localeCompare(right.createdAt);
-
-    if (createdAtCompare !== 0) {
-      return createdAtCompare;
-    }
-
-    return left.id.localeCompare(right.id);
+  const {
+    eventsByRound,
+    mergedEvents,
+    visibleEvents,
+    visibleStreamedMessages,
+  } = createAuditTrailViewData({
+    replay,
+    streamedMessages,
+    selectedRound,
+    activeFilter,
+    activeWindow,
+    activeRoundWindow,
   });
-  const matchingEvents = mergedEvents.filter((event) =>
-    matchesFilter(activeFilter, event),
-  );
-  const latestRoundNumber = matchingEvents.reduce(
-    (latestRound, event) => Math.max(latestRound, event.roundNumber ?? 0),
-    selectedRound ?? 0,
-  );
-  const roundFilteredEvents =
-    activeRoundWindow === 'all'
-      ? matchingEvents
-      : matchingEvents.filter((event) => {
-          const roundNumber = event.roundNumber ?? 0;
-
-          return (
-            roundNumber >=
-            latestRoundNumber - Number.parseInt(activeRoundWindow, 10) + 1
-          );
-        });
-  const visibleEvents =
-    activeWindow === 'all'
-      ? roundFilteredEvents
-      : roundFilteredEvents.slice(-Number.parseInt(activeWindow, 10));
-  const eventsByRound = visibleEvents.reduce<
-    Array<{
-      roundNumber: number;
-      events: typeof visibleEvents;
-    }>
-  >((groups, event) => {
-    const roundNumber = event.roundNumber ?? selectedRound ?? 0;
-    const existingGroup = groups.find(
-      (group) => group.roundNumber === roundNumber,
-    );
-
-    if (existingGroup) {
-      existingGroup.events.push(event);
-      return groups;
-    }
-
-    groups.push({ roundNumber, events: [event] });
-    return groups;
-  }, []);
 
   useEffect(() => {
+    const visibleAnimationKeys = visibleEvents.map(
+      (event) => event.animationKey ?? event.id,
+    );
+
     if (!isExpanded) {
-      previousVisibleEventIds.current = visibleEvents.map((event) => event.id);
+      previousVisibleEventIds.current = visibleAnimationKeys;
       return;
     }
 
     const previousIds = new Set(previousVisibleEventIds.current);
-    const appendedEventIds = visibleEvents
-      .map((event) => event.id)
-      .filter((eventId) => !previousIds.has(eventId));
+    const appendedEventIds = visibleAnimationKeys.filter(
+      (eventId) => !previousIds.has(eventId),
+    );
 
-    previousVisibleEventIds.current = visibleEvents.map((event) => event.id);
+    previousVisibleEventIds.current = visibleAnimationKeys;
 
     if (appendedEventIds.length === 0) {
       return;
@@ -378,7 +216,9 @@ export function AuditTrailCard({
                           <article
                             key={event.id}
                             className={
-                              animatedEventIds.includes(event.id)
+                              animatedEventIds.includes(
+                                event.animationKey ?? event.id,
+                              )
                                 ? `timeline-event${isMarketOpportunityEvent ? ' market-opportunity-event' : ''} timeline-event-enter`
                                 : `timeline-event${isMarketOpportunityEvent ? ' market-opportunity-event' : ''}`
                             }

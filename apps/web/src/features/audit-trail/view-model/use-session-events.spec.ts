@@ -39,7 +39,7 @@ describe('createSessionEventHandlers', () => {
     expect(streamedMessages).toEqual([]);
   });
 
-  it('builds streamed message state from SSE events and attaches the persisted message id', async () => {
+  it('builds streamed message state from SSE events and attaches the persisted message id without forcing an immediate replay refresh', async () => {
     const invalidateQueries = vi.fn().mockResolvedValue(undefined);
     const setLatestRunSummary = vi.fn();
     let streamedMessages: StreamedAuditMessageRecord[] = [];
@@ -127,7 +127,7 @@ describe('createSessionEventHandlers', () => {
         messageId: 'message-9',
       }),
     ]);
-    expect(invalidateQueries).toHaveBeenCalledTimes(3);
+    expect(invalidateQueries).not.toHaveBeenCalled();
   });
 
   it('removes aborted streamed messages and still refreshes for transfer and round completion events', async () => {

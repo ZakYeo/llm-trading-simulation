@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import type { GameSessionRecord } from '../lib/api';
+import type { MarketVisibilityViewData } from '../features/session-overview/model/session-overview';
 import { formatBasisPoints, formatCurrency } from '../lib/formatters';
 
 import {
@@ -11,56 +11,17 @@ import {
 } from './card-shell';
 
 interface MarketVisibilityCardProps {
-  selectedSession?: GameSessionRecord;
+  market?: MarketVisibilityViewData;
   variant?: 'default' | 'compact';
 }
 
-function getPositionStatusLabel(
-  currentRound: number,
-  settlementRound: number,
-): 'Open' | 'Settled' {
-  return settlementRound <= currentRound ? 'Settled' : 'Open';
-}
-
 export function MarketVisibilityCard({
-  selectedSession,
+  market,
   variant = 'default',
 }: MarketVisibilityCardProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
-  if (selectedSession && variant === 'compact') {
-    const featuredOpportunity = selectedSession.marketOpportunities[0];
-    const opportunityTitles = selectedSession.marketOpportunities
-      .map((opportunity) => opportunity.title)
-      .join(' · ');
-    const openPositions = selectedSession.marketPositions.filter(
-      (position) =>
-        getPositionStatusLabel(
-          selectedSession.currentRound,
-          position.settlementRound,
-        ) === 'Open',
-    );
-    const settledPositions = selectedSession.marketPositions.filter(
-      (position) =>
-        getPositionStatusLabel(
-          selectedSession.currentRound,
-          position.settlementRound,
-        ) === 'Settled',
-    );
-    const firstOpenPosition = openPositions[0];
-    const featuredPosition = firstOpenPosition ?? settledPositions[0];
-    const featuredPositionOwner = featuredPosition
-      ? selectedSession.agents.find(
-          (agent) => agent.id === featuredPosition.ownerAgentId,
-        )
-      : undefined;
-    const featuredPositionStatus = featuredPosition
-      ? getPositionStatusLabel(
-          selectedSession.currentRound,
-          featuredPosition.settlementRound,
-        )
-      : null;
-
+  if (market && variant === 'compact') {
     return (
       <CardShell className="market-shell summary-shell">
         <CardHeader
@@ -69,11 +30,11 @@ export function MarketVisibilityCard({
           compact
           actions={
             <span className="status-chip muted">
-              {selectedSession.marketOpportunities.length} opportunit
-              {selectedSession.marketOpportunities.length === 1 ? 'y' : 'ies'}
+              {market.opportunityCount} opportunit
+              {market.opportunityCount === 1 ? 'y' : 'ies'}
               {' / '}
-              {selectedSession.marketPositions.length} position
-              {selectedSession.marketPositions.length === 1 ? '' : 's'}
+              {market.positionCount} position
+              {market.positionCount === 1 ? '' : 's'}
             </span>
           }
         />
@@ -81,42 +42,44 @@ export function MarketVisibilityCard({
         <div className="summary-stat-grid">
           <article className="treasury-stat-card">
             <span>Opportunities</span>
-            <strong>{selectedSession.marketOpportunities.length}</strong>
+            <strong>{market.opportunityCount}</strong>
           </article>
           <article className="treasury-stat-card">
             <span>Open positions</span>
-            <strong>{openPositions.length}</strong>
+            <strong>{market.openPositionCount}</strong>
           </article>
           <article className="treasury-stat-card">
             <span>Round</span>
-            <strong>{selectedSession.currentRound}</strong>
+            <strong>{market.currentRound}</strong>
           </article>
         </div>
 
         <div className="summary-stack">
           <article className="summary-callout">
             <span>Featured opportunity</span>
-            <strong>{featuredOpportunity?.title ?? 'No live listings'}</strong>
+            <strong>
+              {market.featuredOpportunity?.title ?? 'No live listings'}
+            </strong>
             <p className="summary-copy">
-              {featuredOpportunity
-                ? `${formatCurrency(featuredOpportunity.minCommitment)} to ${formatCurrency(featuredOpportunity.maxCommitment)} · ${formatBasisPoints(featuredOpportunity.estimatedNetReturnBps)} · ${featuredOpportunity.signalQuality} signal · ${featuredOpportunity.holdingPeriodRounds} round hold`
+              {market.featuredOpportunity
+                ? `${formatCurrency(market.featuredOpportunity.minCommitment)} to ${formatCurrency(market.featuredOpportunity.maxCommitment)} · ${formatBasisPoints(market.featuredOpportunity.estimatedNetReturnBps)} · ${market.featuredOpportunity.signalQuality} signal · ${market.featuredOpportunity.holdingPeriodRounds} round hold`
                 : 'No live market opportunities are available in this session.'}
             </p>
-            {opportunityTitles ? (
-              <p className="summary-copy">{opportunityTitles}</p>
+            {market.opportunityTitles ? (
+              <p className="summary-copy">{market.opportunityTitles}</p>
             ) : null}
           </article>
 
           <article className="summary-callout">
             <span>Trader exposure</span>
             <strong>
-              {featuredPosition
-                ? `${featuredPosition.opportunityTitle} · ${formatCurrency(featuredPosition.principal)}`
+              {market.featuredPosition
+                ? `${market.featuredPosition.opportunityTitle} · ${formatCurrency(market.featuredPosition.principal)}`
                 : 'No market positions opened yet.'}
             </strong>
             <p className="summary-copy">
-              {featuredPosition
-                ? `${featuredPositionOwner?.name ?? featuredPosition.ownerAgentId} · ${featuredPositionStatus} · Round ${featuredPosition.settlementRound}`
+              {market.featuredPosition
+                ? `${market.featuredPosition.ownerName} · ${market.featuredPosition.statusLabel} · Round ${market.featuredPosition.settlementRound}`
                 : 'Exposure appears here once a trader opens a position.'}
             </p>
           </article>
@@ -132,13 +95,13 @@ export function MarketVisibilityCard({
         title="Market Visibility"
         actions={
           <>
-            {selectedSession ? (
+            {market ? (
               <span className="status-chip muted">
-                {selectedSession.marketOpportunities.length} opportunit
-                {selectedSession.marketOpportunities.length === 1 ? 'y' : 'ies'}
+                {market.opportunityCount} opportunit
+                {market.opportunityCount === 1 ? 'y' : 'ies'}
                 {' / '}
-                {selectedSession.marketPositions.length} position
-                {selectedSession.marketPositions.length === 1 ? '' : 's'}
+                {market.positionCount} position
+                {market.positionCount === 1 ? '' : 's'}
               </span>
             ) : null}
             <CardCollapseButton
@@ -152,7 +115,7 @@ export function MarketVisibilityCard({
       />
 
       <CardBody isExpanded={isExpanded}>
-        {!selectedSession ? (
+        {!market ? (
           <p className="empty-copy">
             Create a new session or connect to a saved session to inspect live
             market opportunities and trader positions.
@@ -166,13 +129,13 @@ export function MarketVisibilityCard({
                   <h3>Current listings</h3>
                 </div>
                 <span className="status-chip muted">
-                  Round {selectedSession.currentRound}
+                  Round {market.currentRound}
                 </span>
               </div>
 
-              {selectedSession.marketOpportunities.length > 0 ? (
+              {market.opportunities.length > 0 ? (
                 <div className="market-opportunity-grid">
-                  {selectedSession.marketOpportunities.map((opportunity) => (
+                  {market.opportunities.map((opportunity) => (
                     <article
                       key={opportunity.id}
                       className="market-opportunity-card"
@@ -258,67 +221,57 @@ export function MarketVisibilityCard({
                 </div>
               </div>
 
-              {selectedSession.marketPositions.length > 0 ? (
+              {market.positions.length > 0 ? (
                 <div className="market-position-grid">
-                  {selectedSession.marketPositions.map((position) => {
-                    const ownerAgent = selectedSession.agents.find(
-                      (agent) => agent.id === position.ownerAgentId,
-                    );
-                    const statusLabel = getPositionStatusLabel(
-                      selectedSession.currentRound,
-                      position.settlementRound,
-                    );
-
-                    return (
-                      <article
-                        key={`${position.ownerAgentId}-${position.opportunityId}-${position.entryRound}`}
-                        className="market-position-card"
-                      >
-                        <div className="market-card-topline">
-                          <div>
-                            <strong>{position.opportunityTitle}</strong>
-                            <p>{ownerAgent?.name ?? position.ownerAgentId}</p>
-                          </div>
-                          <span
-                            className={
-                              statusLabel === 'Settled'
-                                ? 'status-chip position-settled'
-                                : 'status-chip position-open'
-                            }
-                          >
-                            {statusLabel}
-                          </span>
+                  {market.positions.map((position) => (
+                    <article
+                      key={position.key}
+                      className="market-position-card"
+                    >
+                      <div className="market-card-topline">
+                        <div>
+                          <strong>{position.opportunityTitle}</strong>
+                          <p>{position.ownerName}</p>
                         </div>
+                        <span
+                          className={
+                            position.statusLabel === 'Settled'
+                              ? 'status-chip position-settled'
+                              : 'status-chip position-open'
+                          }
+                        >
+                          {position.statusLabel}
+                        </span>
+                      </div>
 
-                        <dl className="market-detail-grid">
-                          <div>
-                            <dt>Owner</dt>
-                            <dd>{ownerAgent?.name ?? position.ownerAgentId}</dd>
-                          </div>
-                          <div>
-                            <dt>Principal</dt>
-                            <dd>{formatCurrency(position.principal)}</dd>
-                          </div>
-                          <div>
-                            <dt>Entry round</dt>
-                            <dd>Round {position.entryRound}</dd>
-                          </div>
-                          <div>
-                            <dt>Settlement round</dt>
-                            <dd>Round {position.settlementRound}</dd>
-                          </div>
-                          <div>
-                            <dt>Current context</dt>
-                            <dd>Round {selectedSession.currentRound}</dd>
-                          </div>
-                          <div>
-                            <dt>Realized value</dt>
-                            <dd>Not exposed in session payload</dd>
-                          </div>
-                        </dl>
-                      </article>
-                    );
-                  })}
+                      <dl className="market-detail-grid">
+                        <div>
+                          <dt>Owner</dt>
+                          <dd>{position.ownerName}</dd>
+                        </div>
+                        <div>
+                          <dt>Principal</dt>
+                          <dd>{formatCurrency(position.principal)}</dd>
+                        </div>
+                        <div>
+                          <dt>Entry round</dt>
+                          <dd>Round {position.entryRound}</dd>
+                        </div>
+                        <div>
+                          <dt>Settlement round</dt>
+                          <dd>Round {position.settlementRound}</dd>
+                        </div>
+                        <div>
+                          <dt>Current context</dt>
+                          <dd>Round {market.currentRound}</dd>
+                        </div>
+                        <div>
+                          <dt>Realized value</dt>
+                          <dd>Not exposed in session payload</dd>
+                        </div>
+                      </dl>
+                    </article>
+                  ))}
                 </div>
               ) : (
                 <p className="empty-copy market-empty">

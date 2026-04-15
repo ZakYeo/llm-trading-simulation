@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import type { GameSessionRecord } from '../lib/api';
+import type { TreasuryViewData } from '../features/session-overview/model/session-overview';
 import { formatCurrency } from '../lib/formatters';
 
 import {
@@ -11,46 +11,19 @@ import {
 } from './card-shell';
 
 interface TreasuryCardProps {
-  selectedSession?: GameSessionRecord;
+  treasury?: TreasuryViewData;
   variant?: 'default' | 'compact';
 }
 
 export function TreasuryCard({
-  selectedSession,
+  treasury,
   variant = 'default',
 }: TreasuryCardProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
-  if (!selectedSession) {
+  if (!treasury) {
     return null;
   }
-
-  const banker = selectedSession.agents.find(
-    (agent) => agent.role === 'banker',
-  );
-  const trader = selectedSession.agents.find(
-    (agent) => agent.role === 'trader',
-  );
-  const traderCustodyPosition =
-    banker && trader
-      ? selectedSession.bankerCustodyPositions.find(
-          (position) =>
-            position.bankerAgentId === banker.id &&
-            position.ownerAgentId === trader.id,
-        )
-      : undefined;
-  const totalCustodiedBalance = selectedSession.bankerCustodyPositions.reduce(
-    (total, position) => total + Number.parseFloat(position.totalBalance),
-    0,
-  );
-  const totalCustodiedInterest = selectedSession.bankerCustodyPositions.reduce(
-    (total, position) => total + Number.parseFloat(position.accruedInterest),
-    0,
-  );
-  const totalCustodiedPrincipal = selectedSession.bankerCustodyPositions.reduce(
-    (total, position) => total + Number.parseFloat(position.principal),
-    0,
-  );
 
   if (variant === 'compact') {
     return (
@@ -65,42 +38,40 @@ export function TreasuryCard({
         <div className="summary-stat-grid">
           <article className="treasury-stat-card emphasis">
             <span>Total custodied</span>
-            <strong>{formatCurrency(totalCustodiedBalance.toFixed(4))}</strong>
+            <strong>{formatCurrency(treasury.totalCustodiedBalance)}</strong>
           </article>
           <article className="treasury-stat-card">
             <span>Accrued interest</span>
-            <strong>{formatCurrency(totalCustodiedInterest.toFixed(4))}</strong>
+            <strong>{formatCurrency(treasury.totalCustodiedInterest)}</strong>
           </article>
           <article className="treasury-stat-card">
             <span>Trader custody</span>
-            <strong>
-              {traderCustodyPosition
-                ? formatCurrency(traderCustodyPosition.totalBalance)
-                : formatCurrency('0.0000')}
-            </strong>
+            <strong>{formatCurrency(treasury.traderCustodyBalance)}</strong>
           </article>
         </div>
 
         <div className="treasury-position-card summary-position-card">
-          {traderCustodyPosition ? (
+          {treasury.traderCustodyPosition ? (
             <>
               <span>Trader principal / total</span>
               <div>
                 <span>Trader principal with banker</span>
                 <strong>
-                  {formatCurrency(traderCustodyPosition.principal)}
+                  {formatCurrency(treasury.traderCustodyPosition.principal)}
                 </strong>
               </div>
               <div>
                 <span>Trader accrued interest</span>
                 <strong>
-                  {formatCurrency(traderCustodyPosition.accruedInterest)}
+                  {formatCurrency(
+                    treasury.traderCustodyPosition.accruedInterest,
+                  )}
                 </strong>
               </div>
               <div>
                 <span>Redeemable total</span>
                 <strong>
-                  {formatCurrency(traderCustodyPosition.totalBalance)}
+                  {formatCurrency(treasury.traderCustodyPosition.totalBalance)}
                 </strong>
               </div>
             </>
@@ -142,49 +113,49 @@ export function TreasuryCard({
               <article className="treasury-stat-card emphasis">
                 <span>Total custodied</span>
                 <strong>
-                  {formatCurrency(totalCustodiedBalance.toFixed(4))}
+                  {formatCurrency(treasury.totalCustodiedBalance)}
                 </strong>
               </article>
               <article className="treasury-stat-card">
                 <span>Total principal</span>
                 <strong>
-                  {formatCurrency(totalCustodiedPrincipal.toFixed(4))}
+                  {formatCurrency(treasury.totalCustodiedPrincipal)}
                 </strong>
               </article>
               <article className="treasury-stat-card">
                 <span>Accrued interest</span>
                 <strong>
-                  {formatCurrency(totalCustodiedInterest.toFixed(4))}
+                  {formatCurrency(treasury.totalCustodiedInterest)}
                 </strong>
               </article>
               <article className="treasury-stat-card">
                 <span>Trader custody</span>
-                <strong>
-                  {traderCustodyPosition
-                    ? formatCurrency(traderCustodyPosition.totalBalance)
-                    : formatCurrency('0.0000')}
-                </strong>
+                <strong>{formatCurrency(treasury.traderCustodyBalance)}</strong>
               </article>
             </div>
 
-            {traderCustodyPosition ? (
+            {treasury.traderCustodyPosition ? (
               <div className="treasury-position-card">
                 <div>
                   <span>Trader principal with banker</span>
                   <strong>
-                    {formatCurrency(traderCustodyPosition.principal)}
+                    {formatCurrency(treasury.traderCustodyPosition.principal)}
                   </strong>
                 </div>
                 <div>
                   <span>Trader accrued interest</span>
                   <strong>
-                    {formatCurrency(traderCustodyPosition.accruedInterest)}
+                    {formatCurrency(
+                      treasury.traderCustodyPosition.accruedInterest,
+                    )}
                   </strong>
                 </div>
                 <div>
                   <span>Redeemable total</span>
                   <strong>
-                    {formatCurrency(traderCustodyPosition.totalBalance)}
+                    {formatCurrency(
+                      treasury.traderCustodyPosition.totalBalance,
+                    )}
                   </strong>
                 </div>
               </div>

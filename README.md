@@ -89,7 +89,8 @@ Current HTTP surface, at a high level:
 
 ### Frontend
 
-The web app is an operator dashboard that currently supports:
+`apps/web` is the only supported frontend. The web app is an operator dashboard
+that currently supports:
 
 - creating a new session with a configurable banker and trader
 - reconnecting to existing sessions
@@ -97,6 +98,23 @@ The web app is an operator dashboard that currently supports:
 - advancing the current round with an optional custody interest rate
 - inspecting balances, custody totals, market opportunities, open positions, and replay history
 - watching live streamed activity while turns are in progress
+
+The frontend is organized with a feature-first MVVM structure:
+
+- `View`: React components and page composition, primarily the dashboard shell and presentational cards
+- `ViewModel`: hooks that coordinate React Query, SSE event handling, mutation side effects, and UI commands
+- `Model`: frontend-only typed mappers and helpers that derive display state from shared contracts and API payloads
+
+Current frontend feature areas under `apps/web/src/features` are centered on:
+
+- `operator-dashboard`: page composition and top-level orchestration
+- `session-setup`: create/connect flow and agent draft state
+- `audit-trail`: replay and live event stream shaping
+- `session-overview`: balances, treasury, and market display models
+
+This structure is intended as an internal refactor only. The dashboard visuals,
+routes, and operator behavior should remain unchanged unless explicitly called
+out elsewhere.
 
 ## Session Model
 
