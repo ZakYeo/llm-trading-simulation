@@ -1,6 +1,7 @@
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 
 export type MarketOpportunityRiskLevel = 'low' | 'high';
+export type MarketOpportunitySignalQuality = 'low' | 'medium' | 'high';
 export type MarketOpportunityCategory =
   | 'carry'
   | 'event'
@@ -24,6 +25,7 @@ export interface MarketOpportunityProps {
   worstCaseReturnBps: number;
   bestCaseReturnBps: number;
   resolutionReturnBps: number;
+  signalQuality?: MarketOpportunitySignalQuality;
 }
 
 export class MarketOpportunity {
@@ -41,6 +43,7 @@ export class MarketOpportunity {
   readonly worstCaseReturnBps: number;
   readonly bestCaseReturnBps: number;
   readonly resolutionReturnBps: number;
+  readonly signalQuality: MarketOpportunitySignalQuality;
 
   constructor(props: MarketOpportunityProps) {
     if (props.id.trim().length === 0) {
@@ -90,5 +93,10 @@ export class MarketOpportunity {
     this.worstCaseReturnBps = props.worstCaseReturnBps;
     this.bestCaseReturnBps = props.bestCaseReturnBps;
     this.resolutionReturnBps = props.resolutionReturnBps;
+    this.signalQuality = props.signalQuality ?? 'medium';
+  }
+
+  get holdingPeriodRounds() {
+    return this.settlementRound - this.listedRound;
   }
 }

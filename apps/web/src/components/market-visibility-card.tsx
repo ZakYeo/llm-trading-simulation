@@ -99,7 +99,7 @@ export function MarketVisibilityCard({
             <strong>{featuredOpportunity?.title ?? 'No live listings'}</strong>
             <p className="summary-copy">
               {featuredOpportunity
-                ? `${formatCurrency(featuredOpportunity.minCommitment)} to ${formatCurrency(featuredOpportunity.maxCommitment)} · ${formatBasisPoints(featuredOpportunity.estimatedNetReturnBps)}`
+                ? `${formatCurrency(featuredOpportunity.minCommitment)} to ${formatCurrency(featuredOpportunity.maxCommitment)} · ${formatBasisPoints(featuredOpportunity.estimatedNetReturnBps)} · ${featuredOpportunity.signalQuality} signal · ${featuredOpportunity.holdingPeriodRounds} round hold`
                 : 'No live market opportunities are available in this session.'}
             </p>
             {opportunityTitles ? (
@@ -190,8 +190,8 @@ export function MarketVisibilityCard({
                           }
                         >
                           {opportunity.riskLevel === 'high'
-                            ? 'Risky'
-                            : 'Bad / Low Edge'}
+                            ? 'High risk'
+                            : 'Low risk'}
                         </span>
                       </div>
 
@@ -218,6 +218,17 @@ export function MarketVisibilityCard({
                             {formatBasisPoints(opportunity.worstCaseReturnBps)}
                             {' to '}
                             {formatBasisPoints(opportunity.bestCaseReturnBps)}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Signal quality</dt>
+                          <dd>{opportunity.signalQuality}</dd>
+                        </div>
+                        <div>
+                          <dt>Hold</dt>
+                          <dd>
+                            {opportunity.holdingPeriodRounds} round
+                            {opportunity.holdingPeriodRounds === 1 ? '' : 's'}
                           </dd>
                         </div>
                         <div>

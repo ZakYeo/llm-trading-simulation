@@ -84,6 +84,8 @@ function createContext(
           estimatedNetReturnBps: 300,
           worstCaseReturnBps: -800,
           bestCaseReturnBps: 1200,
+          signalQuality: 'low',
+          holdingPeriodRounds: 1,
         },
       ],
       selfOpenPositions: [],
@@ -181,6 +183,7 @@ describe('OpenAiAgentSystemContextBuilder', () => {
     expect(prompt).toContain(
       'Market context: visible market opportunities: [id=opp-risky title=Binary Event Volatility',
     );
+    expect(prompt).toContain('signalQuality=low holdingPeriodRounds=1');
     expect(prompt).toContain(
       'primary counterparty open market positions: [id=opp-risky title=Binary Event Volatility principal=9.0000',
     );
@@ -193,6 +196,7 @@ describe('OpenAiAgentSystemContextBuilder', () => {
     expect(prompt).toContain(
       "Role economics: as the banker, you improve your outcome by attracting and retaining trader trader-1's custodial funds",
     );
+    expect(prompt).not.toContain('Reject obviously weak opportunities');
     expect(prompt).toContain(
       'Decision rule: compare the expected value of communicating, proposing, or responding against the value of waiting.',
     );
@@ -253,6 +257,8 @@ describe('OpenAiAgentSystemContextBuilder', () => {
               estimatedNetReturnBps: 300,
               worstCaseReturnBps: -800,
               bestCaseReturnBps: 1200,
+              signalQuality: 'low',
+              holdingPeriodRounds: 1,
             },
           ],
           selfOpenPositions: [],

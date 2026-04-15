@@ -1,6 +1,7 @@
 import type {
   MarketOpportunityCategory,
   MarketOpportunityRiskLevel,
+  MarketOpportunitySignalQuality,
 } from '../../domain/entities/market-opportunity.js';
 
 export interface MarketOpportunityTemplate {
@@ -14,6 +15,7 @@ export interface MarketOpportunityTemplate {
   estimatedNetReturnBps: number;
   worstCaseReturnBps: number;
   bestCaseReturnBps: number;
+  signalQuality: MarketOpportunitySignalQuality;
   settlementHorizons: [1] | [1, 2];
   resolutionReturnBpsOptions: readonly [number, ...number[]];
   isExtremeRisk?: boolean;
@@ -27,12 +29,13 @@ export const marketOpportunityTemplateCatalog: readonly MarketOpportunityTemplat
       riskLevel: 'low',
       title: 'Steep Curve Carry',
       summary:
-        'A measured carry trade with predictable financing and capped upside. Reliable if unexciting.',
+        'A measured carry setup with steadier financing and narrower payoff dispersion than faster-moving trades.',
       minCommitment: '5.0000',
       maxCommitment: '18.0000',
       estimatedNetReturnBps: 85,
       worstCaseReturnBps: -60,
       bestCaseReturnBps: 160,
+      signalQuality: 'high',
       settlementHorizons: [1],
       resolutionReturnBpsOptions: [120, 90, 45, -40],
     },
@@ -40,16 +43,17 @@ export const marketOpportunityTemplateCatalog: readonly MarketOpportunityTemplat
       id: 'carry-trap-01',
       category: 'carry',
       riskLevel: 'low',
-      title: 'Funding Basis Trap',
+      title: 'Term Basis Carry',
       summary:
-        'The headline carry looks calm, but rolling costs and crowded positioning can turn it into slow bleed.',
+        'A carry setup with modest expected edge and a longer hold, where financing discipline matters more than speed.',
       minCommitment: '5.0000',
       maxCommitment: '20.0000',
-      estimatedNetReturnBps: -55,
-      worstCaseReturnBps: -180,
-      bestCaseReturnBps: 35,
-      settlementHorizons: [1],
-      resolutionReturnBpsOptions: [-150, -90, -45, 20],
+      estimatedNetReturnBps: 95,
+      worstCaseReturnBps: -110,
+      bestCaseReturnBps: 190,
+      signalQuality: 'medium',
+      settlementHorizons: [1, 2],
+      resolutionReturnBpsOptions: [170, 110, 60, -80],
     },
     {
       id: 'event-binary-01',
@@ -63,6 +67,7 @@ export const marketOpportunityTemplateCatalog: readonly MarketOpportunityTemplat
       estimatedNetReturnBps: 260,
       worstCaseReturnBps: -850,
       bestCaseReturnBps: 1250,
+      signalQuality: 'low',
       settlementHorizons: [1],
       resolutionReturnBpsOptions: [1250, 680, -420, -850],
       isExtremeRisk: true,
@@ -79,6 +84,7 @@ export const marketOpportunityTemplateCatalog: readonly MarketOpportunityTemplat
       estimatedNetReturnBps: 180,
       worstCaseReturnBps: -420,
       bestCaseReturnBps: 620,
+      signalQuality: 'medium',
       settlementHorizons: [1, 2],
       resolutionReturnBpsOptions: [540, 260, -180, -360],
     },
@@ -94,6 +100,7 @@ export const marketOpportunityTemplateCatalog: readonly MarketOpportunityTemplat
       estimatedNetReturnBps: 95,
       worstCaseReturnBps: -35,
       bestCaseReturnBps: 180,
+      signalQuality: 'high',
       settlementHorizons: [1],
       resolutionReturnBpsOptions: [140, 100, 65, -20],
     },
@@ -109,6 +116,7 @@ export const marketOpportunityTemplateCatalog: readonly MarketOpportunityTemplat
       estimatedNetReturnBps: 240,
       worstCaseReturnBps: -900,
       bestCaseReturnBps: 1100,
+      signalQuality: 'low',
       settlementHorizons: [1, 2],
       resolutionReturnBpsOptions: [980, 520, -380, -900],
       isExtremeRisk: true,
@@ -125,6 +133,7 @@ export const marketOpportunityTemplateCatalog: readonly MarketOpportunityTemplat
       estimatedNetReturnBps: 170,
       worstCaseReturnBps: -520,
       bestCaseReturnBps: 760,
+      signalQuality: 'low',
       settlementHorizons: [1, 2],
       resolutionReturnBpsOptions: [740, 310, -220, -480],
     },
@@ -140,7 +149,14 @@ export const marketOpportunityTemplateCatalog: readonly MarketOpportunityTemplat
       estimatedNetReturnBps: 110,
       worstCaseReturnBps: -120,
       bestCaseReturnBps: 260,
+      signalQuality: 'medium',
       settlementHorizons: [1, 2],
       resolutionReturnBpsOptions: [220, 130, 40, -90],
     },
   ] as const;
+
+export function findMarketOpportunityTemplateById(templateId: string) {
+  return marketOpportunityTemplateCatalog.find(
+    (template) => template.id === templateId,
+  );
+}

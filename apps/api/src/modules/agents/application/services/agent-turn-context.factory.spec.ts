@@ -291,6 +291,8 @@ describe('AgentTurnContextFactory', () => {
       opportunityId: 'opp-risky',
       riskLevel: 'high',
       estimatedNetReturnBps: 300,
+      signalQuality: 'medium',
+      holdingPeriodRounds: 1,
     });
     expect(context.marketContext.exposureSummary).toMatchObject({
       selfOpenPositionCount: 0,

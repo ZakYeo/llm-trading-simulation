@@ -6,6 +6,7 @@ import { GameAgent } from '../../domain/entities/game-agent.js';
 import { GameSession } from '../../domain/entities/game-session.js';
 import { MarketOpportunity } from '../../domain/entities/market-opportunity.js';
 import { MarketPosition } from '../../domain/entities/market-position.js';
+import { findMarketOpportunityTemplateById } from '../../application/services/market-opportunity-template.catalog.js';
 import type { AgentPersonalityProfile } from '@llm-sim/shared-types';
 
 export interface PersistedGameSessionRecord {
@@ -391,6 +392,9 @@ export class GameSessionPrismaMapper {
             worstCaseReturnBps: opportunity.worstCaseReturnBps,
             bestCaseReturnBps: opportunity.bestCaseReturnBps,
             resolutionReturnBps: opportunity.resolutionReturnBps,
+            signalQuality:
+              findMarketOpportunityTemplateById(opportunity.templateId)
+                ?.signalQuality ?? 'medium',
           }),
       ),
       marketPositions: (record.marketPositions ?? []).map(

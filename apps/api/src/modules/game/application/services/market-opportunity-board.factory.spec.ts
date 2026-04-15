@@ -43,6 +43,17 @@ describe('MarketOpportunityBoardFactory', () => {
     expect(left.some((opportunity) => opportunity.riskLevel === 'high')).toBe(
       true,
     );
+    expect(
+      left.every((opportunity) => opportunity.estimatedNetReturnBps > 0),
+    ).toBe(true);
+    expect(
+      left.every(
+        (opportunity) =>
+          opportunity.signalQuality === 'low' ||
+          opportunity.signalQuality === 'medium' ||
+          opportunity.signalQuality === 'high',
+      ),
+    ).toBe(true);
   });
 
   it('tops the board back up deterministically after round advancement without exceeding four active opportunities', () => {

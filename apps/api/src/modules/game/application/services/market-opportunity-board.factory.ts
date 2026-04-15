@@ -157,6 +157,7 @@ export class MarketOpportunityBoardFactory {
       worstCaseReturnBps: template.worstCaseReturnBps,
       bestCaseReturnBps: template.bestCaseReturnBps,
       resolutionReturnBps,
+      signalQuality: template.signalQuality,
     });
   }
 

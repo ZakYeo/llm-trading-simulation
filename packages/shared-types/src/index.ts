@@ -48,6 +48,7 @@ export type AgentActionType =
   | 'finalize_turn';
 
 export type AgentMessageVisibility = 'public' | 'private';
+export type MarketOpportunitySignalQuality = 'low' | 'medium' | 'high';
 
 export interface GameAgentRecord {
   id: string;
@@ -86,6 +87,8 @@ export interface MarketOpportunityRecord {
   estimatedNetReturnBps: number;
   worstCaseReturnBps: number;
   bestCaseReturnBps: number;
+  signalQuality: MarketOpportunitySignalQuality;
+  holdingPeriodRounds: number;
 }
 
 export interface MarketPositionRecord {

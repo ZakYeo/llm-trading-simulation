@@ -425,6 +425,8 @@ function buildMarketContext(
       estimatedNetReturnBps: opportunity.estimatedNetReturnBps,
       worstCaseReturnBps: opportunity.worstCaseReturnBps,
       bestCaseReturnBps: opportunity.bestCaseReturnBps,
+      signalQuality: opportunity.signalQuality,
+      holdingPeriodRounds: opportunity.holdingPeriodRounds,
     })),
     selfOpenPositions,
     primaryCounterpartyOpenPositions,

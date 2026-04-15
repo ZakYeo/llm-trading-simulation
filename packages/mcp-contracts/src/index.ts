@@ -139,6 +139,8 @@ export const agentTurnContextSchema = z.object({
         estimatedNetReturnBps: z.number().int(),
         worstCaseReturnBps: z.number().int(),
         bestCaseReturnBps: z.number().int(),
+        signalQuality: z.enum(['low', 'medium', 'high']),
+        holdingPeriodRounds: z.number().int().positive(),
       }),
     ),
     selfOpenPositions: z.array(

@@ -63,6 +63,8 @@ function createTraderContext(): AgentTurnContext {
           estimatedNetReturnBps: -75,
           worstCaseReturnBps: -150,
           bestCaseReturnBps: 25,
+          signalQuality: 'medium',
+          holdingPeriodRounds: 1,
         },
         {
           opportunityId: 'opp-risky',
@@ -76,6 +78,8 @@ function createTraderContext(): AgentTurnContext {
           estimatedNetReturnBps: 300,
           worstCaseReturnBps: -800,
           bestCaseReturnBps: 1200,
+          signalQuality: 'low',
+          holdingPeriodRounds: 1,
         },
       ],
       selfOpenPositions: [],

@@ -64,6 +64,8 @@ function createContext(): AgentTurnContext {
           estimatedNetReturnBps: 300,
           worstCaseReturnBps: -800,
           bestCaseReturnBps: 1200,
+          signalQuality: 'low',
+          holdingPeriodRounds: 1,
         },
       ],
       selfOpenPositions: [],

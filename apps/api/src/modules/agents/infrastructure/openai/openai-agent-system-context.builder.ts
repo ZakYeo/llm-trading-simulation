@@ -118,7 +118,7 @@ export class OpenAiAgentSystemContextBuilder {
         : `visible market opportunities: ${this.context.marketContext.visibleOpportunities
             .map(
               (opportunity) =>
-                `[id=${opportunity.opportunityId} title=${opportunity.title} risk=${opportunity.riskLevel} listedRound=${opportunity.listedRound} settlementRound=${opportunity.settlementRound} min=${opportunity.minCommitment} max=${opportunity.maxCommitment} estBps=${opportunity.estimatedNetReturnBps} worstBps=${opportunity.worstCaseReturnBps} bestBps=${opportunity.bestCaseReturnBps} summary=${opportunity.summary}]`,
+                `[id=${opportunity.opportunityId} title=${opportunity.title} risk=${opportunity.riskLevel} signalQuality=${opportunity.signalQuality} holdingPeriodRounds=${opportunity.holdingPeriodRounds} listedRound=${opportunity.listedRound} settlementRound=${opportunity.settlementRound} min=${opportunity.minCommitment} max=${opportunity.maxCommitment} estBps=${opportunity.estimatedNetReturnBps} worstBps=${opportunity.worstCaseReturnBps} bestBps=${opportunity.bestCaseReturnBps} summary=${opportunity.summary}]`,
             )
             .join(' ')}`;
     const selfOpenPositions =
@@ -197,7 +197,7 @@ export class OpenAiAgentSystemContextBuilder {
       case 'trader':
         this.segments.push(
           banker
-            ? `Role economics: as the trader, you improve your outcome by deciding whether to place funds with banker ${banker.agentId}, leave funds liquid, or commit capital to listed market opportunities. Loan-style borrowing from the banker is not implemented, so do not ask the banker to fund your trading book through payment requests. If you decide to move funds into banker custody, use place_funds_with_banker targeting banker ${banker.agentId}. If you decide to pull funds back out, use redeem_funds_from_banker targeting banker ${banker.agentId}. If a market opportunity has attractive expected value relative to custody and liquidity, use open_market_position. Reject obviously weak opportunities when they are inferior to custody or cash.`
+            ? `Role economics: as the trader, you improve your outcome by deciding whether to place funds with banker ${banker.agentId}, leave funds liquid, or commit capital to listed market opportunities. Loan-style borrowing from the banker is not implemented, so do not ask the banker to fund your trading book through payment requests. If you decide to move funds into banker custody, use place_funds_with_banker targeting banker ${banker.agentId}. If you decide to pull funds back out, use redeem_funds_from_banker targeting banker ${banker.agentId}. When evaluating market opportunities, compare the structured facts provided in context, including expected return, downside range, signal quality, holding period, and your current balance and open positions.`
             : 'Role economics: as the trader, you improve your outcome by choosing when to keep funds liquid versus committing them to available treasury or market mechanics.',
         );
         return this;
@@ -245,7 +245,7 @@ export class OpenAiAgentSystemContextBuilder {
       this.context.marketContext.selfOpenPositions.length === 0
     ) {
       this.segments.push(
-        'Current opportunity: at least one listed market opportunity is available. Compare its expected payoff and downside against banker custody and staying liquid before defaulting to passive carry.',
+        'Current opportunity: at least one listed market opportunity is available. Compare the provided opportunity facts against custody and staying liquid before deciding whether to open a position.',
       );
       return this;
     }
