@@ -20,14 +20,18 @@ export function BalancesCard({
   variant = 'default',
 }: BalancesCardProps) {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [inspectedAgentId, setInspectedAgentId] = useState<string | null>(null);
+  const [inspectedAgentIds, setInspectedAgentIds] = useState<string[]>([]);
 
   if (!selectedSession) {
     return null;
   }
 
   function toggleInspectedAgent(agentId: string) {
-    setInspectedAgentId((current) => (current === agentId ? null : agentId));
+    setInspectedAgentIds((current) =>
+      current.includes(agentId)
+        ? current.filter((currentAgentId) => currentAgentId !== agentId)
+        : [...current, agentId],
+    );
   }
 
   function renderPersonality(agent: GameSessionRecord['agents'][number]) {
@@ -76,7 +80,7 @@ export function BalancesCard({
     agent: GameSessionRecord['agents'][number],
     extraClassName = '',
   ) {
-    const isInspecting = inspectedAgentId === agent.id;
+    const isInspecting = inspectedAgentIds.includes(agent.id);
 
     return (
       <article
