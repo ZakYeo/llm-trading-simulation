@@ -55,4 +55,41 @@ describe('AgentSessionEventStreamService', () => {
       occurredAt: '2026-04-08T10:00:01.000Z',
     });
   });
+
+  it('passes through streamed message events for the requested session', async () => {
+    const service = new AgentSessionEventStreamService();
+    const eventPromise = firstValueFrom(service.streamForGameSession('game-3'));
+
+    service.publish({
+      type: 'message_stream_delta',
+      streamId: 'stream-1',
+      gameSessionId: 'game-3',
+      roundNumber: 1,
+      turnNumber: 4,
+      agentId: 'agent-1',
+      agentName: 'Banker Bot',
+      recipientAgentId: 'agent-2',
+      recipientAgentName: 'Trader Bot',
+      visibility: 'private',
+      delta: 'Hello',
+      content: 'Hello',
+      occurredAt: '2026-04-08T10:00:02.000Z',
+    });
+
+    await expect(eventPromise).resolves.toEqual({
+      type: 'message_stream_delta',
+      streamId: 'stream-1',
+      gameSessionId: 'game-3',
+      roundNumber: 1,
+      turnNumber: 4,
+      agentId: 'agent-1',
+      agentName: 'Banker Bot',
+      recipientAgentId: 'agent-2',
+      recipientAgentName: 'Trader Bot',
+      visibility: 'private',
+      delta: 'Hello',
+      content: 'Hello',
+      occurredAt: '2026-04-08T10:00:02.000Z',
+    });
+  });
 });

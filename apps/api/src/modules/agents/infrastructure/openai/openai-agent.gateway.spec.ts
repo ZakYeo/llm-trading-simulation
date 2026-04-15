@@ -1,7 +1,7 @@
+import type { AgentTurnContext } from '@llm-sim/mcp-contracts';
 import { describe, expect, it, vi } from 'vitest';
 
 import { OpenAiAgentGateway } from './openai-agent.gateway.js';
-import type { AgentTurnContext } from '@llm-sim/mcp-contracts';
 
 function createContext(): AgentTurnContext {
   return {
@@ -184,5 +184,133 @@ describe('OpenAiAgentGateway', () => {
       amount: '25.0000',
       reasoning: 'Highest expected return justifies a large allocation.',
     });
+  });
+
+  it('streams message content before returning the finalized action', async () => {
+    const callbacks = {
+      onMessageStreamStarted: vi.fn(),
+      onMessageStreamDelta: vi.fn(),
+      onMessageStreamCompleted: vi.fn(),
+      onMessageStreamAborted: vi.fn(),
+    };
+    const client = {
+      responses: {
+        stream: vi.fn().mockResolvedValue(
+          (async function* () {
+            yield {
+              type: 'response.output_text.delta',
+              delta:
+                '{"type":"send_private_message","recipientAgentId":"banker-1","content":"Hello',
+            };
+            yield {
+              type: 'response.output_text.delta',
+              delta:
+                ' Banker","amount":null,"rationale":null,"proposalActionId":null,"opportunityId":null,"reasoning":"Short note."}',
+            };
+          })(),
+        ),
+        create: vi.fn(),
+      },
+    };
+    const gateway = new OpenAiAgentGateway(
+      client as never,
+      'gpt-test',
+      undefined,
+      true,
+    );
+
+    const action = await gateway.decideNextAction(createContext(), callbacks);
+
+    expect(action).toEqual({
+      type: 'send_private_message',
+      recipientAgentId: 'banker-1',
+      content: 'Hello Banker',
+      reasoning: 'Short note.',
+    });
+    expect(callbacks.onMessageStreamStarted).toHaveBeenCalledTimes(1);
+    expect(callbacks.onMessageStreamDelta).toHaveBeenCalledWith(
+      expect.objectContaining({
+        visibility: 'private',
+        recipientAgentId: 'banker-1',
+        content: 'Hello',
+      }),
+    );
+    expect(callbacks.onMessageStreamDelta).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        content: 'Hello Banker',
+      }),
+    );
+    expect(callbacks.onMessageStreamCompleted).toHaveBeenCalledWith(
+      expect.objectContaining({
+        visibility: 'private',
+        recipientAgentId: 'banker-1',
+        content: 'Hello Banker',
+      }),
+    );
+    expect(callbacks.onMessageStreamAborted).not.toHaveBeenCalled();
+  });
+
+  it('aborts a partial message stream when the final action is not a message', async () => {
+    const callbacks = {
+      onMessageStreamStarted: vi.fn(),
+      onMessageStreamDelta: vi.fn(),
+      onMessageStreamCompleted: vi.fn(),
+      onMessageStreamAborted: vi.fn(),
+    };
+    const client = {
+      responses: {
+        stream: vi.fn().mockResolvedValue(
+          (async function* () {
+            yield {
+              type: 'response.output_text.delta',
+              delta:
+                '{"type":"send_private_message","recipientAgentId":"banker-1","content":"Draft',
+            };
+            yield {
+              type: 'response.output_text.delta',
+              delta:
+                '","amount":null,"rationale":null,"proposalActionId":null,"opportunityId":null,"reasoning":"Maybe"}',
+            };
+            yield {
+              type: 'response.completed',
+              response: {
+                output_text: JSON.stringify({
+                  type: 'finalize_turn',
+                  recipientAgentId: null,
+                  content: null,
+                  amount: null,
+                  rationale: null,
+                  proposalActionId: null,
+                  opportunityId: null,
+                  reasoning: 'Hold.',
+                }),
+              },
+            };
+          })(),
+        ),
+        create: vi.fn(),
+      },
+    };
+    const gateway = new OpenAiAgentGateway(
+      client as never,
+      'gpt-test',
+      undefined,
+      true,
+    );
+
+    const action = await gateway.decideNextAction(createContext(), callbacks);
+
+    expect(action).toEqual({
+      type: 'finalize_turn',
+      reasoning: 'Hold.',
+    });
+    expect(callbacks.onMessageStreamAborted).toHaveBeenCalledWith(
+      expect.objectContaining({
+        visibility: 'private',
+        recipientAgentId: 'banker-1',
+        content: 'Draft',
+      }),
+    );
+    expect(callbacks.onMessageStreamCompleted).not.toHaveBeenCalled();
   });
 });

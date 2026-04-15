@@ -1,9 +1,15 @@
 import type { AgentAction, AgentTurnContext } from '@llm-sim/mcp-contracts';
 
-import type { AgentGatewayPort } from '../../application/ports/agent-gateway.port.js';
+import type {
+  AgentGatewayPort,
+  AgentMessageStreamCallbacks,
+} from '../../application/ports/agent-gateway.port.js';
 
 export class MockAgentGateway implements AgentGatewayPort {
-  async decideNextAction(context: AgentTurnContext): Promise<AgentAction> {
+  async decideNextAction(
+    context: AgentTurnContext,
+    callbacks?: AgentMessageStreamCallbacks,
+  ): Promise<AgentAction> {
     const scenario = process.env.AGENT_MOCK_SCENARIO;
     const banker = context.peers.find((peer) => peer.role === 'banker');
     const trader = context.peers.find((peer) => peer.role === 'trader');
@@ -39,11 +45,14 @@ export class MockAgentGateway implements AgentGatewayPort {
     );
 
     if (context.self.role === 'banker' && trader && context.turnNumber === 1) {
-      return {
+      const action = {
         type: 'send_private_message',
         recipientAgentId: trader.agentId,
         content: 'Share your strongest signal and I can review terms.',
-      };
+      } satisfies AgentAction;
+
+      streamMessageAction(action, callbacks);
+      return action;
     }
 
     if (
@@ -148,14 +157,67 @@ export class MockAgentGateway implements AgentGatewayPort {
     }
 
     if (context.self.role === 'analyst' && context.turnNumber === 2) {
-      return {
+      const action = {
         type: 'send_public_message',
         content: 'Volatility is compressing and timing risk is falling.',
-      };
+      } satisfies AgentAction;
+
+      streamMessageAction(action, callbacks);
+      return action;
     }
 
     return {
       type: 'finalize_turn',
     };
   }
+}
+
+function streamMessageAction(
+  action: AgentAction,
+  callbacks?: AgentMessageStreamCallbacks,
+) {
+  if (
+    !callbacks ||
+    (action.type !== 'send_private_message' &&
+      action.type !== 'send_public_message')
+  ) {
+    return;
+  }
+
+  const streamId = `mock-stream-${Math.random().toString(36).slice(2, 10)}`;
+  const visibility =
+    action.type === 'send_private_message' ? 'private' : 'public';
+  const recipientAgentId =
+    action.type === 'send_private_message' ? action.recipientAgentId : null;
+
+  callbacks.onMessageStreamStarted({
+    streamId,
+    visibility,
+    recipientAgentId,
+  });
+
+  const midpoint = Math.max(1, Math.ceil(action.content.length / 2));
+  const chunks = [
+    action.content.slice(0, midpoint),
+    action.content.slice(midpoint),
+  ].filter((chunk) => chunk.length > 0);
+  let content = '';
+
+  for (const chunk of chunks) {
+    content += chunk;
+    callbacks.onMessageStreamDelta({
+      streamId,
+      visibility,
+      recipientAgentId,
+      delta: chunk,
+      content,
+    });
+  }
+
+  callbacks.onMessageStreamCompleted({
+    streamId,
+    visibility,
+    recipientAgentId,
+    content: action.content,
+  });
 }

@@ -9,6 +9,7 @@ import {
   getReplayEventDetail,
   getReplayEventLabel,
 } from '../lib/formatters';
+import type { StreamedAuditMessageRecord } from '../hooks/use-session-events';
 
 import {
   CardBody,
@@ -19,12 +20,18 @@ import {
 
 interface AuditTrailCardProps {
   replay?: GameReplayRecord;
+  streamedMessages?: StreamedAuditMessageRecord[];
   selectedRound?: number;
   isFetching: boolean;
   isTurnFlowInProgress: boolean;
   inProgressLabel?: string;
   latestRunSummary: string;
 }
+
+type AuditTrailEvent = GameReplayRecord['events'][number] & {
+  isStreaming?: boolean;
+  streamingStatus?: StreamedAuditMessageRecord['status'];
+};
 
 type ReplayFilter =
   | 'all'
@@ -87,6 +94,7 @@ function matchesFilter(
 
 export function AuditTrailCard({
   replay,
+  streamedMessages = [],
   selectedRound,
   isFetching,
   isTurnFlowInProgress,
@@ -102,8 +110,90 @@ export function AuditTrailCard({
   const timelineScrollRef = useRef<HTMLDivElement | null>(null);
   const previousVisibleEventIds = useRef<string[]>([]);
 
-  const matchingEvents =
-    replay?.events.filter((event) => matchesFilter(activeFilter, event)) ?? [];
+  const persistedEvents = replay?.events ?? [];
+  const hasPersistedStreamAction = (
+    streamedMessage: StreamedAuditMessageRecord,
+  ) =>
+    persistedEvents.some((event) => {
+      if (event.type !== 'action') {
+        return false;
+      }
+
+      return (
+        event.roundNumber === streamedMessage.roundNumber &&
+        event.turnNumber === streamedMessage.turnNumber &&
+        event.agentId === streamedMessage.senderAgentId &&
+        event.actionType ===
+          (streamedMessage.visibility === 'private'
+            ? 'send_private_message'
+            : 'send_public_message') &&
+        event.content === streamedMessage.content
+      );
+    });
+  const visibleStreamedMessages = streamedMessages.filter(
+    (streamedMessage) =>
+      !persistedEvents.some((event) => event.id === streamedMessage.messageId),
+  );
+  const mergedEvents: AuditTrailEvent[] = [
+    ...persistedEvents,
+    ...visibleStreamedMessages.flatMap((streamedMessage) => {
+      const events: AuditTrailEvent[] = [];
+
+      if (!hasPersistedStreamAction(streamedMessage)) {
+        events.push({
+          id: `stream-action-${streamedMessage.streamId}`,
+          type: 'action',
+          createdAt: streamedMessage.occurredAt,
+          roundNumber: streamedMessage.roundNumber,
+          turnNumber: streamedMessage.turnNumber,
+          agentId: streamedMessage.senderAgentId,
+          agentName: streamedMessage.senderAgentName,
+          recipientAgentId: streamedMessage.recipientAgentId,
+          content: streamedMessage.content,
+          actionType:
+            streamedMessage.visibility === 'private'
+              ? 'send_private_message'
+              : 'send_public_message',
+          isStreaming: true,
+          streamingStatus: streamedMessage.status,
+        });
+      }
+
+      if (
+        streamedMessage.content.length > 0 ||
+        streamedMessage.status === 'completed'
+      ) {
+        events.push({
+          id: `stream-message-${streamedMessage.streamId}`,
+          type: 'message',
+          createdAt: streamedMessage.occurredAt,
+          roundNumber: streamedMessage.roundNumber,
+          turnNumber: streamedMessage.turnNumber,
+          senderAgentId: streamedMessage.senderAgentId,
+          senderAgentName: streamedMessage.senderAgentName,
+          recipientAgentId: streamedMessage.recipientAgentId,
+          recipientAgentName: streamedMessage.recipientAgentName,
+          visibility: streamedMessage.visibility,
+          content: streamedMessage.content,
+          isStreaming: true,
+          streamingStatus: streamedMessage.status,
+        });
+      }
+
+      return events;
+    }),
+  ].sort((left, right) => {
+    const createdAtCompare = left.createdAt.localeCompare(right.createdAt);
+
+    if (createdAtCompare !== 0) {
+      return createdAtCompare;
+    }
+
+    return left.id.localeCompare(right.id);
+  });
+  const matchingEvents = mergedEvents.filter((event) =>
+    matchesFilter(activeFilter, event),
+  );
   const latestRoundNumber = matchingEvents.reduce(
     (latestRound, event) => Math.max(latestRound, event.roundNumber ?? 0),
     selectedRound ?? 0,
@@ -184,9 +274,9 @@ export function AuditTrailCard({
         title="Audit Trail"
         actions={
           <>
-            {replay ? (
+            {replay || visibleStreamedMessages.length > 0 ? (
               <span className="status-chip muted">
-                {visibleEvents.length} / {replay.events.length} events
+                {visibleEvents.length} / {mergedEvents.length} events
               </span>
             ) : null}
             <CardCollapseButton
@@ -265,7 +355,7 @@ export function AuditTrailCard({
           {isFetching ? <p>Loading replay...</p> : null}
 
           <div ref={timelineScrollRef} className="timeline-scroll">
-            {replay ? (
+            {replay || visibleStreamedMessages.length > 0 ? (
               visibleEvents.length > 0 ? (
                 <div className="timeline">
                   {eventsByRound.map((group) => (
@@ -276,7 +366,10 @@ export function AuditTrailCard({
                       </div>
 
                       {group.events.map((event) => {
-                        const eventDetail = getReplayEventDetail(event);
+                        const eventDetail =
+                          event.isStreaming && event.type === 'message'
+                            ? (event.content ?? '')
+                            : getReplayEventDetail(event);
                         const isMarketOpportunityEvent =
                           event.type === 'market_opportunity_listed' ||
                           event.type === 'market_opportunity_resolved';
@@ -299,7 +392,22 @@ export function AuditTrailCard({
                                 <span>{formatTimestamp(event.createdAt)}</span>
                               </div>
                               {eventDetail && !isMarketOpportunityEvent ? (
-                                <p className="event-detail">{eventDetail}</p>
+                                <p className="event-detail">
+                                  {eventDetail}
+                                  {event.isStreaming ? (
+                                    <span
+                                      className="streaming-cursor"
+                                      aria-label={
+                                        event.streamingStatus === 'streaming'
+                                          ? 'Message typing in progress'
+                                          : 'Live message persisted'
+                                      }
+                                    >
+                                      {' '}
+                                      |
+                                    </span>
+                                  ) : null}
+                                </p>
                               ) : null}
                               {event.type === 'market_opportunity_listed' ? (
                                 <dl className="event-meta-grid">

@@ -20,7 +20,10 @@ import {
   listGameSessions,
   orchestrateAgentRound,
 } from './lib/api';
-import { useSessionEvents } from './hooks/use-session-events';
+import {
+  type StreamedAuditMessageRecord,
+  useSessionEvents,
+} from './hooks/use-session-events';
 
 type AgentRole = 'banker' | 'trader';
 
@@ -100,6 +103,9 @@ export function App() {
   const [turnCount, setTurnCount] = useState(2);
   const [interestRateBps, setInterestRateBps] = useState('250');
   const [latestRunSummary, setLatestRunSummary] = useState('');
+  const [streamedMessages, setStreamedMessages] = useState<
+    StreamedAuditMessageRecord[]
+  >([]);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [agentDrafts, setAgentDrafts] =
     useState<AgentDraft[]>(defaultAgentSetup);
@@ -323,8 +329,10 @@ export function App() {
 
   useSessionEvents({
     queryClient,
+    replay,
     selectedSessionId,
     setLatestRunSummary,
+    setStreamedMessages,
   });
 
   return (
@@ -476,6 +484,7 @@ export function App() {
               >
                 <AuditTrailCard
                   replay={replay}
+                  streamedMessages={streamedMessages}
                   selectedRound={selectedSession?.currentRound}
                   isFetching={replayQuery.isFetching}
                   isTurnFlowInProgress={isTurnFlowInProgress}

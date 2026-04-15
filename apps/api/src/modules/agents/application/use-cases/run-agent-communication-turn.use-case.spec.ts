@@ -15,6 +15,7 @@ import { GameSession } from '../../../game/domain/entities/game-session.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import type { AgentGatewayPort } from '../ports/agent-gateway.port.js';
+import type { AgentMessageStreamCallbacks } from '../ports/agent-gateway.port.js';
 import type {
   AgentActionRecord,
   AgentActionRepositoryPort,
@@ -156,7 +157,10 @@ class ScriptedAgentGateway implements AgentGatewayPort {
 
   constructor(private readonly actions: AgentAction[]) {}
 
-  async decideNextAction(): Promise<AgentAction> {
+  async decideNextAction(
+    _context: AgentTurnContext,
+    callbacks?: AgentMessageStreamCallbacks,
+  ): Promise<AgentAction> {
     const action = this.actions[this.index];
 
     if (!action) {
@@ -164,6 +168,28 @@ class ScriptedAgentGateway implements AgentGatewayPort {
     }
 
     this.index += 1;
+
+    if (callbacks && action.type === 'send_private_message') {
+      callbacks.onMessageStreamStarted({
+        streamId: `stream-${this.index}`,
+        visibility: 'private',
+        recipientAgentId: action.recipientAgentId,
+      });
+      callbacks.onMessageStreamDelta({
+        streamId: `stream-${this.index}`,
+        visibility: 'private',
+        recipientAgentId: action.recipientAgentId,
+        delta: action.content,
+        content: action.content,
+      });
+      callbacks.onMessageStreamCompleted({
+        streamId: `stream-${this.index}`,
+        visibility: 'private',
+        recipientAgentId: action.recipientAgentId,
+        content: action.content,
+      });
+    }
+
     return action;
   }
 }
@@ -268,6 +294,48 @@ describe('RunAgentCommunicationTurnUseCase', () => {
     });
     expect(eventStreamService.published).toEqual([
       {
+        type: 'message_stream_started',
+        streamId: 'stream-1',
+        gameSessionId: 'game-1',
+        roundNumber: 1,
+        turnNumber: 2,
+        agentId: 'agent-1',
+        agentName: 'Banker Bot',
+        recipientAgentId: 'agent-2',
+        recipientAgentName: 'Trader Bot',
+        visibility: 'private',
+        occurredAt: expect.any(String),
+      },
+      {
+        type: 'message_stream_delta',
+        streamId: 'stream-1',
+        gameSessionId: 'game-1',
+        roundNumber: 1,
+        turnNumber: 2,
+        agentId: 'agent-1',
+        agentName: 'Banker Bot',
+        recipientAgentId: 'agent-2',
+        recipientAgentName: 'Trader Bot',
+        visibility: 'private',
+        delta: 'I can safeguard funds and report treasury balances clearly.',
+        content: 'I can safeguard funds and report treasury balances clearly.',
+        occurredAt: expect.any(String),
+      },
+      {
+        type: 'message_stream_completed',
+        streamId: 'stream-1',
+        gameSessionId: 'game-1',
+        roundNumber: 1,
+        turnNumber: 2,
+        agentId: 'agent-1',
+        agentName: 'Banker Bot',
+        recipientAgentId: 'agent-2',
+        recipientAgentName: 'Trader Bot',
+        visibility: 'private',
+        content: 'I can safeguard funds and report treasury balances clearly.',
+        occurredAt: expect.any(String),
+      },
+      {
         type: 'action_progressed',
         gameSessionId: 'game-1',
         roundNumber: 1,
@@ -275,6 +343,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
         agentId: 'agent-1',
         agentName: 'Banker Bot',
         actionType: 'send_private_message',
+        streamId: 'stream-1',
         messageId: 'message-1',
         messageVisibility: 'private',
         occurredAt: expect.any(String),
@@ -287,6 +356,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
         agentId: 'agent-2',
         agentName: 'Trader Bot',
         actionType: 'place_funds_with_banker',
+        streamId: undefined,
         messageId: undefined,
         messageVisibility: undefined,
         occurredAt: expect.any(String),

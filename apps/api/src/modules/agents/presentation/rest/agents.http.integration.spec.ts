@@ -66,6 +66,19 @@ async function readNextSseEvent(
   }
 }
 
+async function readSseEvents(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  count: number,
+) {
+  const events: Array<{ event: string; data: string }> = [];
+
+  for (let index = 0; index < count; index += 1) {
+    events.push(await readNextSseEvent(reader));
+  }
+
+  return events;
+}
+
 describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
   let prismaService: PrismaService;
   let baseUrl: string;
@@ -140,7 +153,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
     ).toBe(true);
   });
 
-  it('streams agent progress over SSE for a session', async () => {
+  it('streams message typing events and progress over SSE for a session', async () => {
     const createdSession = await createAgentSession(baseUrl);
     const abortController = new AbortController();
 
@@ -161,7 +174,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
     expect(sseResponse.body).toBeTruthy();
 
     const reader = sseResponse.body!.getReader();
-    const firstEventPromise = readNextSseEvent(reader);
+    const eventPromises = readSseEvents(reader, 4);
 
     const turnResponse = await fetch(
       `${baseUrl}/api/agents/sessions/${createdSession.id}/turns/communicate`,
@@ -174,8 +187,8 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
 
     let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
 
-    const firstEvent = await Promise.race([
-      firstEventPromise,
+    const streamedEvents = await Promise.race([
+      eventPromises,
       new Promise<never>((_, reject) => {
         timeoutHandle = setTimeout(() => {
           reject(new Error('Timed out waiting for SSE event'));
@@ -190,15 +203,66 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
     abortController.abort();
     await reader.cancel().catch(() => undefined);
 
-    expect(firstEvent.event).toBe('action_progressed');
-    expect(JSON.parse(firstEvent.data)).toEqual(
+    const replayResponse = await fetch(
+      `${baseUrl}/api/replay/sessions/${createdSession.id}`,
+    );
+    expect(replayResponse.status).toBe(200);
+    const replay = (await replayResponse.json()) as {
+      events: Array<{
+        id: string;
+        type: string;
+        content?: string;
+      }>;
+    };
+
+    expect(streamedEvents.map((event) => event.event)).toEqual([
+      'message_stream_started',
+      'message_stream_delta',
+      'message_stream_completed',
+      'action_progressed',
+    ]);
+    expect(JSON.parse(streamedEvents[0].data)).toEqual(
       expect.objectContaining({
-        type: 'action_progressed',
+        type: 'message_stream_started',
         gameSessionId: createdSession.id,
         roundNumber: 0,
         turnNumber: 1,
       }),
     );
+    expect(JSON.parse(streamedEvents[1].data)).toEqual(
+      expect.objectContaining({
+        type: 'message_stream_delta',
+        gameSessionId: createdSession.id,
+        delta: expect.any(String),
+        content: expect.any(String),
+      }),
+    );
+    expect(JSON.parse(streamedEvents[2].data)).toEqual(
+      expect.objectContaining({
+        type: 'message_stream_completed',
+        gameSessionId: createdSession.id,
+        content: expect.any(String),
+      }),
+    );
+    expect(JSON.parse(streamedEvents[3].data)).toEqual(
+      expect.objectContaining({
+        type: 'action_progressed',
+        gameSessionId: createdSession.id,
+        roundNumber: 0,
+        turnNumber: 1,
+        streamId: expect.any(String),
+        messageId: expect.any(String),
+      }),
+    );
+    expect(
+      replay.events.some(
+        (event) =>
+          event.type === 'message' &&
+          event.id === JSON.parse(streamedEvents[3].data).messageId &&
+          typeof event.content === 'string' &&
+          event.content.length > 0,
+      ),
+    ).toBe(true);
   });
 
   it('orchestrates multiple backend agent turns and persists richer agent outcomes', async () => {

@@ -201,6 +201,64 @@ export interface CommunicationTurnRecord {
   }>;
 }
 
+export type AgentSessionMessageStreamEventRecord =
+  | {
+      type: 'message_stream_started';
+      streamId: string;
+      gameSessionId: string;
+      roundNumber: number;
+      turnNumber: number;
+      agentId: string;
+      agentName: string;
+      recipientAgentId: string | null;
+      recipientAgentName?: string;
+      visibility: AgentMessageVisibility;
+      occurredAt: string;
+    }
+  | {
+      type: 'message_stream_delta';
+      streamId: string;
+      gameSessionId: string;
+      roundNumber: number;
+      turnNumber: number;
+      agentId: string;
+      agentName: string;
+      recipientAgentId: string | null;
+      recipientAgentName?: string;
+      visibility: AgentMessageVisibility;
+      delta: string;
+      content: string;
+      occurredAt: string;
+    }
+  | {
+      type: 'message_stream_completed';
+      streamId: string;
+      gameSessionId: string;
+      roundNumber: number;
+      turnNumber: number;
+      agentId: string;
+      agentName: string;
+      recipientAgentId: string | null;
+      recipientAgentName?: string;
+      visibility: AgentMessageVisibility;
+      content: string;
+      occurredAt: string;
+    }
+  | {
+      type: 'message_stream_aborted';
+      streamId: string;
+      gameSessionId: string;
+      roundNumber: number;
+      turnNumber: number;
+      agentId: string;
+      agentName: string;
+      recipientAgentId: string | null;
+      recipientAgentName?: string;
+      visibility: AgentMessageVisibility;
+      content?: string;
+      occurredAt: string;
+    };
+
 export interface OrchestratedRoundRecord {
   gameSessionId: string;
   roundNumber: number;
@@ -216,10 +274,12 @@ export type AgentSessionEventRecord =
       agentId: string;
       agentName: string;
       actionType: Exclude<AgentActionType, 'finalize_turn'>;
+      streamId?: string;
       messageId?: string;
       messageVisibility?: AgentMessageVisibility;
       occurredAt: string;
     }
+  | AgentSessionMessageStreamEventRecord
   | {
       type: 'transfer_settled';
       gameSessionId: string;

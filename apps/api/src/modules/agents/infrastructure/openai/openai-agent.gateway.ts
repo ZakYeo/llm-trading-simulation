@@ -1,10 +1,15 @@
+import { randomUUID } from 'node:crypto';
+
 import type { AgentAction, AgentTurnContext } from '@llm-sim/mcp-contracts';
 import { agentActionSchema } from '@llm-sim/mcp-contracts';
 import type OpenAI from 'openai';
 
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
-import type { AgentGatewayPort } from '../../application/ports/agent-gateway.port.js';
+import type {
+  AgentGatewayPort,
+  AgentMessageStreamCallbacks,
+} from '../../application/ports/agent-gateway.port.js';
 import {
   defaultOpenAiAgentSystemPrompt,
   OpenAiAgentSystemContextBuilder,
@@ -75,6 +80,12 @@ interface RawAgentDecision {
   proposalActionId: string | null;
   opportunityId: string | null;
   reasoning: string | null;
+}
+
+interface MessageStreamPreview {
+  type: 'send_public_message' | 'send_private_message';
+  recipientAgentId: string | null;
+  content: string;
 }
 
 function resolveRecipientAgentId(
@@ -386,6 +397,228 @@ function normalizeAgentDecision(
   }
 }
 
+function buildDecisionRequest(
+  model: string,
+  prompt: string,
+  context: AgentTurnContext,
+) {
+  return {
+    model,
+    input: [
+      {
+        role: 'system' as const,
+        content: prompt,
+      },
+      {
+        role: 'user' as const,
+        content: JSON.stringify(context),
+      },
+    ],
+    text: {
+      format: {
+        type: 'json_schema' as const,
+        ...agentDecisionJsonSchema,
+      },
+    },
+  };
+}
+
+function decodeJsonFragment(value: string) {
+  return value
+    .replace(/\\\\/gu, '\\')
+    .replace(/\\"/gu, '"')
+    .replace(/\\n/gu, '\n')
+    .replace(/\\r/gu, '\r')
+    .replace(/\\t/gu, '\t')
+    .replace(/\\\//gu, '/');
+}
+
+function extractPartialMessageStream(
+  rawText: string,
+): MessageStreamPreview | null {
+  const typeMatch = rawText.match(
+    /"type"\s*:\s*"(send_public_message|send_private_message)"/u,
+  );
+
+  if (!typeMatch) {
+    return null;
+  }
+
+  const contentMatch = rawText.match(/"content"\s*:\s*"((?:\\.|[^"])*)/u);
+
+  if (!contentMatch) {
+    return null;
+  }
+
+  const recipientMatch = rawText.match(
+    /"recipientAgentId"\s*:\s*(null|"([^"]*)")/u,
+  );
+
+  return {
+    type: typeMatch[1] as MessageStreamPreview['type'],
+    recipientAgentId:
+      recipientMatch?.[1] === 'null' ? null : (recipientMatch?.[2] ?? null),
+    content: decodeJsonFragment(contentMatch[1] ?? ''),
+  };
+}
+
+function logParsedAction(context: AgentTurnContext, parsedAction: AgentAction) {
+  console.info(
+    JSON.stringify({
+      type: 'agent_decision',
+      gameSessionId: context.gameId,
+      turnNumber: context.turnNumber,
+      agentId: context.self.agentId,
+      agentName: context.self.name,
+      role: context.self.role,
+      actionType: parsedAction.type,
+      recipientAgentId:
+        'recipientAgentId' in parsedAction
+          ? parsedAction.recipientAgentId
+          : null,
+      proposalActionId:
+        'proposalActionId' in parsedAction
+          ? parsedAction.proposalActionId
+          : null,
+      opportunityId:
+        'opportunityId' in parsedAction ? parsedAction.opportunityId : null,
+      reasoning: parsedAction.reasoning ?? null,
+    }),
+  );
+}
+
+function toFinalizedAction(outputText: string, context: AgentTurnContext) {
+  return agentActionSchema.parse(
+    normalizeAgentDecision(JSON.parse(outputText) as RawAgentDecision, context),
+  );
+}
+
+function emitMessagePreview(
+  rawText: string,
+  callbacks: AgentMessageStreamCallbacks | undefined,
+  streamState: {
+    active?: {
+      streamId: string;
+      visibility: 'public' | 'private';
+      recipientAgentId: string | null;
+      content: string;
+    };
+  },
+) {
+  if (!callbacks) {
+    return;
+  }
+
+  const preview = extractPartialMessageStream(rawText);
+
+  if (!preview) {
+    return;
+  }
+
+  const visibility =
+    preview.type === 'send_private_message' ? 'private' : 'public';
+  const recipientAgentId =
+    preview.type === 'send_private_message' ? preview.recipientAgentId : null;
+
+  if (!streamState.active) {
+    streamState.active = {
+      streamId: randomUUID(),
+      visibility,
+      recipientAgentId,
+      content: '',
+    };
+    callbacks.onMessageStreamStarted({
+      streamId: streamState.active.streamId,
+      visibility,
+      recipientAgentId,
+    });
+  }
+
+  const nextContent = preview.content;
+  const previousContent = streamState.active.content;
+
+  if (
+    streamState.active.visibility !== visibility ||
+    streamState.active.recipientAgentId !== recipientAgentId
+  ) {
+    streamState.active.visibility = visibility;
+    streamState.active.recipientAgentId = recipientAgentId;
+  }
+
+  if (nextContent.length <= previousContent.length) {
+    return;
+  }
+
+  const delta = nextContent.slice(previousContent.length);
+  streamState.active.content = nextContent;
+  callbacks.onMessageStreamDelta({
+    streamId: streamState.active.streamId,
+    visibility,
+    recipientAgentId,
+    delta,
+    content: nextContent,
+  });
+}
+
+async function consumeStreamingResponse(
+  stream: AsyncIterable<unknown>,
+  callbacks: AgentMessageStreamCallbacks | undefined,
+) {
+  const streamState: {
+    active?: {
+      streamId: string;
+      visibility: 'public' | 'private';
+      recipientAgentId: string | null;
+      content: string;
+    };
+  } = {};
+  let outputText = '';
+
+  for await (const event of stream) {
+    const typedEvent = event as {
+      type?: string;
+      delta?: string;
+      text?: string;
+      snapshot?: string;
+      response?: { output_text?: string };
+    };
+
+    if (
+      typedEvent.type === 'response.output_text.delta' &&
+      typeof typedEvent.delta === 'string'
+    ) {
+      outputText += typedEvent.delta;
+      emitMessagePreview(outputText, callbacks, streamState);
+      continue;
+    }
+
+    if (
+      typedEvent.type === 'response.output_text.done' &&
+      typeof typedEvent.text === 'string'
+    ) {
+      outputText = typedEvent.text;
+      emitMessagePreview(outputText, callbacks, streamState);
+      continue;
+    }
+
+    if (typeof typedEvent.snapshot === 'string') {
+      outputText = typedEvent.snapshot;
+      emitMessagePreview(outputText, callbacks, streamState);
+      continue;
+    }
+
+    if (typeof typedEvent.response?.output_text === 'string') {
+      outputText = typedEvent.response.output_text;
+      emitMessagePreview(outputText, callbacks, streamState);
+    }
+  }
+
+  return {
+    outputText,
+    streamState,
+  };
+}
+
 export class OpenAiAgentGateway implements AgentGatewayPort {
   constructor(
     private readonly client: OpenAI,
@@ -410,66 +643,117 @@ export class OpenAiAgentGateway implements AgentGatewayPort {
       .build();
   }
 
-  async decideNextAction(context: AgentTurnContext): Promise<AgentAction> {
-    try {
-      const response = await this.client.responses.create({
-        model: this.model,
-        input: [
-          {
-            role: 'system',
-            content: this.buildPrompt(context),
-          },
-          {
-            role: 'user',
-            content: JSON.stringify(context),
-          },
-        ],
-        text: {
-          format: {
-            type: 'json_schema',
-            ...agentDecisionJsonSchema,
-          },
-        },
-      });
+  async decideNextAction(
+    context: AgentTurnContext,
+    callbacks?: AgentMessageStreamCallbacks,
+  ): Promise<AgentAction> {
+    const prompt = this.buildPrompt(context);
+    const request = buildDecisionRequest(this.model, prompt, context);
+    let activeStream:
+      | {
+          streamId: string;
+          visibility: 'public' | 'private';
+          recipientAgentId: string | null;
+          content: string;
+        }
+      | undefined;
 
-      if (!response.output_text) {
+    try {
+      const responses = this.client.responses as OpenAI['responses'] & {
+        stream?: (input: unknown) => Promise<
+          AsyncIterable<unknown> & {
+            finalResponse?: () => Promise<{ output_text?: string }>;
+          }
+        >;
+      };
+      let outputText = '';
+      if (typeof responses.stream === 'function') {
+        const responseStream = await responses.stream(request);
+        const consumed = await consumeStreamingResponse(
+          responseStream,
+          callbacks,
+        );
+        outputText = consumed.outputText;
+        activeStream = consumed.streamState.active;
+
+        if (!outputText && typeof responseStream.finalResponse === 'function') {
+          outputText =
+            (await responseStream.finalResponse())?.output_text ?? '';
+        }
+      } else {
+        const response = await this.client.responses.create(request);
+        outputText = response.output_text ?? '';
+      }
+
+      if (!outputText) {
         throw new DomainInvariantError(
           'OpenAI agent gateway returned no structured action.',
         );
       }
 
-      const parsedAction = agentActionSchema.parse(
-        normalizeAgentDecision(
-          JSON.parse(response.output_text) as RawAgentDecision,
-          context,
-        ),
-      );
+      const parsedAction = toFinalizedAction(outputText, context);
 
-      console.info(
-        JSON.stringify({
-          type: 'agent_decision',
-          gameSessionId: context.gameId,
-          turnNumber: context.turnNumber,
-          agentId: context.self.agentId,
-          agentName: context.self.name,
-          role: context.self.role,
-          actionType: parsedAction.type,
-          recipientAgentId:
-            'recipientAgentId' in parsedAction
-              ? parsedAction.recipientAgentId
-              : null,
-          proposalActionId:
-            'proposalActionId' in parsedAction
-              ? parsedAction.proposalActionId
-              : null,
-          opportunityId:
-            'opportunityId' in parsedAction ? parsedAction.opportunityId : null,
-          reasoning: parsedAction.reasoning ?? null,
-        }),
-      );
+      if (
+        callbacks &&
+        (parsedAction.type === 'send_private_message' ||
+          parsedAction.type === 'send_public_message')
+      ) {
+        const visibility =
+          parsedAction.type === 'send_private_message' ? 'private' : 'public';
+        const recipientAgentId =
+          parsedAction.type === 'send_private_message'
+            ? parsedAction.recipientAgentId
+            : null;
+        const streamId = activeStream?.streamId ?? randomUUID();
+
+        if (!activeStream) {
+          callbacks.onMessageStreamStarted({
+            streamId,
+            visibility,
+            recipientAgentId,
+          });
+        }
+
+        if ((activeStream?.content ?? '') !== parsedAction.content) {
+          callbacks.onMessageStreamDelta({
+            streamId,
+            visibility,
+            recipientAgentId,
+            delta: parsedAction.content.slice(
+              activeStream?.content.length ?? 0,
+            ),
+            content: parsedAction.content,
+          });
+        }
+
+        callbacks.onMessageStreamCompleted({
+          streamId,
+          visibility,
+          recipientAgentId,
+          content: parsedAction.content,
+        });
+      } else if (callbacks && activeStream) {
+        callbacks.onMessageStreamAborted({
+          streamId: activeStream.streamId,
+          visibility: activeStream.visibility,
+          recipientAgentId: activeStream.recipientAgentId,
+          content: activeStream.content,
+        });
+      }
+
+      logParsedAction(context, parsedAction);
 
       return parsedAction;
     } catch (error) {
+      if (callbacks && activeStream) {
+        callbacks.onMessageStreamAborted({
+          streamId: activeStream.streamId,
+          visibility: activeStream.visibility,
+          recipientAgentId: activeStream.recipientAgentId,
+          content: activeStream.content,
+        });
+      }
+
       console.error(
         JSON.stringify({
           type: 'agent_decision_error',

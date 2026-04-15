@@ -5,7 +5,10 @@ import type { GameSessionRepositoryPort } from '../../../game/application/ports/
 import type { OpenMarketPositionUseCase } from '../../../game/application/use-cases/open-market-position.use-case.js';
 import type { PlaceFundsWithBankerUseCase } from '../../../game/application/use-cases/place-funds-with-banker.use-case.js';
 import type { RedeemFundsFromBankerUseCase } from '../../../game/application/use-cases/redeem-funds-from-banker.use-case.js';
-import type { AgentGatewayPort } from '../ports/agent-gateway.port.js';
+import type {
+  AgentGatewayPort,
+  AgentMessageStreamCallbacks,
+} from '../ports/agent-gateway.port.js';
 import type {
   AgentActionRecord,
   AgentActionRepositoryPort,
@@ -101,7 +104,113 @@ export class RunAgentCommunicationTurnUseCase {
           recentMessages,
           recentActions,
         );
-        const action = await this.agentGateway.decideNextAction(context);
+        let latestStreamId: string | undefined;
+        const callbacks: AgentMessageStreamCallbacks = {
+          onMessageStreamStarted: ({
+            streamId,
+            visibility,
+            recipientAgentId,
+          }) => {
+            latestStreamId = streamId;
+            this.agentSessionEventStreamService.publish({
+              type: 'message_stream_started',
+              streamId,
+              gameSessionId: currentSession.id,
+              roundNumber: currentSession.currentRound,
+              turnNumber,
+              agentId: agent.id,
+              agentName: agent.name,
+              recipientAgentId,
+              recipientAgentName: resolveAgentName(
+                currentSession,
+                recipientAgentId,
+              ),
+              visibility,
+              occurredAt: new Date().toISOString(),
+            });
+          },
+          onMessageStreamDelta: ({
+            streamId,
+            visibility,
+            recipientAgentId,
+            delta,
+            content,
+          }) => {
+            latestStreamId = streamId;
+            this.agentSessionEventStreamService.publish({
+              type: 'message_stream_delta',
+              streamId,
+              gameSessionId: currentSession.id,
+              roundNumber: currentSession.currentRound,
+              turnNumber,
+              agentId: agent.id,
+              agentName: agent.name,
+              recipientAgentId,
+              recipientAgentName: resolveAgentName(
+                currentSession,
+                recipientAgentId,
+              ),
+              visibility,
+              delta,
+              content,
+              occurredAt: new Date().toISOString(),
+            });
+          },
+          onMessageStreamCompleted: ({
+            streamId,
+            visibility,
+            recipientAgentId,
+            content,
+          }) => {
+            latestStreamId = streamId;
+            this.agentSessionEventStreamService.publish({
+              type: 'message_stream_completed',
+              streamId,
+              gameSessionId: currentSession.id,
+              roundNumber: currentSession.currentRound,
+              turnNumber,
+              agentId: agent.id,
+              agentName: agent.name,
+              recipientAgentId,
+              recipientAgentName: resolveAgentName(
+                currentSession,
+                recipientAgentId,
+              ),
+              visibility,
+              content,
+              occurredAt: new Date().toISOString(),
+            });
+          },
+          onMessageStreamAborted: ({
+            streamId,
+            visibility,
+            recipientAgentId,
+            content,
+          }) => {
+            latestStreamId = streamId;
+            this.agentSessionEventStreamService.publish({
+              type: 'message_stream_aborted',
+              streamId,
+              gameSessionId: currentSession.id,
+              roundNumber: currentSession.currentRound,
+              turnNumber,
+              agentId: agent.id,
+              agentName: agent.name,
+              recipientAgentId,
+              recipientAgentName: resolveAgentName(
+                currentSession,
+                recipientAgentId,
+              ),
+              visibility,
+              content,
+              occurredAt: new Date().toISOString(),
+            });
+          },
+        };
+        const action = await this.agentGateway.decideNextAction(
+          context,
+          callbacks,
+        );
         const { recipientAgentId, relatedProposalActionId } =
           this.agentActionValidator.validate(
             currentSession,
@@ -136,6 +245,7 @@ export class RunAgentCommunicationTurnUseCase {
             agentId: agent.id,
             agentName: agent.name,
             actionType: action.type,
+            streamId: latestStreamId,
             messageId: execution.savedMessage?.id,
             messageVisibility: execution.savedMessage?.visibility,
             occurredAt: new Date().toISOString(),
@@ -176,4 +286,17 @@ export class RunAgentCommunicationTurnUseCase {
       messages: savedMessages,
     };
   }
+}
+
+function resolveAgentName(
+  session: NonNullable<
+    Awaited<ReturnType<GameSessionRepositoryPort['findById']>>
+  >,
+  agentId: string | null,
+) {
+  if (!agentId) {
+    return undefined;
+  }
+
+  return session.agents.find((candidate) => candidate.id === agentId)?.name;
 }
