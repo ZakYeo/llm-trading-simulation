@@ -4,6 +4,8 @@ A pnpm workspace for a backend-driven multi-agent trading simulation.
 
 The current codebase consists of:
 
+
+
 - `apps/api`: a NestJS API for session state, agent orchestration, replay reads, and SSE session events
 - `apps/web`: a React + Vite operator UI for creating sessions, running turns, advancing rounds, and inspecting state
 - `packages/shared-types`: shared transport DTOs and enums used across API and web
@@ -22,6 +24,14 @@ The active simulation loop is centered on a banker and trader. Agents negotiate,
 - Apply percentage-based entry fees and deterministic adverse slippage when traders open market positions
 - Persist replay history for transfers, messages, actions, custody events, market listings, and settlements
 - Run unit, integration, and Playwright coverage from the workspace root
+
+## Screenshots
+<img width="2559" height="1354" alt="image" src="https://github.com/user-attachments/assets/4e24ddfb-7142-4339-91c7-b3ece0b31c9d" />
+<img width="490" height="753" alt="image" src="https://github.com/user-attachments/assets/e2abba1e-e439-4365-a7b8-b9979aae85b0" />
+<img width="2559" height="1352" alt="image" src="https://github.com/user-attachments/assets/7467725a-15ae-4854-a041-86aecafbe16a" />
+<img width="2555" height="1346" alt="image" src="https://github.com/user-attachments/assets/d143cffa-0807-4d0f-81a2-ac03bea5e00c" />
+<img width="903" height="913" alt="image" src="https://github.com/user-attachments/assets/a9fd73fb-6249-4889-a857-27aa2ffa213e" />
+
 
 ## Tech Stack
 
