@@ -19,6 +19,7 @@ import type {
 } from '../ports/agent-message-repository.port.js';
 import type { AgentSessionEventStreamService } from '../services/agent-session-event-stream.service.js';
 import { AgentActionExecutor } from '../services/agent-action-executor.js';
+import { AgentGatewayDecisionNormalizer } from '../services/agent-gateway-decision-normalizer.js';
 import { AgentActionValidator } from '../services/agent-action-validator.js';
 import { AgentTurnContextFactory } from '../services/agent-turn-context.factory.js';
 
@@ -65,6 +66,7 @@ export class RunAgentCommunicationTurnUseCase {
       redeemFundsFromBankerUseCase,
       openMarketPositionUseCase,
     ),
+    private readonly agentGatewayDecisionNormalizer = new AgentGatewayDecisionNormalizer(),
   ) {}
 
   async execute(
@@ -207,10 +209,11 @@ export class RunAgentCommunicationTurnUseCase {
             });
           },
         };
-        const action = await this.agentGateway.decideNextAction(
+        const decision = await this.agentGateway.decideNextAction(
           context,
           callbacks,
         );
+        const action = this.agentGatewayDecisionNormalizer.normalize(decision);
         const { recipientAgentId, relatedProposalActionId } =
           this.agentActionValidator.validate(
             currentSession,

@@ -138,7 +138,7 @@ export const openMarketPositionArgumentsSchema = z
 
 export const finalizeTurnArgumentsSchema = z.object({}).strict();
 
-export const agentToolInvocationSchema = z.discriminatedUnion('name', [
+export const agentToolCallParamsSchema = z.discriminatedUnion('name', [
   z
     .object({
       name: z.literal('messaging.send_public'),
@@ -201,19 +201,255 @@ export const agentToolInvocationSchema = z.discriminatedUnion('name', [
     .strict(),
 ]);
 
-export const agentDecisionEnvelopeSchema = z
+export const agentToolInvocationSchema = agentToolCallParamsSchema;
+
+const toolInputSchemaSchema = z
   .object({
-    tool: agentToolInvocationSchema,
-    reasoning: z.string().min(1).optional(),
+    type: z.literal('object'),
+    properties: z.record(z.string(), z.unknown()),
+    required: z.array(z.string()).optional(),
+    additionalProperties: z.boolean().optional(),
   })
   .strict();
+
+export const agentToolDefinitionSchema = z
+  .object({
+    name: agentToolNameSchema,
+    title: z.string().min(1).optional(),
+    description: z.string().min(1),
+    inputSchema: toolInputSchemaSchema,
+  })
+  .strict();
+
+export const agentToolResultContentSchema = z.discriminatedUnion('type', [
+  z
+    .object({
+      type: z.literal('text'),
+      text: z.string(),
+    })
+    .strict(),
+]);
+
+export const agentToolResultSchema = z
+  .object({
+    content: z.array(agentToolResultContentSchema),
+    structuredContent: z.record(z.string(), z.unknown()).optional(),
+    isError: z.boolean().optional(),
+  })
+  .strict();
+
+function createToolInputSchema(
+  properties: Record<string, unknown>,
+  required: string[] = [],
+) {
+  return {
+    type: 'object' as const,
+    properties,
+    required,
+    additionalProperties: false,
+  };
+}
+
+export const agentToolDefinitions = [
+  {
+    name: 'messaging.send_public',
+    title: 'Send Public Message',
+    description: 'Broadcast a public message to all agents in the session.',
+    inputSchema: createToolInputSchema(
+      {
+        content: {
+          type: 'string',
+          minLength: 1,
+          description: 'The public message content.',
+        },
+      },
+      ['content'],
+    ),
+  },
+  {
+    name: 'messaging.send_private',
+    title: 'Send Private Message',
+    description: 'Send a private message to a single counterparty agent.',
+    inputSchema: createToolInputSchema(
+      {
+        recipientAgentId: {
+          type: 'string',
+          minLength: 1,
+          description: 'The target agent identifier.',
+        },
+        content: {
+          type: 'string',
+          minLength: 1,
+          description: 'The private message content.',
+        },
+      },
+      ['recipientAgentId', 'content'],
+    ),
+  },
+  {
+    name: 'transfer.request_payment',
+    title: 'Request Payment',
+    description: 'Propose a direct payment from another agent.',
+    inputSchema: createToolInputSchema(
+      {
+        recipientAgentId: {
+          type: 'string',
+          minLength: 1,
+          description: 'The agent being asked to pay.',
+        },
+        amount: {
+          type: 'string',
+          minLength: 1,
+          description: 'The requested decimal amount.',
+        },
+        rationale: {
+          type: 'string',
+          minLength: 1,
+          description: 'The reason for the payment request.',
+        },
+      },
+      ['recipientAgentId', 'amount', 'rationale'],
+    ),
+  },
+  {
+    name: 'transfer.counter_payment_request',
+    title: 'Counter Payment Request',
+    description: 'Counter an existing transfer proposal with new terms.',
+    inputSchema: createToolInputSchema(
+      {
+        proposalActionId: {
+          type: 'string',
+          minLength: 1,
+          description: 'The original proposal action identifier.',
+        },
+        recipientAgentId: {
+          type: 'string',
+          minLength: 1,
+          description: 'The original proposal sender.',
+        },
+        amount: {
+          type: 'string',
+          minLength: 1,
+          description: 'The counter-offer decimal amount.',
+        },
+        rationale: {
+          type: 'string',
+          minLength: 1,
+          description: 'The reason for the counter-offer.',
+        },
+      },
+      ['proposalActionId', 'recipientAgentId', 'amount', 'rationale'],
+    ),
+  },
+  {
+    name: 'transfer.accept_payment_request',
+    title: 'Accept Payment Request',
+    description: 'Accept an existing transfer proposal.',
+    inputSchema: createToolInputSchema(
+      {
+        proposalActionId: {
+          type: 'string',
+          minLength: 1,
+          description: 'The proposal action identifier to accept.',
+        },
+      },
+      ['proposalActionId'],
+    ),
+  },
+  {
+    name: 'transfer.reject_payment_request',
+    title: 'Reject Payment Request',
+    description: 'Reject an existing transfer proposal.',
+    inputSchema: createToolInputSchema(
+      {
+        proposalActionId: {
+          type: 'string',
+          minLength: 1,
+          description: 'The proposal action identifier to reject.',
+        },
+        rationale: {
+          type: 'string',
+          minLength: 1,
+          description: 'The reason for rejecting the proposal.',
+        },
+      },
+      ['proposalActionId', 'rationale'],
+    ),
+  },
+  {
+    name: 'treasury.place_with_banker',
+    title: 'Place Funds With Banker',
+    description: 'Move funds into banker custody.',
+    inputSchema: createToolInputSchema(
+      {
+        recipientAgentId: {
+          type: 'string',
+          minLength: 1,
+          description: 'The banker agent identifier.',
+        },
+        amount: {
+          type: 'string',
+          minLength: 1,
+          description: 'The decimal amount to place into custody.',
+        },
+      },
+      ['recipientAgentId', 'amount'],
+    ),
+  },
+  {
+    name: 'treasury.redeem_from_banker',
+    title: 'Redeem Funds From Banker',
+    description: 'Redeem funds out of banker custody.',
+    inputSchema: createToolInputSchema(
+      {
+        recipientAgentId: {
+          type: 'string',
+          minLength: 1,
+          description: 'The banker agent identifier.',
+        },
+        amount: {
+          type: 'string',
+          minLength: 1,
+          description: 'The decimal amount to redeem from custody.',
+        },
+      },
+      ['recipientAgentId', 'amount'],
+    ),
+  },
+  {
+    name: 'market.open_position',
+    title: 'Open Market Position',
+    description: 'Commit balance to a market opportunity.',
+    inputSchema: createToolInputSchema(
+      {
+        opportunityId: {
+          type: 'string',
+          minLength: 1,
+          description: 'The market opportunity identifier.',
+        },
+        amount: {
+          type: 'string',
+          minLength: 1,
+          description: 'The decimal amount to commit.',
+        },
+      },
+      ['opportunityId', 'amount'],
+    ),
+  },
+  {
+    name: 'turn.finalize',
+    title: 'Finalize Turn',
+    description: 'Finish the current agent turn without further action.',
+    inputSchema: createToolInputSchema({}),
+  },
+] as const;
 
 export function parseAgentToolInvocation(input: unknown) {
   return agentToolInvocationSchema.parse(input);
 }
 
-export function parseAgentDecisionEnvelope(input: unknown) {
-  return agentDecisionEnvelopeSchema.parse(input);
+export function parseAgentToolCallParams(input: unknown) {
+  return agentToolCallParamsSchema.parse(input);
 }
 
 export const agentTurnContextSchema = z.object({
@@ -478,8 +714,13 @@ export type OpenMarketPositionArguments = z.infer<
   typeof openMarketPositionArgumentsSchema
 >;
 export type FinalizeTurnArguments = z.infer<typeof finalizeTurnArgumentsSchema>;
+export type AgentToolCallParams = z.infer<typeof agentToolCallParamsSchema>;
 export type AgentToolInvocation = z.infer<typeof agentToolInvocationSchema>;
-export type AgentDecisionEnvelope = z.infer<typeof agentDecisionEnvelopeSchema>;
+export type AgentToolDefinition = z.infer<typeof agentToolDefinitionSchema>;
+export type AgentToolResultContent = z.infer<
+  typeof agentToolResultContentSchema
+>;
+export type AgentToolResult = z.infer<typeof agentToolResultSchema>;
 export type AgentTurnContext = z.infer<typeof agentTurnContextSchema>;
 export type AgentAction = z.infer<typeof agentActionSchema>;
 export type BankerPersonalityProfile = z.infer<

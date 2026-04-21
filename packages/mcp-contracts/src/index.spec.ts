@@ -2,26 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import {
   agentActionSchema,
-  agentDecisionEnvelopeSchema,
+  agentToolCallParamsSchema,
+  agentToolDefinitionSchema,
+  agentToolDefinitions,
+  agentToolResultSchema,
   agentToolInvocationSchema,
   agentTurnContextSchema,
-  parseAgentDecisionEnvelope,
+  parseAgentToolCallParams,
   parseAgentToolInvocation,
 } from './index.js';
-
-function createValidEnvelopeInput() {
-  return {
-    tool: {
-      name: 'transfer.request_payment',
-      arguments: {
-        recipientAgentId: 'agent-banker',
-        amount: '12.5000',
-        rationale: 'Pay before sharing the signal.',
-      },
-    },
-    reasoning: 'Lock in value before disclosure.',
-  };
-}
 
 function createValidTurnContext() {
   return {
@@ -195,6 +184,8 @@ describe('agentToolInvocationSchema', () => {
 
     for (const tool of cases) {
       expect(agentToolInvocationSchema.parse(tool)).toEqual(tool);
+      expect(agentToolCallParamsSchema.parse(tool)).toEqual(tool);
+      expect(parseAgentToolCallParams(tool)).toEqual(tool);
       expect(parseAgentToolInvocation(tool)).toEqual(tool);
     }
   });
@@ -251,37 +242,59 @@ describe('agentToolInvocationSchema', () => {
   });
 });
 
-describe('agentDecisionEnvelopeSchema', () => {
-  it('parses a valid decision envelope with reasoning', () => {
-    const input = createValidEnvelopeInput();
+describe('agentToolDefinitionSchema', () => {
+  it('exposes MCP-style tool definitions for the full local tool surface', () => {
+    expect(agentToolDefinitions).toHaveLength(10);
 
-    expect(agentDecisionEnvelopeSchema.parse(input)).toEqual(input);
-    expect(parseAgentDecisionEnvelope(input)).toEqual(input);
+    for (const definition of agentToolDefinitions) {
+      expect(agentToolDefinitionSchema.parse(definition)).toEqual(definition);
+      expect(definition.inputSchema.type).toBe('object');
+      expect(definition.inputSchema.additionalProperties).toBe(false);
+    }
   });
 
-  it('allows reasoning to be omitted', () => {
-    expect(
-      agentDecisionEnvelopeSchema.parse({
-        tool: {
-          name: 'turn.finalize',
-          arguments: {},
-        },
-      }),
-    ).toEqual({
-      tool: {
-        name: 'turn.finalize',
-        arguments: {},
+  it('defines the expected JSON schema for turn.finalize', () => {
+    const definition = agentToolDefinitions.find(
+      (candidate) => candidate.name === 'turn.finalize',
+    );
+
+    expect(definition).toEqual({
+      name: 'turn.finalize',
+      title: 'Finalize Turn',
+      description: 'Finish the current agent turn without further action.',
+      inputSchema: {
+        type: 'object',
+        properties: {},
+        required: [],
+        additionalProperties: false,
       },
     });
   });
+});
 
-  it('rejects extra top-level fields', () => {
-    expect(() =>
-      agentDecisionEnvelopeSchema.parse({
-        ...createValidEnvelopeInput(),
-        tools: [],
+describe('agentToolResultSchema', () => {
+  it('parses an MCP-style tool result with text and structured content', () => {
+    const result = {
+      content: [{ type: 'text', text: 'Transfer request submitted.' }],
+      structuredContent: {
+        actionType: 'request_payment',
+        proposalActionId: 'action-1',
+      },
+    };
+
+    expect(agentToolResultSchema.parse(result)).toEqual(result);
+  });
+
+  it('allows tool-level errors', () => {
+    expect(
+      agentToolResultSchema.parse({
+        content: [{ type: 'text', text: 'Proposal was invalid.' }],
+        isError: true,
       }),
-    ).toThrow();
+    ).toEqual({
+      content: [{ type: 'text', text: 'Proposal was invalid.' }],
+      isError: true,
+    });
   });
 });
 
