@@ -26,18 +26,18 @@ const agentDecisionJsonSchema = {
   name: 'agent_tool_call',
   strict: true,
   schema: {
-    type: 'object',
-    additionalProperties: false,
-    required: ['name', 'arguments'],
-    properties: {
-      name: {
-        type: 'string',
-        enum: agentToolDefinitions.map((tool) => tool.name),
+    anyOf: agentToolDefinitions.map((tool) => ({
+      type: 'object',
+      additionalProperties: false,
+      required: ['name', 'arguments'],
+      properties: {
+        name: {
+          type: 'string',
+          const: tool.name,
+        },
+        arguments: tool.inputSchema,
       },
-      arguments: {
-        anyOf: agentToolDefinitions.map((tool) => tool.inputSchema),
-      },
-    },
+    })),
   },
 } as const;
 

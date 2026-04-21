@@ -189,6 +189,78 @@ describe('OpenAiAgentGateway', () => {
     });
   });
 
+  it('requests a response schema that couples each tool name to its own argument schema', async () => {
+    const create = vi.fn().mockResolvedValue({
+      output_text: JSON.stringify({
+        name: 'turn.finalize',
+        arguments: {},
+      }),
+    });
+    const client = {
+      responses: {
+        create,
+      },
+    };
+    const gateway = new OpenAiAgentGateway(
+      client as never,
+      'gpt-test',
+      undefined,
+      true,
+    );
+
+    await gateway.decideNextAction(createContext());
+
+    const request = create.mock.calls[0]?.[0] as {
+      text: {
+        format: {
+          schema: {
+            anyOf: Array<{
+              properties: {
+                name: { const: string };
+                arguments: { properties?: Record<string, unknown> };
+              };
+            }>;
+          };
+        };
+      };
+    };
+    const branches = request.text.format.schema.anyOf;
+    const sendPrivateBranch = branches.find(
+      (branch) => branch.properties.name.const === 'messaging.send_private',
+    );
+    const finalizeBranch = branches.find(
+      (branch) => branch.properties.name.const === 'turn.finalize',
+    );
+
+    expect(sendPrivateBranch).toEqual(
+      expect.objectContaining({
+        required: ['name', 'arguments'],
+        properties: expect.objectContaining({
+          name: { const: 'messaging.send_private', type: 'string' },
+          arguments: expect.objectContaining({
+            required: ['recipientAgentId', 'content'],
+            properties: expect.objectContaining({
+              recipientAgentId: expect.any(Object),
+              content: expect.any(Object),
+            }),
+          }),
+        }),
+      }),
+    );
+    expect(finalizeBranch).toEqual(
+      expect.objectContaining({
+        required: ['name', 'arguments'],
+        properties: expect.objectContaining({
+          name: { const: 'turn.finalize', type: 'string' },
+          arguments: expect.objectContaining({
+            required: [],
+            properties: {},
+          }),
+        }),
+      }),
+    );
+  });
+
   it('streams message content before returning the finalized action', async () => {
     const callbacks = {
       onMessageStreamStarted: vi.fn(),

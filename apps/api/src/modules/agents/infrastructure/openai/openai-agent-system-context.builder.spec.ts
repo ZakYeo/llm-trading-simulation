@@ -204,10 +204,43 @@ describe('OpenAiAgentSystemContextBuilder', () => {
     expect(prompt).toContain(
       "Role economics: as the banker, you improve your outcome by attracting and retaining trader trader-1's custodial funds",
     );
+    expect(prompt).toContain('messaging.send_public = Broadcasts information');
+    expect(prompt).toContain(
+      'transfer.request_payment = Creates a concrete executable payment request',
+    );
+    expect(prompt).toContain(
+      'treasury.place_with_banker = Moves the owner agent balance into banker custody while preserving beneficial ownership.',
+    );
+    expect(prompt).toContain(
+      'turn.finalize = Ends the turn without moving money.',
+    );
     expect(prompt).not.toContain('Reject obviously weak opportunities');
+    expect(prompt).not.toContain(
+      'Action semantics: send_public_message = Broadcasts information',
+    );
+    expect(prompt).not.toContain('place_funds_with_banker');
+    expect(prompt).not.toContain('finalize_turn');
     expect(prompt).toContain(
       'Decision rule: compare the expected value of communicating, proposing, or responding against the value of waiting.',
     );
+  });
+
+  it('uses namespaced MCP tool names in the default system prompt', () => {
+    expect(defaultOpenAiAgentSystemPrompt).toContain(
+      'transfer.request_payment',
+    );
+    expect(defaultOpenAiAgentSystemPrompt).toContain(
+      'treasury.place_with_banker',
+    );
+    expect(defaultOpenAiAgentSystemPrompt).toContain('market.open_position');
+    expect(defaultOpenAiAgentSystemPrompt).toContain('turn.finalize');
+    expect(defaultOpenAiAgentSystemPrompt).not.toContain(
+      'Use request_payment, counter_payment_request',
+    );
+    expect(defaultOpenAiAgentSystemPrompt).not.toContain(
+      'use place_funds_with_banker',
+    );
+    expect(defaultOpenAiAgentSystemPrompt).not.toContain('finalize_turn');
   });
 
   it('allows role-specific tweaks by composing only selected sections', () => {
