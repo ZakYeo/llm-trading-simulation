@@ -214,6 +214,19 @@ export class RunAgentCommunicationTurnUseCase {
           callbacks,
         );
         const action = this.agentGatewayDecisionNormalizer.normalize(decision);
+        if (
+          latestStreamId === undefined &&
+          (action.type === 'send_private_message' ||
+            action.type === 'send_public_message')
+        ) {
+          emitSyntheticMessageStream({
+            action,
+            callbacks,
+            session: currentSession,
+            turnNumber,
+            agentId: agent.id,
+          });
+        }
         const { recipientAgentId, relatedProposalActionId } =
           this.agentActionValidator.validate(
             currentSession,
@@ -302,4 +315,50 @@ function resolveAgentName(
   }
 
   return session.agents.find((candidate) => candidate.id === agentId)?.name;
+}
+
+function emitSyntheticMessageStream(input: {
+  action: Extract<
+    AgentAction,
+    { type: 'send_private_message' | 'send_public_message' }
+  >;
+  callbacks: AgentMessageStreamCallbacks;
+  session: NonNullable<
+    Awaited<ReturnType<GameSessionRepositoryPort['findById']>>
+  >;
+  turnNumber: number;
+  agentId: string;
+}) {
+  const visibility =
+    input.action.type === 'send_private_message' ? 'private' : 'public';
+  const recipientAgentId =
+    input.action.type === 'send_private_message'
+      ? input.action.recipientAgentId
+      : null;
+  const streamId = [
+    'synthetic-message-stream',
+    input.session.id,
+    input.session.currentRound,
+    input.turnNumber,
+    input.agentId,
+  ].join(':');
+
+  input.callbacks.onMessageStreamStarted({
+    streamId,
+    visibility,
+    recipientAgentId,
+  });
+  input.callbacks.onMessageStreamDelta({
+    streamId,
+    visibility,
+    recipientAgentId,
+    delta: input.action.content,
+    content: input.action.content,
+  });
+  input.callbacks.onMessageStreamCompleted({
+    streamId,
+    visibility,
+    recipientAgentId,
+    content: input.action.content,
+  });
 }

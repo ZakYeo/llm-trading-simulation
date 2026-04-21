@@ -462,6 +462,101 @@ describe('RunAgentCommunicationTurnUseCase', () => {
     ]);
   });
 
+  it('synthesizes message stream events for MCP messaging tool calls', async () => {
+    const eventStreamService = new RecordingAgentSessionEventStreamService();
+    const useCase = new RunAgentCommunicationTurnUseCase(
+      new InMemoryGameSessionRepository(createSession()),
+      new InMemoryAgentMessageRepository(),
+      new InMemoryAgentActionRepository(),
+      new ScriptedAgentGateway([
+        {
+          name: 'messaging.send_private',
+          arguments: {
+            recipientAgentId: 'agent-2',
+            content: 'I can fund this trade, but I want clearer terms first.',
+          },
+        } satisfies AgentToolCallParams,
+        {
+          name: 'turn.finalize',
+          arguments: {},
+        } satisfies AgentToolCallParams,
+      ]),
+      eventStreamService as never,
+      new RecordingPlaceFundsWithBankerUseCase() as never,
+      new RecordingRedeemFundsFromBankerUseCase() as never,
+    );
+
+    const result = await useCase.execute({
+      gameSessionId: 'game-1',
+      turnNumber: 2,
+    });
+
+    expect(result.messages).toHaveLength(1);
+    expect(result.messages[0]).toMatchObject({
+      senderAgentId: 'agent-1',
+      recipientAgentId: 'agent-2',
+      visibility: 'private',
+      content: 'I can fund this trade, but I want clearer terms first.',
+    });
+    expect(eventStreamService.published).toEqual([
+      {
+        type: 'message_stream_started',
+        streamId: 'synthetic-message-stream:game-1:1:2:agent-1',
+        gameSessionId: 'game-1',
+        roundNumber: 1,
+        turnNumber: 2,
+        agentId: 'agent-1',
+        agentName: 'Banker Bot',
+        recipientAgentId: 'agent-2',
+        recipientAgentName: 'Trader Bot',
+        visibility: 'private',
+        occurredAt: expect.any(String),
+      },
+      {
+        type: 'message_stream_delta',
+        streamId: 'synthetic-message-stream:game-1:1:2:agent-1',
+        gameSessionId: 'game-1',
+        roundNumber: 1,
+        turnNumber: 2,
+        agentId: 'agent-1',
+        agentName: 'Banker Bot',
+        recipientAgentId: 'agent-2',
+        recipientAgentName: 'Trader Bot',
+        visibility: 'private',
+        delta: 'I can fund this trade, but I want clearer terms first.',
+        content: 'I can fund this trade, but I want clearer terms first.',
+        occurredAt: expect.any(String),
+      },
+      {
+        type: 'message_stream_completed',
+        streamId: 'synthetic-message-stream:game-1:1:2:agent-1',
+        gameSessionId: 'game-1',
+        roundNumber: 1,
+        turnNumber: 2,
+        agentId: 'agent-1',
+        agentName: 'Banker Bot',
+        recipientAgentId: 'agent-2',
+        recipientAgentName: 'Trader Bot',
+        visibility: 'private',
+        content: 'I can fund this trade, but I want clearer terms first.',
+        occurredAt: expect.any(String),
+      },
+      {
+        type: 'action_progressed',
+        gameSessionId: 'game-1',
+        roundNumber: 1,
+        turnNumber: 2,
+        agentId: 'agent-1',
+        agentName: 'Banker Bot',
+        actionType: 'send_private_message',
+        streamId: 'synthetic-message-stream:game-1:1:2:agent-1',
+        messageId: 'message-1',
+        messageVisibility: 'private',
+        occurredAt: expect.any(String),
+      },
+    ]);
+  });
+
   it('rejects resolving a proposal that has already been accepted or rejected', async () => {
     const actionRepository = new InMemoryAgentActionRepository();
     await actionRepository.save({
