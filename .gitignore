@@ -19,3 +19,6 @@ apps/api/src/generated
 *.bundle
 AGENTS.md
 plan.md
+.gitnexus
+.claude/*
+CLAUDE.md
