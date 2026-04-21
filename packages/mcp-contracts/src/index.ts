@@ -1,3 +1,10 @@
+import {
+  CallToolRequestParamsSchema,
+  CallToolResultSchema,
+  ToolSchema,
+  type CallToolResult,
+  type Tool,
+} from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
 const personalitySliderSchema = z.number().int().min(0).max(10);
@@ -211,15 +218,17 @@ const toolInputSchemaSchema = z
     additionalProperties: z.boolean().optional(),
   })
   .strict();
+type ToolInputSchema = {
+  type: 'object';
+  properties: Record<string, object>;
+  required?: string[];
+  additionalProperties?: boolean;
+};
 
-export const agentToolDefinitionSchema = z
-  .object({
-    name: agentToolNameSchema,
-    title: z.string().min(1).optional(),
-    description: z.string().min(1),
-    inputSchema: toolInputSchemaSchema,
-  })
-  .strict();
+export const agentToolDefinitionSchema = ToolSchema.extend({
+  name: agentToolNameSchema,
+  inputSchema: toolInputSchemaSchema,
+});
 
 export const agentToolResultContentSchema = z.discriminatedUnion('type', [
   z
@@ -230,18 +239,12 @@ export const agentToolResultContentSchema = z.discriminatedUnion('type', [
     .strict(),
 ]);
 
-export const agentToolResultSchema = z
-  .object({
-    content: z.array(agentToolResultContentSchema),
-    structuredContent: z.record(z.string(), z.unknown()).optional(),
-    isError: z.boolean().optional(),
-  })
-  .strict();
+export const agentToolResultSchema = CallToolResultSchema;
 
 function createToolInputSchema(
-  properties: Record<string, unknown>,
+  properties: Record<string, object>,
   required: string[] = [],
-) {
+): ToolInputSchema {
   return {
     type: 'object' as const,
     properties,
@@ -442,14 +445,19 @@ export const agentToolDefinitions = [
     description: 'Finish the current agent turn without further action.',
     inputSchema: createToolInputSchema({}),
   },
-] as const;
+] as const satisfies readonly AgentToolDefinition[];
 
 export function parseAgentToolInvocation(input: unknown) {
-  return agentToolInvocationSchema.parse(input);
+  return parseAgentToolCallParams(input);
 }
 
 export function parseAgentToolCallParams(input: unknown) {
-  return agentToolCallParamsSchema.parse(input);
+  const parsed = CallToolRequestParamsSchema.pick({
+    name: true,
+    arguments: true,
+  }).parse(input);
+
+  return agentToolCallParamsSchema.parse(parsed);
 }
 
 export const agentTurnContextSchema = z.object({
@@ -716,11 +724,9 @@ export type OpenMarketPositionArguments = z.infer<
 export type FinalizeTurnArguments = z.infer<typeof finalizeTurnArgumentsSchema>;
 export type AgentToolCallParams = z.infer<typeof agentToolCallParamsSchema>;
 export type AgentToolInvocation = z.infer<typeof agentToolInvocationSchema>;
-export type AgentToolDefinition = z.infer<typeof agentToolDefinitionSchema>;
-export type AgentToolResultContent = z.infer<
-  typeof agentToolResultContentSchema
->;
-export type AgentToolResult = z.infer<typeof agentToolResultSchema>;
+export type AgentToolDefinition = Tool & { name: AgentToolName };
+export type AgentToolResultContent = CallToolResult['content'][number];
+export type AgentToolResult = CallToolResult;
 export type AgentTurnContext = z.infer<typeof agentTurnContextSchema>;
 export type AgentAction = z.infer<typeof agentActionSchema>;
 export type BankerPersonalityProfile = z.infer<

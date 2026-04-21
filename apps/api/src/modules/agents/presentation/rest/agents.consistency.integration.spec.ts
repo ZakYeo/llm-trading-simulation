@@ -3,7 +3,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
 
 import { createApp } from '../../../../app.factory.js';
-import type { AgentAction, AgentTurnContext } from '@llm-sim/mcp-contracts';
+import type {
+  AgentToolCallParams,
+  AgentTurnContext,
+} from '@llm-sim/mcp-contracts';
 
 import { RunAgentCommunicationTurnUseCase } from '../../application/use-cases/run-agent-communication-turn.use-case.js';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service.js';
@@ -12,7 +15,9 @@ const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 
 interface PatchedRunAgentCommunicationTurnUseCase {
   agentGateway: {
-    decideNextAction: (context: AgentTurnContext) => Promise<AgentAction>;
+    decideNextAction: (
+      context: AgentTurnContext,
+    ) => Promise<AgentToolCallParams>;
   };
   agentActionExecutor: {
     openMarketPositionUseCase: {
@@ -354,7 +359,7 @@ describe.runIf(Boolean(testDatabaseUrl))(
         context,
       ) => {
         capturedContexts.push(context);
-        return { type: 'finalize_turn' };
+        return { name: 'turn.finalize', arguments: {} };
       };
 
       try {

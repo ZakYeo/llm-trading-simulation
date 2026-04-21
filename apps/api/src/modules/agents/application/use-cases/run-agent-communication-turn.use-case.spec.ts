@@ -17,10 +17,7 @@ import { GameAgent } from '../../../game/domain/entities/game-agent.js';
 import { GameSession } from '../../../game/domain/entities/game-session.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
-import type {
-  AgentGatewayDecision,
-  AgentGatewayPort,
-} from '../ports/agent-gateway.port.js';
+import type { AgentGatewayPort } from '../ports/agent-gateway.port.js';
 import type { AgentMessageStreamCallbacks } from '../ports/agent-gateway.port.js';
 import type {
   AgentActionRecord,
@@ -161,42 +158,38 @@ class InMemoryAgentActionRepository implements AgentActionRepositoryPort {
 class ScriptedAgentGateway implements AgentGatewayPort {
   private index = 0;
 
-  constructor(private readonly actions: AgentGatewayDecision[]) {}
+  constructor(private readonly actions: AgentToolCallParams[]) {}
 
   async decideNextAction(
     _context: AgentTurnContext,
     callbacks?: AgentMessageStreamCallbacks,
-  ): Promise<AgentGatewayDecision> {
+  ): Promise<AgentToolCallParams> {
     const action = this.actions[this.index];
 
     if (!action) {
-      return { type: 'finalize_turn' };
+      return { name: 'turn.finalize', arguments: {} };
     }
 
     this.index += 1;
 
-    if (
-      callbacks &&
-      'type' in action &&
-      action.type === 'send_private_message'
-    ) {
+    if (callbacks && action.name === 'messaging.send_private') {
       callbacks.onMessageStreamStarted({
         streamId: `stream-${this.index}`,
         visibility: 'private',
-        recipientAgentId: action.recipientAgentId,
+        recipientAgentId: action.arguments.recipientAgentId,
       });
       callbacks.onMessageStreamDelta({
         streamId: `stream-${this.index}`,
         visibility: 'private',
-        recipientAgentId: action.recipientAgentId,
-        delta: action.content,
-        content: action.content,
+        recipientAgentId: action.arguments.recipientAgentId,
+        delta: action.arguments.content,
+        content: action.arguments.content,
       });
       callbacks.onMessageStreamCompleted({
         streamId: `stream-${this.index}`,
         visibility: 'private',
-        recipientAgentId: action.recipientAgentId,
-        content: action.content,
+        recipientAgentId: action.arguments.recipientAgentId,
+        content: action.arguments.content,
       });
     }
 
@@ -209,10 +202,11 @@ class RecordingAgentGateway implements AgentGatewayPort {
 
   async decideNextAction(
     context: AgentTurnContext,
-  ): Promise<AgentGatewayDecision> {
+  ): Promise<AgentToolCallParams> {
     this.contexts.push(context);
     return {
-      type: 'finalize_turn',
+      name: 'turn.finalize',
+      arguments: {},
     };
   }
 }
@@ -259,16 +253,19 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       new InMemoryAgentActionRepository(),
       new ScriptedAgentGateway([
         {
-          type: 'send_private_message',
-          recipientAgentId: 'agent-2',
-          content:
-            'I can safeguard funds and report treasury balances clearly.',
+          name: 'messaging.send_private',
+          arguments: {
+            recipientAgentId: 'agent-2',
+            content:
+              'I can safeguard funds and report treasury balances clearly.',
+          },
         },
         {
-          type: 'place_funds_with_banker',
-          recipientAgentId: 'agent-1',
-          amount: '15.0000',
-          reasoning: 'I want my idle capital to earn custody interest.',
+          name: 'treasury.place_with_banker',
+          arguments: {
+            recipientAgentId: 'agent-1',
+            amount: '15.0000',
+          },
         },
       ]),
       eventStreamService as never,
@@ -501,7 +498,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
     expect(eventStreamService.published).toEqual([
       {
         type: 'message_stream_started',
-        streamId: 'synthetic-message-stream:game-1:1:2:agent-1',
+        streamId: 'stream-1',
         gameSessionId: 'game-1',
         roundNumber: 1,
         turnNumber: 2,
@@ -514,7 +511,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       },
       {
         type: 'message_stream_delta',
-        streamId: 'synthetic-message-stream:game-1:1:2:agent-1',
+        streamId: 'stream-1',
         gameSessionId: 'game-1',
         roundNumber: 1,
         turnNumber: 2,
@@ -529,7 +526,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       },
       {
         type: 'message_stream_completed',
-        streamId: 'synthetic-message-stream:game-1:1:2:agent-1',
+        streamId: 'stream-1',
         gameSessionId: 'game-1',
         roundNumber: 1,
         turnNumber: 2,
@@ -549,7 +546,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
         agentId: 'agent-1',
         agentName: 'Banker Bot',
         actionType: 'send_private_message',
-        streamId: 'synthetic-message-stream:game-1:1:2:agent-1',
+        streamId: 'stream-1',
         messageId: 'message-1',
         messageVisibility: 'private',
         occurredAt: expect.any(String),
@@ -585,12 +582,15 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       actionRepository,
       new ScriptedAgentGateway([
         {
-          type: 'reject_payment_request',
-          proposalActionId: 'action-1',
-          rationale: 'This should not be allowed twice.',
+          name: 'transfer.reject_payment_request',
+          arguments: {
+            proposalActionId: 'action-1',
+            rationale: 'This should not be allowed twice.',
+          },
         },
         {
-          type: 'finalize_turn',
+          name: 'turn.finalize',
+          arguments: {},
         },
       ]),
       new RecordingAgentSessionEventStreamService() as never,
@@ -625,14 +625,17 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       actionRepository,
       new ScriptedAgentGateway([
         {
-          type: 'counter_payment_request',
-          proposalActionId: 'action-1',
-          recipientAgentId: 'agent-2',
-          amount: '8.5000',
-          rationale: 'I can fund this trade, but only at a lower amount.',
+          name: 'transfer.counter_payment_request',
+          arguments: {
+            proposalActionId: 'action-1',
+            recipientAgentId: 'agent-2',
+            amount: '8.5000',
+            rationale: 'I can fund this trade, but only at a lower amount.',
+          },
         },
         {
-          type: 'finalize_turn',
+          name: 'turn.finalize',
+          arguments: {},
         },
       ]),
       new RecordingAgentSessionEventStreamService() as never,
@@ -873,12 +876,15 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       new InMemoryAgentActionRepository(),
       new ScriptedAgentGateway([
         {
-          type: 'finalize_turn',
+          name: 'turn.finalize',
+          arguments: {},
         },
         {
-          type: 'redeem_funds_from_banker',
-          recipientAgentId: 'agent-1',
-          amount: '0.5000',
+          name: 'treasury.redeem_from_banker',
+          arguments: {
+            recipientAgentId: 'agent-1',
+            amount: '0.5000',
+          },
         },
       ]),
       eventStreamService as never,
@@ -927,13 +933,16 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       new InMemoryAgentActionRepository(),
       new ScriptedAgentGateway([
         {
-          type: 'finalize_turn',
+          name: 'turn.finalize',
+          arguments: {},
         },
         {
-          type: 'request_payment',
-          recipientAgentId: 'agent-1',
-          amount: '12.5000',
-          rationale: 'Please fund my trading book.',
+          name: 'transfer.request_payment',
+          arguments: {
+            recipientAgentId: 'agent-1',
+            amount: '12.5000',
+            rationale: 'Please fund my trading book.',
+          },
         },
       ]),
       new RecordingAgentSessionEventStreamService() as never,

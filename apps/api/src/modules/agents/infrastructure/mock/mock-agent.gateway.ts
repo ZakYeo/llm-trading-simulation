@@ -1,4 +1,7 @@
-import type { AgentAction, AgentTurnContext } from '@llm-sim/mcp-contracts';
+import type {
+  AgentToolCallParams,
+  AgentTurnContext,
+} from '@llm-sim/mcp-contracts';
 
 import type {
   AgentGatewayPort,
@@ -9,7 +12,7 @@ export class MockAgentGateway implements AgentGatewayPort {
   async decideNextAction(
     context: AgentTurnContext,
     callbacks?: AgentMessageStreamCallbacks,
-  ): Promise<AgentAction> {
+  ): Promise<AgentToolCallParams> {
     const scenario = process.env.AGENT_MOCK_SCENARIO;
     const banker = context.peers.find((peer) => peer.role === 'banker');
     const trader = context.peers.find((peer) => peer.role === 'trader');
@@ -46,10 +49,12 @@ export class MockAgentGateway implements AgentGatewayPort {
 
     if (context.self.role === 'banker' && trader && context.turnNumber === 1) {
       const action = {
-        type: 'send_private_message',
-        recipientAgentId: trader.agentId,
-        content: 'Share your strongest signal and I can review terms.',
-      } satisfies AgentAction;
+        name: 'messaging.send_private',
+        arguments: {
+          recipientAgentId: trader.agentId,
+          content: 'Share your strongest signal and I can review terms.',
+        },
+      } satisfies AgentToolCallParams;
 
       streamMessageAction(action, callbacks);
       return action;
@@ -63,9 +68,11 @@ export class MockAgentGateway implements AgentGatewayPort {
       context.turnNumber === 1
     ) {
       return {
-        type: 'open_market_position',
-        opportunityId: riskyOpportunity.opportunityId,
-        amount: riskyOpportunity.minCommitment,
+        name: 'market.open_position',
+        arguments: {
+          opportunityId: riskyOpportunity.opportunityId,
+          amount: riskyOpportunity.minCommitment,
+        },
       };
     }
 
@@ -77,10 +84,13 @@ export class MockAgentGateway implements AgentGatewayPort {
       !pendingProposal
     ) {
       return {
-        type: 'request_payment',
-        recipientAgentId: trader.agentId,
-        amount: '12.5000',
-        rationale: 'Settle the analysis fee before I disclose the full signal.',
+        name: 'transfer.request_payment',
+        arguments: {
+          recipientAgentId: trader.agentId,
+          amount: '12.5000',
+          rationale:
+            'Settle the analysis fee before I disclose the full signal.',
+        },
       };
     }
 
@@ -92,9 +102,11 @@ export class MockAgentGateway implements AgentGatewayPort {
       !ownCustodyPosition
     ) {
       return {
-        type: 'place_funds_with_banker',
-        recipientAgentId: banker.agentId,
-        amount: '10.0000',
+        name: 'treasury.place_with_banker',
+        arguments: {
+          recipientAgentId: banker.agentId,
+          amount: '10.0000',
+        },
       };
     }
 
@@ -105,25 +117,31 @@ export class MockAgentGateway implements AgentGatewayPort {
     ) {
       if (scenario === 'reject_proposal') {
         return {
-          type: 'reject_payment_request',
-          proposalActionId: pendingProposal.actionId,
-          rationale: 'The proposed transfer is too risky for this round.',
+          name: 'transfer.reject_payment_request',
+          arguments: {
+            proposalActionId: pendingProposal.actionId,
+            rationale: 'The proposed transfer is too risky for this round.',
+          },
         };
       }
 
       if (scenario === 'counter_proposal') {
         return {
-          type: 'counter_payment_request',
-          proposalActionId: pendingProposal.actionId,
-          recipientAgentId: analyst?.agentId ?? pendingProposal.agentId,
-          amount: '8.5000',
-          rationale: 'I will settle, but only at a reduced fee.',
+          name: 'transfer.counter_payment_request',
+          arguments: {
+            proposalActionId: pendingProposal.actionId,
+            recipientAgentId: analyst?.agentId ?? pendingProposal.agentId,
+            amount: '8.5000',
+            rationale: 'I will settle, but only at a reduced fee.',
+          },
         };
       }
 
       return {
-        type: 'accept_payment_request',
-        proposalActionId: pendingProposal.actionId,
+        name: 'transfer.accept_payment_request',
+        arguments: {
+          proposalActionId: pendingProposal.actionId,
+        },
       };
     }
 
@@ -135,12 +153,14 @@ export class MockAgentGateway implements AgentGatewayPort {
       ownCustodyPosition.totalBalance !== '0.0000'
     ) {
       return {
-        type: 'redeem_funds_from_banker',
-        recipientAgentId: banker.agentId,
-        amount:
-          ownCustodyPosition.accruedInterest !== '0.0000'
-            ? ownCustodyPosition.accruedInterest
-            : '2.5000',
+        name: 'treasury.redeem_from_banker',
+        arguments: {
+          recipientAgentId: banker.agentId,
+          amount:
+            ownCustodyPosition.accruedInterest !== '0.0000'
+              ? ownCustodyPosition.accruedInterest
+              : '2.5000',
+        },
       };
     }
 
@@ -151,44 +171,52 @@ export class MockAgentGateway implements AgentGatewayPort {
       pendingProposal?.type === 'counter_payment_request'
     ) {
       return {
-        type: 'accept_payment_request',
-        proposalActionId: pendingProposal.actionId,
+        name: 'transfer.accept_payment_request',
+        arguments: {
+          proposalActionId: pendingProposal.actionId,
+        },
       };
     }
 
     if (context.self.role === 'analyst' && context.turnNumber === 2) {
       const action = {
-        type: 'send_public_message',
-        content: 'Volatility is compressing and timing risk is falling.',
-      } satisfies AgentAction;
+        name: 'messaging.send_public',
+        arguments: {
+          content: 'Volatility is compressing and timing risk is falling.',
+        },
+      } satisfies AgentToolCallParams;
 
       streamMessageAction(action, callbacks);
       return action;
     }
 
     return {
-      type: 'finalize_turn',
+      name: 'turn.finalize',
+      arguments: {},
     };
   }
 }
 
 function streamMessageAction(
-  action: AgentAction,
+  action: AgentToolCallParams,
   callbacks?: AgentMessageStreamCallbacks,
 ) {
   if (
     !callbacks ||
-    (action.type !== 'send_private_message' &&
-      action.type !== 'send_public_message')
+    (action.name !== 'messaging.send_private' &&
+      action.name !== 'messaging.send_public')
   ) {
     return;
   }
 
   const streamId = `mock-stream-${Math.random().toString(36).slice(2, 10)}`;
   const visibility =
-    action.type === 'send_private_message' ? 'private' : 'public';
+    action.name === 'messaging.send_private' ? 'private' : 'public';
   const recipientAgentId =
-    action.type === 'send_private_message' ? action.recipientAgentId : null;
+    action.name === 'messaging.send_private'
+      ? action.arguments.recipientAgentId
+      : null;
+  const fullContent = action.arguments.content;
 
   callbacks.onMessageStreamStarted({
     streamId,
@@ -196,21 +224,21 @@ function streamMessageAction(
     recipientAgentId,
   });
 
-  const midpoint = Math.max(1, Math.ceil(action.content.length / 2));
+  const midpoint = Math.max(1, Math.ceil(fullContent.length / 2));
   const chunks = [
-    action.content.slice(0, midpoint),
-    action.content.slice(midpoint),
+    fullContent.slice(0, midpoint),
+    fullContent.slice(midpoint),
   ].filter((chunk) => chunk.length > 0);
-  let content = '';
+  let streamedContent = '';
 
   for (const chunk of chunks) {
-    content += chunk;
+    streamedContent += chunk;
     callbacks.onMessageStreamDelta({
       streamId,
       visibility,
       recipientAgentId,
       delta: chunk,
-      content,
+      content: streamedContent,
     });
   }
 
@@ -218,6 +246,6 @@ function streamMessageAction(
     streamId,
     visibility,
     recipientAgentId,
-    content: action.content,
+    content: streamedContent,
   });
 }

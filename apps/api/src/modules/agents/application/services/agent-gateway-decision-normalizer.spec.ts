@@ -5,18 +5,6 @@ import type { AgentToolCallParams } from '@llm-sim/mcp-contracts';
 import { AgentGatewayDecisionNormalizer } from './agent-gateway-decision-normalizer.js';
 
 describe('AgentGatewayDecisionNormalizer', () => {
-  it('passes through legacy AgentAction payloads unchanged', () => {
-    const normalizer = new AgentGatewayDecisionNormalizer();
-    const action = {
-      type: 'send_private_message',
-      recipientAgentId: 'agent-banker',
-      content: 'Still supported.',
-      reasoning: 'Legacy compatibility.',
-    } as const;
-
-    expect(normalizer.normalize(action)).toEqual(action);
-  });
-
   it.each([
     [
       {

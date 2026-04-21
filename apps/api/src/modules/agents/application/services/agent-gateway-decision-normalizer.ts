@@ -1,20 +1,13 @@
 import {
-  agentActionSchema,
   parseAgentToolCallParams,
   type AgentAction,
+  type AgentToolCallParams,
 } from '@llm-sim/mcp-contracts';
 
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
-import type { AgentGatewayDecision } from '../ports/agent-gateway.port.js';
 
 export class AgentGatewayDecisionNormalizer {
-  normalize(decision: AgentGatewayDecision): AgentAction {
-    const legacyAction = agentActionSchema.safeParse(decision);
-
-    if (legacyAction.success) {
-      return legacyAction.data;
-    }
-
+  normalize(decision: AgentToolCallParams): AgentAction {
     const toolCall = parseAgentToolCallParams(decision);
 
     switch (toolCall.name) {

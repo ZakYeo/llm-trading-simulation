@@ -1,5 +1,4 @@
 import type {
-  AgentAction,
   AgentToolCallParams,
   AgentTurnContext,
 } from '@llm-sim/mcp-contracts';
@@ -36,7 +35,5 @@ export interface AgentGatewayPort {
   decideNextAction(
     context: AgentTurnContext,
     callbacks?: AgentMessageStreamCallbacks,
-  ): Promise<AgentGatewayDecision>;
+  ): Promise<AgentToolCallParams>;
 }
-
-export type AgentGatewayDecision = AgentAction | AgentToolCallParams;

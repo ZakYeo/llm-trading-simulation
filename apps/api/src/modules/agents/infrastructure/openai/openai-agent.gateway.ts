@@ -1,7 +1,14 @@
 import { randomUUID } from 'node:crypto';
 
-import type { AgentAction, AgentTurnContext } from '@llm-sim/mcp-contracts';
-import { agentActionSchema } from '@llm-sim/mcp-contracts';
+import type {
+  AgentToolCallParams,
+  AgentToolName,
+  AgentTurnContext,
+} from '@llm-sim/mcp-contracts';
+import {
+  agentToolDefinitions,
+  parseAgentToolCallParams,
+} from '@llm-sim/mcp-contracts';
 import type OpenAI from 'openai';
 
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
@@ -14,83 +21,43 @@ import {
   defaultOpenAiAgentSystemPrompt,
   OpenAiAgentSystemContextBuilder,
 } from './openai-agent-system-context.builder.js';
+
 const agentDecisionJsonSchema = {
-  name: 'agent_decision',
+  name: 'agent_tool_call',
   strict: true,
   schema: {
     type: 'object',
     additionalProperties: false,
-    required: [
-      'type',
-      'recipientAgentId',
-      'content',
-      'amount',
-      'rationale',
-      'proposalActionId',
-      'opportunityId',
-      'reasoning',
-    ],
+    required: ['name', 'arguments'],
     properties: {
-      type: {
+      name: {
         type: 'string',
-        enum: [
-          'send_public_message',
-          'send_private_message',
-          'request_payment',
-          'counter_payment_request',
-          'accept_payment_request',
-          'reject_payment_request',
-          'place_funds_with_banker',
-          'redeem_funds_from_banker',
-          'open_market_position',
-          'finalize_turn',
-        ],
+        enum: agentToolDefinitions.map((tool) => tool.name),
       },
-      recipientAgentId: {
-        type: ['string', 'null'],
-      },
-      content: {
-        type: ['string', 'null'],
-      },
-      amount: {
-        type: ['string', 'null'],
-      },
-      rationale: {
-        type: ['string', 'null'],
-      },
-      proposalActionId: {
-        type: ['string', 'null'],
-      },
-      opportunityId: {
-        type: ['string', 'null'],
-      },
-      reasoning: {
-        type: ['string', 'null'],
+      arguments: {
+        anyOf: agentToolDefinitions.map((tool) => tool.inputSchema),
       },
     },
   },
 } as const;
 
-interface RawAgentDecision {
-  type: AgentAction['type'];
-  recipientAgentId: string | null;
-  content: string | null;
-  amount: string | null;
-  rationale: string | null;
-  proposalActionId: string | null;
-  opportunityId: string | null;
-  reasoning: string | null;
+interface RawAgentToolCall {
+  name: AgentToolName;
+  arguments?: Record<string, unknown>;
 }
 
 interface MessageStreamPreview {
-  type: 'send_public_message' | 'send_private_message';
+  name: 'messaging.send_public' | 'messaging.send_private';
   recipientAgentId: string | null;
   content: string;
 }
 
 function resolveRecipientAgentId(
   rawRecipientAgentId: string | null,
-  rawDecisionType: AgentAction['type'],
+  rawToolName:
+    | 'messaging.send_private'
+    | 'treasury.place_with_banker'
+    | 'treasury.redeem_from_banker',
   context: AgentTurnContext,
 ): string | null {
   if (!rawRecipientAgentId) {
@@ -117,9 +84,9 @@ function resolveRecipientAgentId(
   if (
     context.self.role === 'banker' &&
     trader &&
-    (rawDecisionType === 'send_private_message' ||
-      rawDecisionType === 'place_funds_with_banker' ||
-      rawDecisionType === 'redeem_funds_from_banker')
+    (rawToolName === 'messaging.send_private' ||
+      rawToolName === 'treasury.place_with_banker' ||
+      rawToolName === 'treasury.redeem_from_banker')
   ) {
     return trader.agentId;
   }
@@ -127,9 +94,9 @@ function resolveRecipientAgentId(
   if (
     context.self.role === 'trader' &&
     banker &&
-    (rawDecisionType === 'send_private_message' ||
-      rawDecisionType === 'place_funds_with_banker' ||
-      rawDecisionType === 'redeem_funds_from_banker')
+    (rawToolName === 'messaging.send_private' ||
+      rawToolName === 'treasury.place_with_banker' ||
+      rawToolName === 'treasury.redeem_from_banker')
   ) {
     return banker.agentId;
   }
@@ -189,12 +156,12 @@ function resolveOpportunityId(
 }
 
 function normalizeOpenMarketPositionAmount(
-  rawAmount: string | null,
+  rawAmount: string | undefined,
   opportunityId: string,
   context: AgentTurnContext,
-): string | null {
+): string | undefined {
   if (!rawAmount) {
-    return null;
+    return undefined;
   }
 
   let amount: Money;
@@ -238,161 +205,243 @@ function normalizeOpenMarketPositionAmount(
 }
 
 function normalizeAgentDecision(
-  rawDecision: RawAgentDecision,
+  rawToolCall: RawAgentToolCall,
   context: AgentTurnContext,
-): AgentAction {
-  const recipientAgentId = resolveRecipientAgentId(
-    rawDecision.recipientAgentId,
-    rawDecision.type,
-    context,
-  );
-  const opportunityId = resolveOpportunityId(
-    rawDecision.opportunityId,
-    context,
-  );
+): AgentToolCallParams {
+  switch (rawToolCall.name) {
+    case 'messaging.send_public': {
+      const content =
+        typeof rawToolCall.arguments?.content === 'string'
+          ? rawToolCall.arguments.content
+          : undefined;
 
-  switch (rawDecision.type) {
-    case 'send_public_message':
-      if (!rawDecision.content) {
+      if (!content) {
         throw new DomainInvariantError(
-          'send_public_message requires content from the model.',
+          'messaging.send_public requires content from the model.',
         );
       }
 
       return {
-        type: rawDecision.type,
-        content: rawDecision.content,
-        reasoning: rawDecision.reasoning ?? undefined,
+        name: rawToolCall.name,
+        arguments: {
+          content,
+        },
       };
-    case 'send_private_message':
-      if (!recipientAgentId || !rawDecision.content) {
+    }
+    case 'messaging.send_private': {
+      const rawRecipientAgentId =
+        typeof rawToolCall.arguments?.recipientAgentId === 'string'
+          ? rawToolCall.arguments.recipientAgentId
+          : null;
+      const content =
+        typeof rawToolCall.arguments?.content === 'string'
+          ? rawToolCall.arguments.content
+          : undefined;
+      const recipientAgentId = resolveRecipientAgentId(
+        rawRecipientAgentId,
+        rawToolCall.name,
+        context,
+      );
+
+      if (!recipientAgentId || !content) {
         throw new DomainInvariantError(
-          'send_private_message requires recipientAgentId and content from the model.',
+          'messaging.send_private requires recipientAgentId and content from the model.',
         );
       }
 
       return {
-        type: rawDecision.type,
-        recipientAgentId,
-        content: rawDecision.content,
-        reasoning: rawDecision.reasoning ?? undefined,
+        name: rawToolCall.name,
+        arguments: {
+          recipientAgentId,
+          content,
+        },
       };
-    case 'request_payment':
-      if (!recipientAgentId || !rawDecision.amount || !rawDecision.rationale) {
+    }
+    case 'transfer.request_payment': {
+      const rawRecipientAgentId =
+        typeof rawToolCall.arguments?.recipientAgentId === 'string'
+          ? rawToolCall.arguments.recipientAgentId
+          : null;
+      const recipientAgentId = resolveRecipientAgentId(
+        rawRecipientAgentId,
+        'messaging.send_private',
+        context,
+      );
+      const amount =
+        typeof rawToolCall.arguments?.amount === 'string'
+          ? rawToolCall.arguments.amount
+          : undefined;
+      const rationale =
+        typeof rawToolCall.arguments?.rationale === 'string'
+          ? rawToolCall.arguments.rationale
+          : undefined;
+
+      if (!recipientAgentId || !amount || !rationale) {
         throw new DomainInvariantError(
-          'request_payment requires recipientAgentId, amount, and rationale from the model.',
+          'transfer.request_payment requires recipientAgentId, amount, and rationale from the model.',
         );
       }
 
       return {
-        type: rawDecision.type,
-        recipientAgentId,
-        amount: rawDecision.amount,
-        rationale: rawDecision.rationale,
-        reasoning: rawDecision.reasoning ?? undefined,
+        name: rawToolCall.name,
+        arguments: {
+          recipientAgentId,
+          amount,
+          rationale,
+        },
       };
-    case 'counter_payment_request':
-      if (
-        !rawDecision.proposalActionId ||
-        !recipientAgentId ||
-        !rawDecision.amount ||
-        !rawDecision.rationale
-      ) {
+    }
+    case 'transfer.counter_payment_request': {
+      const proposalActionId =
+        typeof rawToolCall.arguments?.proposalActionId === 'string'
+          ? rawToolCall.arguments.proposalActionId
+          : undefined;
+      const rawRecipientAgentId =
+        typeof rawToolCall.arguments?.recipientAgentId === 'string'
+          ? rawToolCall.arguments.recipientAgentId
+          : null;
+      const recipientAgentId = resolveRecipientAgentId(
+        rawRecipientAgentId,
+        'messaging.send_private',
+        context,
+      );
+      const amount =
+        typeof rawToolCall.arguments?.amount === 'string'
+          ? rawToolCall.arguments.amount
+          : undefined;
+      const rationale =
+        typeof rawToolCall.arguments?.rationale === 'string'
+          ? rawToolCall.arguments.rationale
+          : undefined;
+
+      if (!proposalActionId || !recipientAgentId || !amount || !rationale) {
         throw new DomainInvariantError(
-          'counter_payment_request requires proposalActionId, recipientAgentId, amount, and rationale from the model.',
+          'transfer.counter_payment_request requires proposalActionId, recipientAgentId, amount, and rationale from the model.',
         );
       }
 
       return {
-        type: rawDecision.type,
-        proposalActionId: rawDecision.proposalActionId,
-        recipientAgentId,
-        amount: rawDecision.amount,
-        rationale: rawDecision.rationale,
-        reasoning: rawDecision.reasoning ?? undefined,
+        name: rawToolCall.name,
+        arguments: {
+          proposalActionId,
+          recipientAgentId,
+          amount,
+          rationale,
+        },
       };
-    case 'accept_payment_request':
-      if (!rawDecision.proposalActionId) {
+    }
+    case 'transfer.accept_payment_request': {
+      const proposalActionId =
+        typeof rawToolCall.arguments?.proposalActionId === 'string'
+          ? rawToolCall.arguments.proposalActionId
+          : undefined;
+
+      if (!proposalActionId) {
         throw new DomainInvariantError(
-          'accept_payment_request requires proposalActionId from the model.',
+          'transfer.accept_payment_request requires proposalActionId from the model.',
         );
       }
 
       return {
-        type: rawDecision.type,
-        proposalActionId: rawDecision.proposalActionId,
-        reasoning: rawDecision.reasoning ?? undefined,
+        name: rawToolCall.name,
+        arguments: {
+          proposalActionId,
+        },
       };
-    case 'reject_payment_request':
-      if (!rawDecision.proposalActionId || !rawDecision.rationale) {
+    }
+    case 'transfer.reject_payment_request': {
+      const proposalActionId =
+        typeof rawToolCall.arguments?.proposalActionId === 'string'
+          ? rawToolCall.arguments.proposalActionId
+          : undefined;
+      const rationale =
+        typeof rawToolCall.arguments?.rationale === 'string'
+          ? rawToolCall.arguments.rationale
+          : undefined;
+
+      if (!proposalActionId || !rationale) {
         throw new DomainInvariantError(
-          'reject_payment_request requires proposalActionId and rationale from the model.',
+          'transfer.reject_payment_request requires proposalActionId and rationale from the model.',
         );
       }
 
       return {
-        type: rawDecision.type,
-        proposalActionId: rawDecision.proposalActionId,
-        rationale: rawDecision.rationale,
-        reasoning: rawDecision.reasoning ?? undefined,
+        name: rawToolCall.name,
+        arguments: {
+          proposalActionId,
+          rationale,
+        },
       };
-    case 'place_funds_with_banker':
-      if (!recipientAgentId || !rawDecision.amount) {
+    }
+    case 'treasury.place_with_banker':
+    case 'treasury.redeem_from_banker': {
+      const rawRecipientAgentId =
+        typeof rawToolCall.arguments?.recipientAgentId === 'string'
+          ? rawToolCall.arguments.recipientAgentId
+          : null;
+      const recipientAgentId = resolveRecipientAgentId(
+        rawRecipientAgentId,
+        rawToolCall.name,
+        context,
+      );
+      const amount =
+        typeof rawToolCall.arguments?.amount === 'string'
+          ? rawToolCall.arguments.amount
+          : undefined;
+
+      if (!recipientAgentId || !amount) {
         throw new DomainInvariantError(
-          'place_funds_with_banker requires recipientAgentId and amount from the model.',
+          `${rawToolCall.name} requires recipientAgentId and amount from the model.`,
         );
       }
 
       return {
-        type: rawDecision.type,
-        recipientAgentId,
-        amount: rawDecision.amount,
-        reasoning: rawDecision.reasoning ?? undefined,
+        name: rawToolCall.name,
+        arguments: {
+          recipientAgentId,
+          amount,
+        },
       };
-    case 'redeem_funds_from_banker':
-      if (!recipientAgentId || !rawDecision.amount) {
+    }
+    case 'market.open_position': {
+      const rawOpportunityId =
+        typeof rawToolCall.arguments?.opportunityId === 'string'
+          ? rawToolCall.arguments.opportunityId
+          : null;
+      const opportunityId = resolveOpportunityId(rawOpportunityId, context);
+
+      if (!opportunityId) {
         throw new DomainInvariantError(
-          'redeem_funds_from_banker requires recipientAgentId and amount from the model.',
+          'market.open_position requires opportunityId from the model.',
+        );
+      }
+
+      const amount = normalizeOpenMarketPositionAmount(
+        typeof rawToolCall.arguments?.amount === 'string'
+          ? rawToolCall.arguments.amount
+          : undefined,
+        opportunityId,
+        context,
+      );
+
+      if (!amount) {
+        throw new DomainInvariantError(
+          'market.open_position requires amount from the model.',
         );
       }
 
       return {
-        type: rawDecision.type,
-        recipientAgentId,
-        amount: rawDecision.amount,
-        reasoning: rawDecision.reasoning ?? undefined,
-      };
-    case 'open_market_position':
-      if (!opportunityId || !rawDecision.amount) {
-        throw new DomainInvariantError(
-          'open_market_position requires opportunityId and amount from the model.',
-        );
-      }
-
-      {
-        const amount = normalizeOpenMarketPositionAmount(
-          rawDecision.amount,
-          opportunityId,
-          context,
-        );
-
-        if (!amount) {
-          throw new DomainInvariantError(
-            'open_market_position requires amount from the model.',
-          );
-        }
-
-        return {
-          type: rawDecision.type,
+        name: rawToolCall.name,
+        arguments: {
           opportunityId,
           amount,
-          reasoning: rawDecision.reasoning ?? undefined,
-        };
-      }
-    case 'finalize_turn':
+        },
+      };
+    }
+    case 'turn.finalize':
       return {
-        type: rawDecision.type,
-        reasoning: rawDecision.reasoning ?? undefined,
+        name: rawToolCall.name,
+        arguments: {},
       };
   }
 }
@@ -436,11 +485,11 @@ function decodeJsonFragment(value: string) {
 function extractPartialMessageStream(
   rawText: string,
 ): MessageStreamPreview | null {
-  const typeMatch = rawText.match(
-    /"type"\s*:\s*"(send_public_message|send_private_message)"/u,
+  const nameMatch = rawText.match(
+    /"name"\s*:\s*"(messaging\.send_public|messaging\.send_private)"/u,
   );
 
-  if (!typeMatch) {
+  if (!nameMatch) {
     return null;
   }
 
@@ -455,14 +504,17 @@ function extractPartialMessageStream(
   );
 
   return {
-    type: typeMatch[1] as MessageStreamPreview['type'],
+    name: nameMatch[1] as MessageStreamPreview['name'],
     recipientAgentId:
       recipientMatch?.[1] === 'null' ? null : (recipientMatch?.[2] ?? null),
     content: decodeJsonFragment(contentMatch[1] ?? ''),
   };
 }
 
-function logParsedAction(context: AgentTurnContext, parsedAction: AgentAction) {
+function logParsedToolCall(
+  context: AgentTurnContext,
+  parsedToolCall: AgentToolCallParams,
+) {
   console.info(
     JSON.stringify({
       type: 'agent_decision',
@@ -471,25 +523,15 @@ function logParsedAction(context: AgentTurnContext, parsedAction: AgentAction) {
       agentId: context.self.agentId,
       agentName: context.self.name,
       role: context.self.role,
-      actionType: parsedAction.type,
-      recipientAgentId:
-        'recipientAgentId' in parsedAction
-          ? parsedAction.recipientAgentId
-          : null,
-      proposalActionId:
-        'proposalActionId' in parsedAction
-          ? parsedAction.proposalActionId
-          : null,
-      opportunityId:
-        'opportunityId' in parsedAction ? parsedAction.opportunityId : null,
-      reasoning: parsedAction.reasoning ?? null,
+      toolName: parsedToolCall.name,
+      toolArguments: parsedToolCall.arguments,
     }),
   );
 }
 
-function toFinalizedAction(outputText: string, context: AgentTurnContext) {
-  return agentActionSchema.parse(
-    normalizeAgentDecision(JSON.parse(outputText) as RawAgentDecision, context),
+function toFinalizedToolCall(outputText: string, context: AgentTurnContext) {
+  return parseAgentToolCallParams(
+    normalizeAgentDecision(JSON.parse(outputText) as RawAgentToolCall, context),
   );
 }
 
@@ -516,9 +558,9 @@ function emitMessagePreview(
   }
 
   const visibility =
-    preview.type === 'send_private_message' ? 'private' : 'public';
+    preview.name === 'messaging.send_private' ? 'private' : 'public';
   const recipientAgentId =
-    preview.type === 'send_private_message' ? preview.recipientAgentId : null;
+    preview.name === 'messaging.send_private' ? preview.recipientAgentId : null;
 
   if (!streamState.active) {
     streamState.active = {
@@ -646,7 +688,7 @@ export class OpenAiAgentGateway implements AgentGatewayPort {
   async decideNextAction(
     context: AgentTurnContext,
     callbacks?: AgentMessageStreamCallbacks,
-  ): Promise<AgentAction> {
+  ): Promise<AgentToolCallParams> {
     const prompt = this.buildPrompt(context);
     const request = buildDecisionRequest(this.model, prompt, context);
     let activeStream:
@@ -691,19 +733,22 @@ export class OpenAiAgentGateway implements AgentGatewayPort {
         );
       }
 
-      const parsedAction = toFinalizedAction(outputText, context);
+      const parsedToolCall = toFinalizedToolCall(outputText, context);
 
       if (
         callbacks &&
-        (parsedAction.type === 'send_private_message' ||
-          parsedAction.type === 'send_public_message')
+        (parsedToolCall.name === 'messaging.send_private' ||
+          parsedToolCall.name === 'messaging.send_public')
       ) {
         const visibility =
-          parsedAction.type === 'send_private_message' ? 'private' : 'public';
+          parsedToolCall.name === 'messaging.send_private'
+            ? 'private'
+            : 'public';
         const recipientAgentId =
-          parsedAction.type === 'send_private_message'
-            ? parsedAction.recipientAgentId
+          parsedToolCall.name === 'messaging.send_private'
+            ? parsedToolCall.arguments.recipientAgentId
             : null;
+        const content = parsedToolCall.arguments.content;
         const streamId = activeStream?.streamId ?? randomUUID();
 
         if (!activeStream) {
@@ -714,15 +759,13 @@ export class OpenAiAgentGateway implements AgentGatewayPort {
           });
         }
 
-        if ((activeStream?.content ?? '') !== parsedAction.content) {
+        if ((activeStream?.content ?? '') !== content) {
           callbacks.onMessageStreamDelta({
             streamId,
             visibility,
             recipientAgentId,
-            delta: parsedAction.content.slice(
-              activeStream?.content.length ?? 0,
-            ),
-            content: parsedAction.content,
+            delta: content.slice(activeStream?.content.length ?? 0),
+            content,
           });
         }
 
@@ -730,7 +773,7 @@ export class OpenAiAgentGateway implements AgentGatewayPort {
           streamId,
           visibility,
           recipientAgentId,
-          content: parsedAction.content,
+          content,
         });
       } else if (callbacks && activeStream) {
         callbacks.onMessageStreamAborted({
@@ -741,9 +784,9 @@ export class OpenAiAgentGateway implements AgentGatewayPort {
         });
       }
 
-      logParsedAction(context, parsedAction);
+      logParsedToolCall(context, parsedToolCall);
 
-      return parsedAction;
+      return parsedToolCall;
     } catch (error) {
       if (callbacks && activeStream) {
         callbacks.onMessageStreamAborted({
@@ -771,7 +814,8 @@ export class OpenAiAgentGateway implements AgentGatewayPort {
       }
 
       return {
-        type: 'finalize_turn',
+        name: 'turn.finalize',
+        arguments: {},
       };
     }
   }

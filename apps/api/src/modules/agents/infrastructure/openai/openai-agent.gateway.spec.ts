@@ -127,15 +127,12 @@ describe('OpenAiAgentGateway', () => {
       responses: {
         create: vi.fn().mockResolvedValue({
           output_text: JSON.stringify({
-            type: 'open_market_position',
-            recipientAgentId: null,
-            content: null,
-            amount: '5.0000',
-            rationale: null,
-            proposalActionId: null,
-            opportunityId:
-              '99564828-4be8-a5b1-a4bb-33d1294eb9ba-risky-opportunity-r0',
-            reasoning: 'Positive expected value exceeds passive alternatives.',
+            name: 'market.open_position',
+            arguments: {
+              opportunityId:
+                '99564828-4be8-a5b1-a4bb-33d1294eb9ba-risky-opportunity-r0',
+              amount: '5.0000',
+            },
           }),
         }),
       },
@@ -150,11 +147,12 @@ describe('OpenAiAgentGateway', () => {
     const action = await gateway.decideNextAction(createContext());
 
     expect(action).toEqual({
-      type: 'open_market_position',
-      opportunityId:
-        '99564828-4be8-4957-a5b1-a2c48495ccb1-risky-opportunity-r0',
-      amount: '5.0000',
-      reasoning: 'Positive expected value exceeds passive alternatives.',
+      name: 'market.open_position',
+      arguments: {
+        opportunityId:
+          '99564828-4be8-4957-a5b1-a2c48495ccb1-risky-opportunity-r0',
+        amount: '5.0000',
+      },
     });
   });
 
@@ -163,14 +161,11 @@ describe('OpenAiAgentGateway', () => {
       responses: {
         create: vi.fn().mockResolvedValue({
           output_text: JSON.stringify({
-            type: 'open_market_position',
-            recipientAgentId: null,
-            content: null,
-            amount: '100.0000',
-            rationale: null,
-            proposalActionId: null,
-            opportunityId: 'Binary Event Volatility',
-            reasoning: 'Highest expected return justifies a large allocation.',
+            name: 'market.open_position',
+            arguments: {
+              opportunityId: 'Binary Event Volatility',
+              amount: '100.0000',
+            },
           }),
         }),
       },
@@ -185,11 +180,12 @@ describe('OpenAiAgentGateway', () => {
     const action = await gateway.decideNextAction(createContext());
 
     expect(action).toEqual({
-      type: 'open_market_position',
-      opportunityId:
-        '99564828-4be8-4957-a5b1-a2c48495ccb1-risky-opportunity-r0',
-      amount: '25.0000',
-      reasoning: 'Highest expected return justifies a large allocation.',
+      name: 'market.open_position',
+      arguments: {
+        opportunityId:
+          '99564828-4be8-4957-a5b1-a2c48495ccb1-risky-opportunity-r0',
+        amount: '25.0000',
+      },
     });
   });
 
@@ -207,12 +203,11 @@ describe('OpenAiAgentGateway', () => {
             yield {
               type: 'response.output_text.delta',
               delta:
-                '{"type":"send_private_message","recipientAgentId":"banker-1","content":"Hello',
+                '{"name":"messaging.send_private","arguments":{"recipientAgentId":"banker-1","content":"Hello',
             };
             yield {
               type: 'response.output_text.delta',
-              delta:
-                ' Banker","amount":null,"rationale":null,"proposalActionId":null,"opportunityId":null,"reasoning":"Short note."}',
+              delta: ' Banker"}}',
             };
           })(),
         ),
@@ -229,10 +224,11 @@ describe('OpenAiAgentGateway', () => {
     const action = await gateway.decideNextAction(createContext(), callbacks);
 
     expect(action).toEqual({
-      type: 'send_private_message',
-      recipientAgentId: 'banker-1',
-      content: 'Hello Banker',
-      reasoning: 'Short note.',
+      name: 'messaging.send_private',
+      arguments: {
+        recipientAgentId: 'banker-1',
+        content: 'Hello Banker',
+      },
     });
     expect(callbacks.onMessageStreamStarted).toHaveBeenCalledTimes(1);
     expect(callbacks.onMessageStreamDelta).toHaveBeenCalledWith(
@@ -271,25 +267,18 @@ describe('OpenAiAgentGateway', () => {
             yield {
               type: 'response.output_text.delta',
               delta:
-                '{"type":"send_private_message","recipientAgentId":"banker-1","content":"Draft',
+                '{"name":"messaging.send_private","arguments":{"recipientAgentId":"banker-1","content":"Draft',
             };
             yield {
               type: 'response.output_text.delta',
-              delta:
-                '","amount":null,"rationale":null,"proposalActionId":null,"opportunityId":null,"reasoning":"Maybe"}',
+              delta: '"}}',
             };
             yield {
               type: 'response.completed',
               response: {
                 output_text: JSON.stringify({
-                  type: 'finalize_turn',
-                  recipientAgentId: null,
-                  content: null,
-                  amount: null,
-                  rationale: null,
-                  proposalActionId: null,
-                  opportunityId: null,
-                  reasoning: 'Hold.',
+                  name: 'turn.finalize',
+                  arguments: {},
                 }),
               },
             };
@@ -308,8 +297,8 @@ describe('OpenAiAgentGateway', () => {
     const action = await gateway.decideNextAction(createContext(), callbacks);
 
     expect(action).toEqual({
-      type: 'finalize_turn',
-      reasoning: 'Hold.',
+      name: 'turn.finalize',
+      arguments: {},
     });
     expect(callbacks.onMessageStreamAborted).toHaveBeenCalledWith(
       expect.objectContaining({

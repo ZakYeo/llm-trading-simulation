@@ -147,9 +147,11 @@ describe('MockAgentGateway', () => {
     const action = await gateway.decideNextAction(createTraderContext());
 
     expect(action).toEqual({
-      type: 'open_market_position',
-      opportunityId: 'opp-risky',
-      amount: '5.0000',
+      name: 'market.open_position',
+      arguments: {
+        opportunityId: 'opp-risky',
+        amount: '5.0000',
+      },
     });
   });
 });

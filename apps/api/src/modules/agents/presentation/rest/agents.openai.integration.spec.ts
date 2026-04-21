@@ -102,7 +102,7 @@ describe.runIf(runLiveOpenAiTests)('Agents live OpenAI integration', () => {
     process.env.OPENAI_API_KEY = liveOpenAiApiKey;
     process.env.OPENAI_MODEL = liveOpenAiModel;
     process.env.OPENAI_AGENT_SYSTEM_PROMPT =
-      'You are participating in a live backend integration test. Your goal is to maximize your own expected fake-money outcome over the session. Communication and negotiation are optional tools, but if they improve expected value you should use them instead of passively finalizing. Across four turns, the table should not end with every action as finalize_turn. Include a short reasoning field explaining the economic logic behind your action.';
+      'You are participating in a live backend integration test. Your goal is to maximize your own expected fake-money outcome over the session. Communication and negotiation are optional tools, but if they improve expected value you should use them instead of passively finalizing. Return only a single MCP-style tool-call object with name and arguments. Across four turns, the table should not end with every action as finalize_turn.';
     process.env.AGENT_RUNTIME_PROVIDER = 'openai';
 
     const app = await createApp();
