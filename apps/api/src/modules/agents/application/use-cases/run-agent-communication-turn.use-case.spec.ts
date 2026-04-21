@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type {
-  AgentToolCallParams,
-  AgentTurnContext,
-} from '@llm-sim/mcp-contracts';
+import type { AgentAction, AgentTurnContext } from '@llm-sim/mcp-contracts';
 import type { GameSessionSummary } from '@llm-sim/shared-types';
 
 import { DepositAccount } from '../../../bank/domain/entities/deposit-account.js';
@@ -17,10 +14,7 @@ import { GameAgent } from '../../../game/domain/entities/game-agent.js';
 import { GameSession } from '../../../game/domain/entities/game-session.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
-import type {
-  AgentGatewayDecision,
-  AgentGatewayPort,
-} from '../ports/agent-gateway.port.js';
+import type { AgentGatewayPort } from '../ports/agent-gateway.port.js';
 import type { AgentMessageStreamCallbacks } from '../ports/agent-gateway.port.js';
 import type {
   AgentActionRecord,
@@ -161,12 +155,12 @@ class InMemoryAgentActionRepository implements AgentActionRepositoryPort {
 class ScriptedAgentGateway implements AgentGatewayPort {
   private index = 0;
 
-  constructor(private readonly actions: AgentGatewayDecision[]) {}
+  constructor(private readonly actions: AgentAction[]) {}
 
   async decideNextAction(
     _context: AgentTurnContext,
     callbacks?: AgentMessageStreamCallbacks,
-  ): Promise<AgentGatewayDecision> {
+  ): Promise<AgentAction> {
     const action = this.actions[this.index];
 
     if (!action) {
@@ -175,11 +169,7 @@ class ScriptedAgentGateway implements AgentGatewayPort {
 
     this.index += 1;
 
-    if (
-      callbacks &&
-      'type' in action &&
-      action.type === 'send_private_message'
-    ) {
+    if (callbacks && action.type === 'send_private_message') {
       callbacks.onMessageStreamStarted({
         streamId: `stream-${this.index}`,
         visibility: 'private',
@@ -207,9 +197,7 @@ class ScriptedAgentGateway implements AgentGatewayPort {
 class RecordingAgentGateway implements AgentGatewayPort {
   contexts: AgentTurnContext[] = [];
 
-  async decideNextAction(
-    context: AgentTurnContext,
-  ): Promise<AgentGatewayDecision> {
+  async decideNextAction(context: AgentTurnContext): Promise<AgentAction> {
     this.contexts.push(context);
     return {
       type: 'finalize_turn',
@@ -371,187 +359,6 @@ describe('RunAgentCommunicationTurnUseCase', () => {
         streamId: undefined,
         messageId: undefined,
         messageVisibility: undefined,
-        occurredAt: expect.any(String),
-      },
-    ]);
-  });
-
-  it('normalizes MCP-style tool calls before validation and execution', async () => {
-    const eventStreamService = new RecordingAgentSessionEventStreamService();
-    const placeFundsWithBankerUseCase =
-      new RecordingPlaceFundsWithBankerUseCase();
-    const useCase = new RunAgentCommunicationTurnUseCase(
-      new InMemoryGameSessionRepository(createSession()),
-      new InMemoryAgentMessageRepository(),
-      new InMemoryAgentActionRepository(),
-      new ScriptedAgentGateway([
-        {
-          name: 'turn.finalize',
-          arguments: {},
-        } satisfies AgentToolCallParams,
-        {
-          name: 'treasury.place_with_banker',
-          arguments: {
-            recipientAgentId: 'agent-1',
-            amount: '15.0000',
-          },
-        } satisfies AgentToolCallParams,
-      ]),
-      eventStreamService as never,
-      placeFundsWithBankerUseCase as never,
-      new RecordingRedeemFundsFromBankerUseCase() as never,
-    );
-
-    const result = await useCase.execute({
-      gameSessionId: 'game-1',
-      turnNumber: 2,
-    });
-
-    expect(result.actions).toEqual([
-      {
-        agentId: 'agent-1',
-        agentName: 'Banker Bot',
-        action: {
-          type: 'finalize_turn',
-        },
-      },
-      {
-        agentId: 'agent-2',
-        agentName: 'Trader Bot',
-        action: {
-          type: 'place_funds_with_banker',
-          recipientAgentId: 'agent-1',
-          amount: '15.0000',
-        },
-      },
-    ]);
-    expect(placeFundsWithBankerUseCase.calls).toEqual([
-      {
-        gameSessionId: 'game-1',
-        ownerAgentId: 'agent-2',
-        bankerAgentId: 'agent-1',
-        amount: '15.0000',
-      },
-    ]);
-    expect(result.actionRecords).toHaveLength(2);
-    expect(result.actionRecords[0]).toMatchObject({
-      agentId: 'agent-1',
-      actionType: 'finalize_turn',
-      recipientAgentId: null,
-    });
-    expect(result.actionRecords[1]).toMatchObject({
-      agentId: 'agent-2',
-      actionType: 'place_funds_with_banker',
-      recipientAgentId: 'agent-1',
-      amount: '15.0000',
-    });
-    expect(eventStreamService.published).toEqual([
-      {
-        type: 'action_progressed',
-        gameSessionId: 'game-1',
-        roundNumber: 1,
-        turnNumber: 2,
-        agentId: 'agent-2',
-        agentName: 'Trader Bot',
-        actionType: 'place_funds_with_banker',
-        streamId: undefined,
-        messageId: undefined,
-        messageVisibility: undefined,
-        occurredAt: expect.any(String),
-      },
-    ]);
-  });
-
-  it('synthesizes message stream events for MCP messaging tool calls', async () => {
-    const eventStreamService = new RecordingAgentSessionEventStreamService();
-    const useCase = new RunAgentCommunicationTurnUseCase(
-      new InMemoryGameSessionRepository(createSession()),
-      new InMemoryAgentMessageRepository(),
-      new InMemoryAgentActionRepository(),
-      new ScriptedAgentGateway([
-        {
-          name: 'messaging.send_private',
-          arguments: {
-            recipientAgentId: 'agent-2',
-            content: 'I can fund this trade, but I want clearer terms first.',
-          },
-        } satisfies AgentToolCallParams,
-        {
-          name: 'turn.finalize',
-          arguments: {},
-        } satisfies AgentToolCallParams,
-      ]),
-      eventStreamService as never,
-      new RecordingPlaceFundsWithBankerUseCase() as never,
-      new RecordingRedeemFundsFromBankerUseCase() as never,
-    );
-
-    const result = await useCase.execute({
-      gameSessionId: 'game-1',
-      turnNumber: 2,
-    });
-
-    expect(result.messages).toHaveLength(1);
-    expect(result.messages[0]).toMatchObject({
-      senderAgentId: 'agent-1',
-      recipientAgentId: 'agent-2',
-      visibility: 'private',
-      content: 'I can fund this trade, but I want clearer terms first.',
-    });
-    expect(eventStreamService.published).toEqual([
-      {
-        type: 'message_stream_started',
-        streamId: 'synthetic-message-stream:game-1:1:2:agent-1',
-        gameSessionId: 'game-1',
-        roundNumber: 1,
-        turnNumber: 2,
-        agentId: 'agent-1',
-        agentName: 'Banker Bot',
-        recipientAgentId: 'agent-2',
-        recipientAgentName: 'Trader Bot',
-        visibility: 'private',
-        occurredAt: expect.any(String),
-      },
-      {
-        type: 'message_stream_delta',
-        streamId: 'synthetic-message-stream:game-1:1:2:agent-1',
-        gameSessionId: 'game-1',
-        roundNumber: 1,
-        turnNumber: 2,
-        agentId: 'agent-1',
-        agentName: 'Banker Bot',
-        recipientAgentId: 'agent-2',
-        recipientAgentName: 'Trader Bot',
-        visibility: 'private',
-        delta: 'I can fund this trade, but I want clearer terms first.',
-        content: 'I can fund this trade, but I want clearer terms first.',
-        occurredAt: expect.any(String),
-      },
-      {
-        type: 'message_stream_completed',
-        streamId: 'synthetic-message-stream:game-1:1:2:agent-1',
-        gameSessionId: 'game-1',
-        roundNumber: 1,
-        turnNumber: 2,
-        agentId: 'agent-1',
-        agentName: 'Banker Bot',
-        recipientAgentId: 'agent-2',
-        recipientAgentName: 'Trader Bot',
-        visibility: 'private',
-        content: 'I can fund this trade, but I want clearer terms first.',
-        occurredAt: expect.any(String),
-      },
-      {
-        type: 'action_progressed',
-        gameSessionId: 'game-1',
-        roundNumber: 1,
-        turnNumber: 2,
-        agentId: 'agent-1',
-        agentName: 'Banker Bot',
-        actionType: 'send_private_message',
-        streamId: 'synthetic-message-stream:game-1:1:2:agent-1',
-        messageId: 'message-1',
-        messageVisibility: 'private',
         occurredAt: expect.any(String),
       },
     ]);

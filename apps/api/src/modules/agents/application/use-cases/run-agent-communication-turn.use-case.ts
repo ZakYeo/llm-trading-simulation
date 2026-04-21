@@ -19,7 +19,6 @@ import type {
 } from '../ports/agent-message-repository.port.js';
 import type { AgentSessionEventStreamService } from '../services/agent-session-event-stream.service.js';
 import { AgentActionExecutor } from '../services/agent-action-executor.js';
-import { AgentGatewayDecisionNormalizer } from '../services/agent-gateway-decision-normalizer.js';
 import { AgentActionValidator } from '../services/agent-action-validator.js';
 import { AgentTurnContextFactory } from '../services/agent-turn-context.factory.js';
 
@@ -66,7 +65,6 @@ export class RunAgentCommunicationTurnUseCase {
       redeemFundsFromBankerUseCase,
       openMarketPositionUseCase,
     ),
-    private readonly agentGatewayDecisionNormalizer = new AgentGatewayDecisionNormalizer(),
   ) {}
 
   async execute(
@@ -209,24 +207,10 @@ export class RunAgentCommunicationTurnUseCase {
             });
           },
         };
-        const decision = await this.agentGateway.decideNextAction(
+        const action = await this.agentGateway.decideNextAction(
           context,
           callbacks,
         );
-        const action = this.agentGatewayDecisionNormalizer.normalize(decision);
-        if (
-          latestStreamId === undefined &&
-          (action.type === 'send_private_message' ||
-            action.type === 'send_public_message')
-        ) {
-          emitSyntheticMessageStream({
-            action,
-            callbacks,
-            session: currentSession,
-            turnNumber,
-            agentId: agent.id,
-          });
-        }
         const { recipientAgentId, relatedProposalActionId } =
           this.agentActionValidator.validate(
             currentSession,
@@ -315,50 +299,4 @@ function resolveAgentName(
   }
 
   return session.agents.find((candidate) => candidate.id === agentId)?.name;
-}
-
-function emitSyntheticMessageStream(input: {
-  action: Extract<
-    AgentAction,
-    { type: 'send_private_message' | 'send_public_message' }
-  >;
-  callbacks: AgentMessageStreamCallbacks;
-  session: NonNullable<
-    Awaited<ReturnType<GameSessionRepositoryPort['findById']>>
-  >;
-  turnNumber: number;
-  agentId: string;
-}) {
-  const visibility =
-    input.action.type === 'send_private_message' ? 'private' : 'public';
-  const recipientAgentId =
-    input.action.type === 'send_private_message'
-      ? input.action.recipientAgentId
-      : null;
-  const streamId = [
-    'synthetic-message-stream',
-    input.session.id,
-    input.session.currentRound,
-    input.turnNumber,
-    input.agentId,
-  ].join(':');
-
-  input.callbacks.onMessageStreamStarted({
-    streamId,
-    visibility,
-    recipientAgentId,
-  });
-  input.callbacks.onMessageStreamDelta({
-    streamId,
-    visibility,
-    recipientAgentId,
-    delta: input.action.content,
-    content: input.action.content,
-  });
-  input.callbacks.onMessageStreamCompleted({
-    streamId,
-    visibility,
-    recipientAgentId,
-    content: input.action.content,
-  });
 }
