@@ -25,17 +25,19 @@ describe('App', () => {
 
     expect(html).toContain('LLM Trading Simulator');
     expect(html).toContain('Session Startup');
+    expect(html).toContain(
+      'Initialize simulation parameters and assemble agent roster.',
+    );
+    expect(html).toContain('Global Parameters');
     expect(html).toContain('Connect to session');
-    expect(html).toContain('Add bot');
+    expect(html).toContain('Agent Roster');
+    expect(html).toContain('Add agent');
     expect(html).toContain('Banker Bot');
     expect(html).toContain('Trader Bot');
-    expect(html).toContain('Personality');
-    expect(html).toContain('Edit');
-    expect(html).not.toContain('Sales aggression');
-    expect(html).not.toContain('Risk appetite');
-    expect(html).toContain(
-      'The rest of the workspace stays out of the way until a session is active.',
-    );
+    expect(html).toContain('Sales aggression');
+    expect(html).toContain('Risk appetite');
+    expect(html).not.toContain('Operator Console');
+    expect(html).not.toContain('Edit');
     expect(html).not.toContain('Audit Trail');
     expect(html).not.toContain('Market Visibility');
     expect(html).not.toContain('Run The Session');

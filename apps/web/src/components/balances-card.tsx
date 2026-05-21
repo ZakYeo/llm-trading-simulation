@@ -53,15 +53,21 @@ export function BalancesCard({
   function renderBalanceCard(
     agent: BalanceAccountViewData,
     extraClassName = '',
+    showPersonality = false,
   ) {
     const isInspecting = inspectedAgentIds.includes(agent.id);
+    const initial = agent.name.trim().charAt(0).toUpperCase() || '?';
+    const roleClassName = agent.role.toLowerCase();
 
     return (
       <article
         key={agent.id}
-        className={`balance-card${extraClassName ? ` ${extraClassName}` : ''}${isInspecting ? ' balance-card-inspecting' : ''}`}
+        className={`balance-card balance-card-${roleClassName}${extraClassName ? ` ${extraClassName}` : ''}${isInspecting ? ' balance-card-inspecting' : ''}`}
       >
         <header>
+          <span className="balance-agent-avatar" aria-hidden="true">
+            {initial}
+          </span>
           <div>
             <strong>{agent.name}</strong>
             <span>{agent.role}</span>
@@ -85,7 +91,7 @@ export function BalancesCard({
             <dd>{agent.reservedBalanceLabel}</dd>
           </div>
         </dl>
-        {isInspecting ? (
+        {showPersonality || isInspecting ? (
           <div className="balance-info-panel">
             <div className="balance-info-section">
               <span className="balance-info-heading">Personality</span>
@@ -100,11 +106,17 @@ export function BalancesCard({
   if (variant === 'compact') {
     return (
       <CardShell className="summary-shell balances-summary-shell">
-        <CardHeader kicker="Balances" title="Agent Accounts" compact />
+        <CardHeader
+          kicker="Accounts"
+          title="Agent Accounts"
+          compact
+          icon="smart_toy"
+          iconTone="secondary"
+        />
 
         <div className="summary-stack">
           {accounts.map((agent) =>
-            renderBalanceCard(agent, 'summary-balance-card'),
+            renderBalanceCard(agent, 'summary-balance-card', true),
           )}
         </div>
       </CardShell>

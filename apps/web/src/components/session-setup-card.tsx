@@ -1,8 +1,6 @@
-import { useEffect, useState } from 'react';
-
 import type { AgentDraft } from '../features/session-setup/model/agent-drafts';
 
-import { CardCollapseButton, CardHeader, CardShell } from './card-shell';
+import { CardShell } from './card-shell';
 
 const bankerSliderFields = [
   {
@@ -110,28 +108,13 @@ export function SessionSetupCard({
   onHideStartupForm,
   onStartNewSession,
 }: SessionSetupCardProps) {
-  const [expandedPersonalityDraftIds, setExpandedPersonalityDraftIds] =
-    useState<string[]>([]);
-
-  useEffect(() => {
-    setExpandedPersonalityDraftIds((current) =>
-      current.filter((draftId) =>
-        agentDrafts.some((draft) => draft.id === draftId),
-      ),
-    );
-  }, [agentDrafts]);
-
-  function togglePersonalityPanel(draftId: string) {
-    setExpandedPersonalityDraftIds((current) =>
-      current.includes(draftId)
-        ? current.filter((currentDraftId) => currentDraftId !== draftId)
-        : [...current, draftId],
-    );
-  }
-
   if (mode === 'collapsed') {
     return (
       <CardShell className="startup-strip">
+        <span className="visually-hidden">
+          Connected to {selectedSessionName ?? 'Active session'}{' '}
+          {selectedSessionId}
+        </span>
         <div className="startup-strip-row">
           <div className="startup-strip-copy">
             <p className="panel-kicker">Startup</p>
@@ -149,6 +132,9 @@ export function SessionSetupCard({
               type="button"
               onClick={onShowStartupForm}
             >
+              <span className="material-symbols-outlined" aria-hidden="true">
+                swap_horiz
+              </span>
               Change session
             </button>
             <button
@@ -156,6 +142,9 @@ export function SessionSetupCard({
               type="button"
               onClick={onStartNewSession}
             >
+              <span className="material-symbols-outlined" aria-hidden="true">
+                add_circle
+              </span>
               New session
             </button>
           </div>
@@ -165,268 +154,225 @@ export function SessionSetupCard({
   }
 
   return (
-    <CardShell className="session-startup-card">
-      <CardHeader
-        kicker="Startup"
-        title="Session Startup"
-        compact
-        actions={
-          <>
-            <span className="status-chip">
-              {hasActiveSession ? 'Active session' : 'Create or connect'}
-            </span>
-            {hasActiveSession ? (
-              <CardCollapseButton
-                isExpanded
-                expandLabel="Show session startup"
-                collapseLabel="Hide session startup"
-                onToggle={onHideStartupForm}
-              />
-            ) : null}
-          </>
-        }
-      />
+    <div className="session-startup-card">
+      {hasActiveSession ? (
+        <div className="startup-active-row">
+          <span className="status-chip">Active session</span>
+          <button
+            className="ghost-button"
+            type="button"
+            onClick={onHideStartupForm}
+          >
+            Hide startup
+          </button>
+        </div>
+      ) : null}
 
-      <div className="setup-section-body">
-        <div className="startup-intro">
-          <p className="startup-lede">
-            Start a fresh session or reconnect to a saved run. The rest of the
-            workspace stays out of the way until a session is active.
-          </p>
+      <CardShell className="startup-panel startup-parameters-panel">
+        <h2 className="startup-section-title">Global Parameters</h2>
+
+        <div className="startup-parameter-grid">
+          <label className="field startup-field startup-field-full">
+            <span>Session name</span>
+            <input
+              value={sessionName}
+              onChange={(event) => onSessionNameChange(event.target.value)}
+              placeholder="Morning liquidity drill"
+            />
+          </label>
+
+          <label className="field startup-field">
+            <span>Initial balance (SIM)</span>
+            <input
+              value={initialBalance}
+              onChange={(event) => onInitialBalanceChange(event.target.value)}
+              placeholder="100.0000"
+            />
+          </label>
+
+          <label className="field startup-field">
+            <span>Treasury interest per round (bps)</span>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={interestRateBps}
+              onChange={(event) => onInterestRateBpsChange(event.target.value)}
+              placeholder="250"
+            />
+          </label>
+
+          <label className="field startup-field startup-field-full startup-connect-field">
+            <span>Connect to session</span>
+            <select
+              value={selectedSessionId}
+              onChange={(event) =>
+                onSelectedSessionIdChange(event.target.value)
+              }
+            >
+              <option value="">Select a saved session</option>
+              {availableSessions.map((session) => (
+                <option key={session.value} value={session.value}>
+                  {session.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </CardShell>
+
+      <CardShell className="startup-panel startup-roster-panel">
+        <div className="startup-roster-header">
+          <h2 className="startup-section-title">Agent Roster</h2>
+          <button
+            className="agent-stack-button"
+            type="button"
+            onClick={onAddAgentDraft}
+            disabled={hasActiveSession}
+          >
+            <span className="material-symbols-outlined" aria-hidden="true">
+              add
+            </span>
+            Add agent
+          </button>
         </div>
 
-        <div className="startup-form-grid">
-          <section className="startup-panel">
-            <div className="section-copy">
-              <strong>Create session</strong>
-            </div>
-
-            <label className="field">
-              <span>Session name</span>
-              <input
-                value={sessionName}
-                onChange={(event) => onSessionNameChange(event.target.value)}
-                placeholder="Morning liquidity drill"
-              />
-            </label>
-
-            <label className="field">
-              <span>Initial balance</span>
-              <input
-                value={initialBalance}
-                onChange={(event) => onInitialBalanceChange(event.target.value)}
-                placeholder="100.0000"
-              />
-            </label>
-
-            <label className="field">
-              <span>Treasury interest per round (bps)</span>
-              <input
-                type="number"
-                min={0}
-                step={1}
-                value={interestRateBps}
-                onChange={(event) =>
-                  onInterestRateBpsChange(event.target.value)
-                }
-                placeholder="250"
-              />
-            </label>
-
-            <div className="section-copy">
-              <strong>Agent roster</strong>
-            </div>
-
-            <div className="agent-stack">
-              <div className="agent-stack-header">
-                <span>Bots</span>
+        <div className="agent-stack">
+          {agentDrafts.map((agent) => (
+            <div key={agent.id} className="agent-editor-card">
+              <div className="agent-card-header">
+                <div className="agent-card-identity">
+                  <input
+                    aria-label={`${agent.name} name`}
+                    value={agent.name}
+                    disabled={hasActiveSession}
+                    onChange={(event) =>
+                      onAgentNameChange(agent.id, event.target.value)
+                    }
+                    placeholder="Agent name"
+                  />
+                  <label>
+                    <span className="sr-only">Role</span>
+                    <select
+                      value={agent.role}
+                      disabled={hasActiveSession}
+                      onChange={(event) =>
+                        onAgentRoleChange(
+                          agent.id,
+                          event.target.value as AgentDraft['role'],
+                        )
+                      }
+                    >
+                      {agentRoleOptions.map((role) => (
+                        <option key={role} value={role}>
+                          Role: {role}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
                 <button
-                  className="agent-stack-button"
+                  className="agent-remove-button"
                   type="button"
-                  onClick={onAddAgentDraft}
-                  disabled={hasActiveSession}
+                  aria-label={`Remove ${agent.name}`}
+                  disabled={hasActiveSession || !canRemoveAgent}
+                  onClick={() => onRemoveAgentDraft(agent.id)}
                 >
-                  Add bot
+                  <span
+                    className="material-symbols-outlined"
+                    aria-hidden="true"
+                  >
+                    close
+                  </span>
                 </button>
               </div>
-              {agentDrafts.map((agent, index) => (
-                <div key={agent.id} className="agent-editor-card">
-                  <div className="agent-editor-row">
-                    <label className="field compact">
-                      <span>Bot {index + 1} name</span>
-                      <input
-                        value={agent.name}
-                        disabled={hasActiveSession}
-                        onChange={(event) =>
-                          onAgentNameChange(agent.id, event.target.value)
-                        }
-                        placeholder="Agent name"
-                      />
-                    </label>
-                    <label className="field compact">
-                      <span>Role</span>
-                      <select
-                        value={agent.role}
-                        disabled={hasActiveSession}
-                        onChange={(event) =>
-                          onAgentRoleChange(
-                            agent.id,
-                            event.target.value as AgentDraft['role'],
-                          )
-                        }
-                      >
-                        {agentRoleOptions.map((role) => (
-                          <option key={role} value={role}>
-                            {role}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <button
-                      className="agent-remove-button"
-                      type="button"
-                      disabled={hasActiveSession || !canRemoveAgent}
-                      onClick={() => onRemoveAgentDraft(agent.id)}
-                    >
-                      Remove
-                    </button>
-                  </div>
 
-                  <div className="agent-personality-toggle-row">
-                    <span className="personality-summary-label">
-                      Personality
-                    </span>
-                    <button
-                      className="ghost-button personality-toggle-button"
-                      type="button"
-                      onClick={() => togglePersonalityPanel(agent.id)}
-                    >
-                      {expandedPersonalityDraftIds.includes(agent.id)
-                        ? 'Hide'
-                        : hasActiveSession
-                          ? 'View'
-                          : 'Edit'}
-                    </button>
-                  </div>
-
-                  {expandedPersonalityDraftIds.includes(agent.id) ? (
-                    <div className="agent-personality-panel">
-                      {agent.personality.kind === 'banker'
-                        ? (() => {
-                            const personality = agent.personality;
-
-                            return bankerSliderFields.map((slider) => (
-                              <label
-                                key={slider.key}
-                                className="field personality-slider-field"
-                              >
-                                <span>
-                                  {slider.label}{' '}
-                                  <strong>{personality[slider.key]}</strong>
-                                </span>
-                                <input
-                                  type="range"
-                                  min={0}
-                                  max={10}
-                                  step={1}
-                                  value={personality[slider.key]}
-                                  disabled={hasActiveSession}
-                                  onChange={(event) =>
-                                    onAgentPersonalityValueChange(
-                                      agent.id,
-                                      slider.key,
-                                      Number.parseInt(event.target.value, 10),
-                                    )
-                                  }
-                                />
-                                <div className="slider-legend">
-                                  <span>{slider.lowLabel}</span>
-                                  <span>{slider.highLabel}</span>
-                                </div>
-                              </label>
-                            ));
-                          })()
-                        : (() => {
-                            const personality = agent.personality;
-
-                            return traderSliderFields.map((slider) => (
-                              <label
-                                key={slider.key}
-                                className="field personality-slider-field"
-                              >
-                                <span>
-                                  {slider.label}{' '}
-                                  <strong>{personality[slider.key]}</strong>
-                                </span>
-                                <input
-                                  type="range"
-                                  min={0}
-                                  max={10}
-                                  step={1}
-                                  value={personality[slider.key]}
-                                  disabled={hasActiveSession}
-                                  onChange={(event) =>
-                                    onAgentPersonalityValueChange(
-                                      agent.id,
-                                      slider.key,
-                                      Number.parseInt(event.target.value, 10),
-                                    )
-                                  }
-                                />
-                                <div className="slider-legend">
-                                  <span>{slider.lowLabel}</span>
-                                  <span>{slider.highLabel}</span>
-                                </div>
-                              </label>
-                            ));
-                          })()}
-                    </div>
-                  ) : null}
-                </div>
-              ))}
+              <div className="agent-personality-panel">
+                {agent.personality.kind === 'banker'
+                  ? renderPersonalitySliders(
+                      agent,
+                      bankerSliderFields,
+                      hasActiveSession,
+                      onAgentPersonalityValueChange,
+                    )
+                  : renderPersonalitySliders(
+                      agent,
+                      traderSliderFields,
+                      hasActiveSession,
+                      onAgentPersonalityValueChange,
+                    )}
+              </div>
             </div>
-
-            <button
-              className="action-button primary"
-              type="button"
-              disabled={isCreating || agentDrafts.length === 0}
-              onClick={onCreateSession}
-            >
-              {isCreating ? 'Creating session...' : 'Create session'}
-            </button>
-          </section>
-
-          <section className="startup-panel startup-panel-connect">
-            <div className="section-copy">
-              <strong>Reconnect</strong>
-            </div>
-
-            <label className="field">
-              <span>Connect to session</span>
-              <select
-                value={selectedSessionId}
-                onChange={(event) =>
-                  onSelectedSessionIdChange(event.target.value)
-                }
-              >
-                <option value="">Select a saved session</option>
-                {availableSessions.map((session) => (
-                  <option key={session.value} value={session.value}>
-                    {session.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <p className="startup-support-copy">
-              Choose a prior session to reopen the operator workspace without
-              recreating the roster.
-            </p>
-          </section>
+          ))}
         </div>
+      </CardShell>
 
+      <div className="startup-create-row">
         {createError ? <p className="error-copy">{createError}</p> : null}
+        <button
+          className="action-button primary startup-create-button"
+          type="button"
+          disabled={isCreating || agentDrafts.length === 0}
+          onClick={onCreateSession}
+        >
+          <span className="material-symbols-outlined" aria-hidden="true">
+            rocket_launch
+          </span>
+          {isCreating ? 'Creating session...' : 'Create session'}
+        </button>
       </div>
-    </CardShell>
+    </div>
   );
+}
+
+function renderPersonalitySliders<
+  TField extends
+    | (typeof bankerSliderFields)[number]
+    | (typeof traderSliderFields)[number],
+>(
+  agent: AgentDraft,
+  sliderFields: readonly TField[],
+  hasActiveSession: boolean,
+  onAgentPersonalityValueChange: (
+    draftId: string,
+    key: string,
+    value: number,
+  ) => void,
+) {
+  return sliderFields.map((slider) => {
+    const value =
+      slider.key in agent.personality
+        ? Number(
+            agent.personality[slider.key as keyof typeof agent.personality],
+          )
+        : 0;
+
+    return (
+      <label key={slider.key} className="field personality-slider-field">
+        <span>
+          {slider.label} <strong>{value}</strong>
+        </span>
+        <input
+          className={
+            agent.personality.kind === 'banker'
+              ? 'personality-range banker'
+              : 'personality-range trader'
+          }
+          type="range"
+          min={0}
+          max={10}
+          step={1}
+          value={value}
+          disabled={hasActiveSession}
+          onChange={(event) =>
+            onAgentPersonalityValueChange(
+              agent.id,
+              slider.key,
+              Number.parseInt(event.target.value, 10),
+            )
+          }
+        />
+      </label>
+    );
+  });
 }

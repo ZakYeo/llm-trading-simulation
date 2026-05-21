@@ -10,6 +10,8 @@ interface CardHeaderProps {
   title: string;
   actions?: ReactNode;
   compact?: boolean;
+  icon?: string;
+  iconTone?: 'primary' | 'secondary' | 'tertiary' | 'neutral';
 }
 
 interface CardCollapseButtonProps {
@@ -42,14 +44,30 @@ export function CardHeader({
   title,
   actions,
   compact = false,
+  icon,
+  iconTone = 'primary',
 }: CardHeaderProps) {
   return (
     <div
       className={joinClasses('panel-header', compact ? 'compact' : undefined)}
     >
-      <div>
-        <p className="panel-kicker">{kicker}</p>
-        <h2>{title}</h2>
+      <div className="panel-title-row">
+        {icon ? (
+          <span
+            className={joinClasses(
+              'material-symbols-outlined',
+              'panel-title-icon',
+              `panel-title-icon-${iconTone}`,
+            )}
+            aria-hidden="true"
+          >
+            {icon}
+          </span>
+        ) : null}
+        <div>
+          <p className="panel-kicker">{kicker}</p>
+          <h2>{title}</h2>
+        </div>
       </div>
       {actions ? <div className="panel-header-actions">{actions}</div> : null}
     </div>
@@ -69,7 +87,9 @@ export function CardCollapseButton({
       type="button"
       onClick={onToggle}
     >
-      {isExpanded ? '−' : '+'}
+      <span className="material-symbols-outlined" aria-hidden="true">
+        {isExpanded ? 'remove' : 'add'}
+      </span>
     </button>
   );
 }

@@ -40,9 +40,11 @@ export function OperateCard({
   return (
     <CardShell className="rail-card">
       <CardHeader
-        kicker="Operate"
-        title="Run The Session"
+        kicker="Controls"
+        title="Run Controls"
         compact
+        icon="play_circle"
+        iconTone="primary"
         actions={
           <>
             <span className="status-chip muted">Round {currentRound ?? 1}</span>
@@ -85,7 +87,7 @@ export function OperateCard({
                 type="button"
                 onClick={() => onTurnCountChange(preset)}
               >
-                {preset} turn{preset === 1 ? '' : 's'}
+                {preset}
               </button>
             ))}
           </div>

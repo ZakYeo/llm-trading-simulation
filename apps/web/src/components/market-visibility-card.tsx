@@ -27,6 +27,8 @@ export function MarketVisibilityCard({
           kicker="Market"
           title="Market Visibility"
           compact
+          icon="monitoring"
+          iconTone="tertiary"
           actions={
             <span className="status-chip muted">
               {market.opportunityPositionSummaryLabel}
@@ -76,6 +78,8 @@ export function MarketVisibilityCard({
       <CardHeader
         kicker="Market"
         title="Market Visibility"
+        icon="monitoring"
+        iconTone="tertiary"
         actions={
           <>
             {market ? (
@@ -104,8 +108,8 @@ export function MarketVisibilityCard({
             <section className="market-section">
               <div className="subsection-header">
                 <div>
-                  <p className="panel-kicker">Opportunities</p>
-                  <h3>Current listings</h3>
+                  <p className="panel-kicker">Current opportunities</p>
+                  <h3>Current Opportunities</h3>
                 </div>
                 <span className="status-chip muted">
                   {market.currentRoundLabel}
@@ -182,8 +186,8 @@ export function MarketVisibilityCard({
             <section className="market-section">
               <div className="subsection-header">
                 <div>
-                  <p className="panel-kicker">Positions</p>
-                  <h3>Trader exposure</h3>
+                  <p className="panel-kicker">Active positions</p>
+                  <h3>Active Positions</h3>
                 </div>
               </div>
 
@@ -241,7 +245,10 @@ export function MarketVisibilityCard({
                 </div>
               ) : (
                 <p className="empty-copy market-empty">
-                  No market positions opened yet.
+                  No Open or Settled positions in {market.currentRoundLabel}
+                  <span className="visually-hidden">
+                    No market positions opened yet.
+                  </span>
                 </p>
               )}
             </section>

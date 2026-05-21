@@ -51,6 +51,8 @@ export function AuditTrailCard({
       <CardHeader
         kicker="Replay"
         title="Audit Trail"
+        icon="list_alt"
+        iconTone="neutral"
         actions={
           <>
             {hasReplayActivity ? (
@@ -58,6 +60,36 @@ export function AuditTrailCard({
                 {visibleEventCount} / {mergedEventCount} events
               </span>
             ) : null}
+            <label className="field replay-window-field">
+              <span>Events</span>
+              <select
+                value={activeWindow}
+                onChange={(event) =>
+                  setActiveWindow(event.target.value as ReplayWindow)
+                }
+              >
+                {windowOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field replay-window-field">
+              <span>Window</span>
+              <select
+                value={activeRoundWindow}
+                onChange={(event) =>
+                  setActiveRoundWindow(event.target.value as ReplayRoundWindow)
+                }
+              >
+                {roundWindowOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
             <CardCollapseButton
               isExpanded={isExpanded}
               expandLabel="Maximise audit trail"
@@ -99,38 +131,6 @@ export function AuditTrailCard({
                 </button>
               ))}
             </div>
-
-            <label className="field replay-window-field">
-              <span>Events</span>
-              <select
-                value={activeWindow}
-                onChange={(event) =>
-                  setActiveWindow(event.target.value as ReplayWindow)
-                }
-              >
-                {windowOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="field replay-window-field">
-              <span>Rounds</span>
-              <select
-                value={activeRoundWindow}
-                onChange={(event) =>
-                  setActiveRoundWindow(event.target.value as ReplayRoundWindow)
-                }
-              >
-                {roundWindowOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
           </div>
 
           {isFetching ? <p>Loading replay...</p> : null}
@@ -156,13 +156,14 @@ export function AuditTrailCard({
                                 : `timeline-event${event.isMarketOpportunityEvent ? ' market-opportunity-event' : ''}`
                             }
                           >
-                            <div className={`event-badge event-${event.type}`}>
-                              {event.badgeLabel}
-                            </div>
                             <div className="event-content">
                               <div className="event-topline">
-                                <strong>{event.label}</strong>
                                 <span>{event.timestampLabel}</span>
+                                <div
+                                  className={`event-badge event-${event.type}`}
+                                >
+                                  {event.badgeLabel}
+                                </div>
                               </div>
                               {event.detail &&
                               !event.isMarketOpportunityEvent ? (
@@ -182,19 +183,25 @@ export function AuditTrailCard({
                                     </span>
                                   ) : null}
                                 </p>
+                              ) : !event.isMarketOpportunityEvent ? (
+                                <p className="event-detail">{event.label}</p>
                               ) : null}
                               {event.type === 'market_opportunity_listed' ? (
-                                <dl className="event-meta-grid">
-                                  {event.listedMeta.map((meta) => (
-                                    <div key={meta.label}>
-                                      <dt>{meta.label}</dt>
-                                      <dd>{meta.value}</dd>
-                                    </div>
-                                  ))}
-                                </dl>
+                                <>
+                                  <p className="event-detail">{event.label}</p>
+                                  <dl className="event-meta-grid">
+                                    {event.listedMeta.map((meta) => (
+                                      <div key={meta.label}>
+                                        <dt>{meta.label}</dt>
+                                        <dd>{meta.value}</dd>
+                                      </div>
+                                    ))}
+                                  </dl>
+                                </>
                               ) : null}
                               {event.type === 'market_opportunity_resolved' ? (
                                 <>
+                                  <p className="event-detail">{event.label}</p>
                                   <dl className="event-meta-grid">
                                     {event.resolvedMeta.map((meta) => (
                                       <div key={meta.label}>
