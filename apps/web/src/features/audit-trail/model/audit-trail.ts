@@ -1,10 +1,58 @@
 import type { GameReplayRecord } from '../../../lib/api';
-import type { StreamedAuditMessageRecord } from '../view-model/use-session-events';
+import {
+  formatBasisPoints,
+  formatCurrency,
+  formatSignedCurrency,
+  formatTimestamp,
+  getReplayEventDetail,
+  getReplayEventLabel,
+} from '../../../lib/formatters';
+
+export interface StreamedAuditMessageRecord {
+  streamId: string;
+  gameSessionId: string;
+  roundNumber: number;
+  turnNumber: number;
+  senderAgentId: string;
+  senderAgentName: string;
+  recipientAgentId: string | null;
+  recipientAgentName?: string;
+  visibility: 'public' | 'private';
+  content: string;
+  occurredAt: string;
+  status: 'streaming' | 'completed';
+  messageId?: string;
+}
 
 export type AuditTrailEvent = GameReplayRecord['events'][number] & {
   isStreaming?: boolean;
   streamingStatus?: StreamedAuditMessageRecord['status'];
   animationKey?: string;
+};
+
+export interface AuditTrailMetaItem {
+  label: string;
+  value: string;
+}
+
+export interface AuditTrailParticipantRow {
+  key: string;
+  ownerAgentName: string;
+  principalLabel: string;
+  profitOrLossLabel: string;
+}
+
+export type AuditTrailTimelineEvent = AuditTrailEvent & {
+  animationId: string;
+  badgeLabel: string;
+  detail: string | null;
+  isMarketOpportunityEvent: boolean;
+  label: string;
+  listedMeta: AuditTrailMetaItem[];
+  participantRows: AuditTrailParticipantRow[];
+  resolvedMeta: AuditTrailMetaItem[];
+  roundLabel: string;
+  timestampLabel: string;
 };
 
 export type ReplayFilter =
@@ -27,12 +75,12 @@ export const replayFilters: ReplayFilter[] = [
 ];
 
 export interface AuditTrailViewData {
-  mergedEvents: AuditTrailEvent[];
-  visibleEvents: AuditTrailEvent[];
+  mergedEvents: AuditTrailTimelineEvent[];
+  visibleEvents: AuditTrailTimelineEvent[];
   visibleStreamedMessages: StreamedAuditMessageRecord[];
   eventsByRound: Array<{
     roundNumber: number;
-    events: AuditTrailEvent[];
+    events: AuditTrailTimelineEvent[];
   }>;
 }
 
@@ -101,10 +149,7 @@ function getAnimationKey(
   );
 }
 
-function matchesFilter(
-  filter: ReplayFilter,
-  event: GameReplayRecord['events'][number],
-) {
+function matchesFilter(filter: ReplayFilter, event: AuditTrailEvent) {
   if (filter === 'all') {
     return true;
   }
@@ -139,6 +184,115 @@ function matchesFilter(
     event.type === 'deposit' ||
     event.type === 'withdrawal'
   );
+}
+
+function createMarketListedMeta(event: AuditTrailEvent): AuditTrailMetaItem[] {
+  if (event.type !== 'market_opportunity_listed') {
+    return [];
+  }
+
+  return [
+    {
+      label: 'Risk',
+      value: event.opportunityRiskLevel ?? '',
+    },
+    {
+      label: 'Window',
+      value: `R${event.listedRound} to R${event.settlementRound}`,
+    },
+    {
+      label: 'Commitment',
+      value:
+        event.minCommitment && event.maxCommitment
+          ? `${formatCurrency(event.minCommitment)} - ${formatCurrency(event.maxCommitment)}`
+          : 'N/A',
+    },
+    {
+      label: 'Range',
+      value:
+        typeof event.worstCaseReturnBps === 'number' &&
+        typeof event.bestCaseReturnBps === 'number'
+          ? `${formatBasisPoints(event.worstCaseReturnBps)} to ${formatBasisPoints(event.bestCaseReturnBps)}`
+          : 'N/A',
+    },
+  ];
+}
+
+function createMarketResolvedMeta(
+  event: AuditTrailEvent,
+): AuditTrailMetaItem[] {
+  if (event.type !== 'market_opportunity_resolved') {
+    return [];
+  }
+
+  return [
+    {
+      label: 'Participants',
+      value: String(event.participantCount ?? 0),
+    },
+    {
+      label: 'Total principal',
+      value: event.totalPrincipal
+        ? formatCurrency(event.totalPrincipal)
+        : '0.00',
+    },
+    {
+      label: 'Net PnL',
+      value: event.totalProfitOrLoss
+        ? formatSignedCurrency(event.totalProfitOrLoss)
+        : '0.00',
+    },
+    {
+      label: 'Window',
+      value: `R${event.listedRound} to R${event.settlementRound}`,
+    },
+  ];
+}
+
+function createParticipantRows(
+  event: AuditTrailEvent,
+): AuditTrailParticipantRow[] {
+  if (event.type !== 'market_opportunity_resolved') {
+    return [];
+  }
+
+  return (
+    event.participantSettlements?.map((participant) => ({
+      key: `${event.id}-${participant.ownerAgentId}`,
+      ownerAgentName: participant.ownerAgentName,
+      principalLabel: formatCurrency(participant.principal),
+      profitOrLossLabel: formatSignedCurrency(participant.profitOrLoss),
+    })) ?? []
+  );
+}
+
+function createTimelineEvent(
+  event: AuditTrailEvent,
+  selectedRound: number | undefined,
+): AuditTrailTimelineEvent {
+  const isMarketOpportunityEvent =
+    event.type === 'market_opportunity_listed' ||
+    event.type === 'market_opportunity_resolved';
+  const detail =
+    event.isStreaming && event.type === 'message'
+      ? (event.content ?? '')
+      : getReplayEventDetail(event);
+
+  return {
+    ...event,
+    animationId: event.animationKey ?? event.id,
+    badgeLabel: event.type.replace(/_/gu, ' '),
+    detail,
+    isMarketOpportunityEvent,
+    label: getReplayEventLabel(event),
+    listedMeta: createMarketListedMeta(event),
+    participantRows: createParticipantRows(event),
+    resolvedMeta: createMarketResolvedMeta(event),
+    roundLabel: `Round ${event.roundNumber ?? selectedRound ?? 0}${
+      event.turnNumber ? ` / Turn ${event.turnNumber}` : ''
+    }`,
+    timestampLabel: formatTimestamp(event.createdAt),
+  };
 }
 
 export function createAuditTrailViewData(input: {
@@ -264,10 +418,13 @@ export function createAuditTrailViewData(input: {
     activeWindow === 'all'
       ? roundFilteredEvents
       : roundFilteredEvents.slice(-Number.parseInt(activeWindow, 10));
-  const eventsByRound = visibleEvents.reduce<
+  const timelineEvents = visibleEvents.map((event) =>
+    createTimelineEvent(event, selectedRound),
+  );
+  const eventsByRound = timelineEvents.reduce<
     Array<{
       roundNumber: number;
-      events: AuditTrailEvent[];
+      events: AuditTrailTimelineEvent[];
     }>
   >((groups, event) => {
     const roundNumber = event.roundNumber ?? selectedRound ?? 0;
@@ -285,8 +442,10 @@ export function createAuditTrailViewData(input: {
   }, []);
 
   return {
-    mergedEvents,
-    visibleEvents,
+    mergedEvents: mergedEvents.map((event) =>
+      createTimelineEvent(event, selectedRound),
+    ),
+    visibleEvents: timelineEvents,
     visibleStreamedMessages,
     eventsByRound,
   };

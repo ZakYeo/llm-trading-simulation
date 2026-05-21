@@ -1,10 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import type { GameSessionSummary } from '../lib/api';
-import {
-  createDefaultPersonality,
-  type AgentDraft,
-} from '../features/session-setup/model/agent-drafts';
+import type { AgentDraft } from '../features/session-setup/model/agent-drafts';
 
 import { CardCollapseButton, CardHeader, CardShell } from './card-shell';
 
@@ -55,7 +51,10 @@ interface SessionSetupCardProps {
   hasActiveSession: boolean;
   selectedSessionId: string;
   selectedSessionName?: string;
-  availableSessions: GameSessionSummary[];
+  availableSessions: Array<{
+    value: string;
+    label: string;
+  }>;
   sessionName: string;
   initialBalance: string;
   interestRateBps: string;
@@ -69,9 +68,12 @@ interface SessionSetupCardProps {
   onSelectedSessionIdChange: (value: string) => void;
   onAddAgentDraft: () => void;
   onRemoveAgentDraft: (draftId: string) => void;
-  onUpdateAgentDraft: (
+  onAgentNameChange: (draftId: string, value: string) => void;
+  onAgentRoleChange: (draftId: string, value: AgentDraft['role']) => void;
+  onAgentPersonalityValueChange: (
     draftId: string,
-    updater: (draft: AgentDraft) => AgentDraft,
+    key: string,
+    value: number,
   ) => void;
   onCreateSession: () => void;
   onShowStartupForm: () => void;
@@ -100,7 +102,9 @@ export function SessionSetupCard({
   onSelectedSessionIdChange,
   onAddAgentDraft,
   onRemoveAgentDraft,
-  onUpdateAgentDraft,
+  onAgentNameChange,
+  onAgentRoleChange,
+  onAgentPersonalityValueChange,
   onCreateSession,
   onShowStartupForm,
   onHideStartupForm,
@@ -254,10 +258,7 @@ export function SessionSetupCard({
                         value={agent.name}
                         disabled={hasActiveSession}
                         onChange={(event) =>
-                          onUpdateAgentDraft(agent.id, (draft) => ({
-                            ...draft,
-                            name: event.target.value,
-                          }))
+                          onAgentNameChange(agent.id, event.target.value)
                         }
                         placeholder="Agent name"
                       />
@@ -268,16 +269,10 @@ export function SessionSetupCard({
                         value={agent.role}
                         disabled={hasActiveSession}
                         onChange={(event) =>
-                          onUpdateAgentDraft(agent.id, (draft) => {
-                            const role = event.target
-                              .value as AgentDraft['role'];
-
-                            return {
-                              ...draft,
-                              role,
-                              personality: createDefaultPersonality(role),
-                            };
-                          })
+                          onAgentRoleChange(
+                            agent.id,
+                            event.target.value as AgentDraft['role'],
+                          )
                         }
                       >
                         {agentRoleOptions.map((role) => (
@@ -337,19 +332,11 @@ export function SessionSetupCard({
                                   value={personality[slider.key]}
                                   disabled={hasActiveSession}
                                   onChange={(event) =>
-                                    onUpdateAgentDraft(agent.id, (draft) => ({
-                                      ...draft,
-                                      personality:
-                                        draft.personality.kind === 'banker'
-                                          ? {
-                                              ...draft.personality,
-                                              [slider.key]: Number.parseInt(
-                                                event.target.value,
-                                                10,
-                                              ),
-                                            }
-                                          : draft.personality,
-                                    }))
+                                    onAgentPersonalityValueChange(
+                                      agent.id,
+                                      slider.key,
+                                      Number.parseInt(event.target.value, 10),
+                                    )
                                   }
                                 />
                                 <div className="slider-legend">
@@ -379,19 +366,11 @@ export function SessionSetupCard({
                                   value={personality[slider.key]}
                                   disabled={hasActiveSession}
                                   onChange={(event) =>
-                                    onUpdateAgentDraft(agent.id, (draft) => ({
-                                      ...draft,
-                                      personality:
-                                        draft.personality.kind === 'trader'
-                                          ? {
-                                              ...draft.personality,
-                                              [slider.key]: Number.parseInt(
-                                                event.target.value,
-                                                10,
-                                              ),
-                                            }
-                                          : draft.personality,
-                                    }))
+                                    onAgentPersonalityValueChange(
+                                      agent.id,
+                                      slider.key,
+                                      Number.parseInt(event.target.value, 10),
+                                    )
                                   }
                                 />
                                 <div className="slider-legend">
@@ -432,8 +411,8 @@ export function SessionSetupCard({
               >
                 <option value="">Select a saved session</option>
                 {availableSessions.map((session) => (
-                  <option key={session.id} value={session.id}>
-                    {session.name} ({session.id})
+                  <option key={session.value} value={session.value}>
+                    {session.label}
                   </option>
                 ))}
               </select>

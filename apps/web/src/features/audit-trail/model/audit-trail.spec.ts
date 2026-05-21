@@ -140,4 +140,86 @@ describe('createAuditTrailViewData', () => {
       afterPersistence.visibleEvents.filter((event) => event.type === 'action'),
     ).toHaveLength(1);
   });
+
+  it('returns display-ready timeline labels and meta for market events', () => {
+    const replay = buildReplay();
+    replay.events.push(
+      {
+        id: 'event-listed-1',
+        type: 'market_opportunity_listed',
+        createdAt: '2026-04-14T09:59:00.000Z',
+        roundNumber: 2,
+        opportunityId: 'opp-1',
+        opportunityTitle: 'Binary Event Volatility',
+        opportunitySummary: 'Wide payoff event trade.',
+        opportunityRiskLevel: 'high',
+        listedRound: 2,
+        settlementRound: 3,
+        minCommitment: '5.0000',
+        maxCommitment: '25.0000',
+        worstCaseReturnBps: -300,
+        bestCaseReturnBps: 420,
+      },
+      {
+        id: 'event-resolved-1',
+        type: 'market_opportunity_resolved',
+        createdAt: '2026-04-14T09:59:30.000Z',
+        roundNumber: 3,
+        opportunityId: 'opp-1',
+        opportunityTitle: 'Binary Event Volatility',
+        participantCount: 1,
+        totalPrincipal: '12.0000',
+        totalProfitOrLoss: '3.6000',
+        listedRound: 2,
+        settlementRound: 3,
+        participantSettlements: [
+          {
+            ownerAgentId: 'trader-1',
+            ownerAgentName: 'Trader Bot',
+            principal: '12.0000',
+            profitOrLoss: '3.6000',
+          },
+        ],
+      },
+    );
+
+    const viewData = createAuditTrailViewData({
+      replay,
+      selectedRound: 2,
+      activeFilter: 'all',
+      activeWindow: 'all',
+      activeRoundWindow: 'all',
+    });
+
+    expect(viewData.visibleEvents[0]).toMatchObject({
+      animationId: 'event-listed-1',
+      badgeLabel: 'market opportunity listed',
+      isMarketOpportunityEvent: true,
+      label: 'Binary Event Volatility listed',
+      roundLabel: 'Round 2',
+    });
+    expect(viewData.visibleEvents[0]?.listedMeta).toEqual([
+      { label: 'Risk', value: 'high' },
+      { label: 'Window', value: 'R2 to R3' },
+      { label: 'Commitment', value: '5.00 - 25.00' },
+      { label: 'Range', value: '-300 bps to +420 bps' },
+    ]);
+    expect(viewData.visibleEvents[1]).toMatchObject({
+      label: 'Binary Event Volatility resolved',
+      resolvedMeta: [
+        { label: 'Participants', value: '1' },
+        { label: 'Total principal', value: '12.00' },
+        { label: 'Net PnL', value: '+3.60' },
+        { label: 'Window', value: 'R2 to R3' },
+      ],
+      participantRows: [
+        {
+          key: 'event-resolved-1-trader-1',
+          ownerAgentName: 'Trader Bot',
+          principalLabel: '12.00',
+          profitOrLossLabel: '+3.60',
+        },
+      ],
+    });
+  });
 });

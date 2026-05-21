@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
 import type { MarketVisibilityViewData } from '../features/session-overview/model/session-overview';
-import { formatBasisPoints, formatCurrency } from '../lib/formatters';
 
 import {
   CardBody,
@@ -30,11 +29,7 @@ export function MarketVisibilityCard({
           compact
           actions={
             <span className="status-chip muted">
-              {market.opportunityCount} opportunit
-              {market.opportunityCount === 1 ? 'y' : 'ies'}
-              {' / '}
-              {market.positionCount} position
-              {market.positionCount === 1 ? '' : 's'}
+              {market.opportunityPositionSummaryLabel}
             </span>
           }
         />
@@ -60,11 +55,7 @@ export function MarketVisibilityCard({
             <strong>
               {market.featuredOpportunity?.title ?? 'No live listings'}
             </strong>
-            <p className="summary-copy">
-              {market.featuredOpportunity
-                ? `${formatCurrency(market.featuredOpportunity.minCommitment)} to ${formatCurrency(market.featuredOpportunity.maxCommitment)} · ${formatBasisPoints(market.featuredOpportunity.estimatedNetReturnBps)} · ${market.featuredOpportunity.signalQuality} signal · ${market.featuredOpportunity.holdingPeriodRounds} round hold`
-                : 'No live market opportunities are available in this session.'}
-            </p>
+            <p className="summary-copy">{market.featuredOpportunitySummary}</p>
             {market.opportunityTitles ? (
               <p className="summary-copy">{market.opportunityTitles}</p>
             ) : null}
@@ -72,16 +63,8 @@ export function MarketVisibilityCard({
 
           <article className="summary-callout">
             <span>Trader exposure</span>
-            <strong>
-              {market.featuredPosition
-                ? `${market.featuredPosition.opportunityTitle} · ${formatCurrency(market.featuredPosition.principal)}`
-                : 'No market positions opened yet.'}
-            </strong>
-            <p className="summary-copy">
-              {market.featuredPosition
-                ? `${market.featuredPosition.ownerName} · ${market.featuredPosition.statusLabel} · Round ${market.featuredPosition.settlementRound}`
-                : 'Exposure appears here once a trader opens a position.'}
-            </p>
+            <strong>{market.featuredPositionSummary}</strong>
+            <p className="summary-copy">{market.featuredPositionDetail}</p>
           </article>
         </div>
       </CardShell>
@@ -97,11 +80,7 @@ export function MarketVisibilityCard({
           <>
             {market ? (
               <span className="status-chip muted">
-                {market.opportunityCount} opportunit
-                {market.opportunityCount === 1 ? 'y' : 'ies'}
-                {' / '}
-                {market.positionCount} position
-                {market.positionCount === 1 ? '' : 's'}
+                {market.opportunityPositionSummaryLabel}
               </span>
             ) : null}
             <CardCollapseButton
@@ -129,7 +108,7 @@ export function MarketVisibilityCard({
                   <h3>Current listings</h3>
                 </div>
                 <span className="status-chip muted">
-                  Round {market.currentRound}
+                  {market.currentRoundLabel}
                 </span>
               </div>
 
@@ -152,36 +131,26 @@ export function MarketVisibilityCard({
                               : 'status-chip risk-low'
                           }
                         >
-                          {opportunity.riskLevel === 'high'
-                            ? 'High risk'
-                            : 'Low risk'}
+                          {opportunity.riskLabel}
                         </span>
                       </div>
 
                       <dl className="market-detail-grid">
                         <div>
                           <dt>Min commitment</dt>
-                          <dd>{formatCurrency(opportunity.minCommitment)}</dd>
+                          <dd>{opportunity.minCommitmentLabel}</dd>
                         </div>
                         <div>
                           <dt>Max commitment</dt>
-                          <dd>{formatCurrency(opportunity.maxCommitment)}</dd>
+                          <dd>{opportunity.maxCommitmentLabel}</dd>
                         </div>
                         <div>
                           <dt>Expected return</dt>
-                          <dd>
-                            {formatBasisPoints(
-                              opportunity.estimatedNetReturnBps,
-                            )}
-                          </dd>
+                          <dd>{opportunity.estimatedNetReturnLabel}</dd>
                         </div>
                         <div>
                           <dt>Range</dt>
-                          <dd>
-                            {formatBasisPoints(opportunity.worstCaseReturnBps)}
-                            {' to '}
-                            {formatBasisPoints(opportunity.bestCaseReturnBps)}
-                          </dd>
+                          <dd>{opportunity.returnRangeLabel}</dd>
                         </div>
                         <div>
                           <dt>Signal quality</dt>
@@ -189,18 +158,15 @@ export function MarketVisibilityCard({
                         </div>
                         <div>
                           <dt>Hold</dt>
-                          <dd>
-                            {opportunity.holdingPeriodRounds} round
-                            {opportunity.holdingPeriodRounds === 1 ? '' : 's'}
-                          </dd>
+                          <dd>{opportunity.holdingPeriodLabel}</dd>
                         </div>
                         <div>
                           <dt>Listed</dt>
-                          <dd>Round {opportunity.listedRound}</dd>
+                          <dd>{opportunity.listedRoundLabel}</dd>
                         </div>
                         <div>
                           <dt>Settlement</dt>
-                          <dd>Round {opportunity.settlementRound}</dd>
+                          <dd>{opportunity.settlementRoundLabel}</dd>
                         </div>
                       </dl>
                     </article>
@@ -251,19 +217,19 @@ export function MarketVisibilityCard({
                         </div>
                         <div>
                           <dt>Principal</dt>
-                          <dd>{formatCurrency(position.principal)}</dd>
+                          <dd>{position.principalLabel}</dd>
                         </div>
                         <div>
                           <dt>Entry round</dt>
-                          <dd>Round {position.entryRound}</dd>
+                          <dd>{position.entryRoundLabel}</dd>
                         </div>
                         <div>
                           <dt>Settlement round</dt>
-                          <dd>Round {position.settlementRound}</dd>
+                          <dd>{position.settlementRoundLabel}</dd>
                         </div>
                         <div>
                           <dt>Current context</dt>
-                          <dd>Round {market.currentRound}</dd>
+                          <dd>{market.currentRoundLabel}</dd>
                         </div>
                         <div>
                           <dt>Realized value</dt>

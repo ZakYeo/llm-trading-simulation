@@ -1,27 +1,31 @@
 import type { AgentPersonalityProfile } from '@llm-sim/shared-types';
 
 import type { GameSessionRecord } from '../../../lib/api';
+import { formatBasisPoints, formatCurrency } from '../../../lib/formatters';
 
 export interface BalanceAccountViewData {
   id: string;
   name: string;
   role: string;
-  availableBalance: string;
-  reservedBalance: string;
-  personalityProfile?: AgentPersonalityProfile;
+  availableBalanceLabel: string;
+  reservedBalanceLabel: string;
+  personalityRows: Array<{
+    label: string;
+    value: string;
+  }>;
 }
 
 export interface TreasuryPositionViewData {
-  principal: string;
-  accruedInterest: string;
-  totalBalance: string;
+  principalLabel: string;
+  accruedInterestLabel: string;
+  totalBalanceLabel: string;
 }
 
 export interface TreasuryViewData {
-  totalCustodiedBalance: string;
-  totalCustodiedPrincipal: string;
-  totalCustodiedInterest: string;
-  traderCustodyBalance: string;
+  totalCustodiedBalanceLabel: string;
+  totalCustodiedPrincipalLabel: string;
+  totalCustodiedInterestLabel: string;
+  traderCustodyBalanceLabel: string;
   traderCustodyPosition?: TreasuryPositionViewData;
 }
 
@@ -32,45 +36,88 @@ export interface MarketOpportunityViewData {
   title: string;
   summary: string;
   riskLevel: 'high' | 'low';
-  minCommitment: string;
-  maxCommitment: string;
-  estimatedNetReturnBps: number;
-  worstCaseReturnBps: number;
-  bestCaseReturnBps: number;
+  riskLabel: string;
+  minCommitmentLabel: string;
+  maxCommitmentLabel: string;
+  estimatedNetReturnLabel: string;
+  returnRangeLabel: string;
   signalQuality: string;
+  signalQualityLabel: string;
   holdingPeriodRounds: number;
+  holdingPeriodLabel: string;
   listedRound: number;
+  listedRoundLabel: string;
   settlementRound: number;
+  settlementRoundLabel: string;
 }
 
 export interface MarketPositionViewData {
   key: string;
   opportunityTitle: string;
   ownerName: string;
-  principal: string;
+  principalLabel: string;
   entryRound: number;
+  entryRoundLabel: string;
   settlementRound: number;
+  settlementRoundLabel: string;
   statusLabel: MarketPositionStatus;
 }
 
 export interface FeaturedMarketPositionViewData {
   opportunityTitle: string;
   ownerName: string;
-  principal: string;
+  principalLabel: string;
   settlementRound: number;
+  settlementRoundLabel: string;
   statusLabel: MarketPositionStatus;
 }
 
 export interface MarketVisibilityViewData {
   currentRound: number;
+  currentRoundLabel: string;
   opportunityCount: number;
   positionCount: number;
   openPositionCount: number;
+  opportunityPositionSummaryLabel: string;
   opportunityTitles: string;
   opportunities: MarketOpportunityViewData[];
   positions: MarketPositionViewData[];
   featuredOpportunity?: MarketOpportunityViewData;
   featuredPosition?: FeaturedMarketPositionViewData;
+  featuredOpportunitySummary: string;
+  featuredPositionSummary: string;
+  featuredPositionDetail: string;
+}
+
+function createPersonalityRows(
+  personalityProfile?: AgentPersonalityProfile,
+): BalanceAccountViewData['personalityRows'] {
+  if (!personalityProfile) {
+    return [];
+  }
+
+  if (personalityProfile.kind === 'banker') {
+    return [
+      { label: 'Warmth', value: `${personalityProfile.warmth}/10` },
+      {
+        label: 'Sales aggression',
+        value: `${personalityProfile.salesAggression}/10`,
+      },
+      {
+        label: 'Risk discipline',
+        value: `${personalityProfile.riskDiscipline}/10`,
+      },
+    ];
+  }
+
+  return [
+    { label: 'Assertiveness', value: `${personalityProfile.assertiveness}/10` },
+    { label: 'Risk appetite', value: `${personalityProfile.riskAppetite}/10` },
+    {
+      label: 'Conviction threshold',
+      value: `${personalityProfile.convictionThreshold}/10`,
+    },
+  ];
 }
 
 export function createBalanceAccounts(
@@ -84,9 +131,9 @@ export function createBalanceAccounts(
     id: agent.id,
     name: agent.name,
     role: agent.role,
-    availableBalance: agent.availableBalance,
-    reservedBalance: agent.reservedBalance,
-    personalityProfile: agent.personalityProfile,
+    availableBalanceLabel: formatCurrency(agent.availableBalance),
+    reservedBalanceLabel: formatCurrency(agent.reservedBalance),
+    personalityRows: createPersonalityRows(agent.personalityProfile),
   }));
 }
 
@@ -121,15 +168,25 @@ export function createTreasuryViewData(
   );
 
   return {
-    totalCustodiedBalance: totalCustodiedBalance.toFixed(4),
-    totalCustodiedPrincipal: totalCustodiedPrincipal.toFixed(4),
-    totalCustodiedInterest: totalCustodiedInterest.toFixed(4),
-    traderCustodyBalance: traderCustodyPosition?.totalBalance ?? '0.0000',
+    totalCustodiedBalanceLabel: formatCurrency(
+      totalCustodiedBalance.toFixed(4),
+    ),
+    totalCustodiedPrincipalLabel: formatCurrency(
+      totalCustodiedPrincipal.toFixed(4),
+    ),
+    totalCustodiedInterestLabel: formatCurrency(
+      totalCustodiedInterest.toFixed(4),
+    ),
+    traderCustodyBalanceLabel: formatCurrency(
+      traderCustodyPosition?.totalBalance ?? '0.0000',
+    ),
     traderCustodyPosition: traderCustodyPosition
       ? {
-          principal: traderCustodyPosition.principal,
-          accruedInterest: traderCustodyPosition.accruedInterest,
-          totalBalance: traderCustodyPosition.totalBalance,
+          principalLabel: formatCurrency(traderCustodyPosition.principal),
+          accruedInterestLabel: formatCurrency(
+            traderCustodyPosition.accruedInterest,
+          ),
+          totalBalanceLabel: formatCurrency(traderCustodyPosition.totalBalance),
         }
       : undefined,
   };
@@ -154,15 +211,23 @@ export function createMarketVisibilityViewData(
     title: opportunity.title,
     summary: opportunity.summary,
     riskLevel: opportunity.riskLevel,
-    minCommitment: opportunity.minCommitment,
-    maxCommitment: opportunity.maxCommitment,
-    estimatedNetReturnBps: opportunity.estimatedNetReturnBps,
-    worstCaseReturnBps: opportunity.worstCaseReturnBps,
-    bestCaseReturnBps: opportunity.bestCaseReturnBps,
+    riskLabel: opportunity.riskLevel === 'high' ? 'High risk' : 'Low risk',
+    minCommitmentLabel: formatCurrency(opportunity.minCommitment),
+    maxCommitmentLabel: formatCurrency(opportunity.maxCommitment),
+    estimatedNetReturnLabel: formatBasisPoints(
+      opportunity.estimatedNetReturnBps,
+    ),
+    returnRangeLabel: `${formatBasisPoints(opportunity.worstCaseReturnBps)} to ${formatBasisPoints(opportunity.bestCaseReturnBps)}`,
     signalQuality: opportunity.signalQuality,
+    signalQualityLabel: `${opportunity.signalQuality} signal`,
     holdingPeriodRounds: opportunity.holdingPeriodRounds,
+    holdingPeriodLabel: `${opportunity.holdingPeriodRounds} round${
+      opportunity.holdingPeriodRounds === 1 ? '' : 's'
+    }`,
     listedRound: opportunity.listedRound,
+    listedRoundLabel: `Round ${opportunity.listedRound}`,
     settlementRound: opportunity.settlementRound,
+    settlementRoundLabel: `Round ${opportunity.settlementRound}`,
   }));
   const positions = session.marketPositions.map((position) => {
     const ownerAgent = session.agents.find(
@@ -173,9 +238,11 @@ export function createMarketVisibilityViewData(
       key: `${position.ownerAgentId}-${position.opportunityId}-${position.entryRound}`,
       opportunityTitle: position.opportunityTitle,
       ownerName: ownerAgent?.name ?? position.ownerAgentId,
-      principal: position.principal,
+      principalLabel: formatCurrency(position.principal),
       entryRound: position.entryRound,
+      entryRoundLabel: `Round ${position.entryRound}`,
       settlementRound: position.settlementRound,
+      settlementRoundLabel: `Round ${position.settlementRound}`,
       statusLabel: getPositionStatusLabel(
         session.currentRound,
         position.settlementRound,
@@ -192,9 +259,13 @@ export function createMarketVisibilityViewData(
 
   return {
     currentRound: session.currentRound,
+    currentRoundLabel: `Round ${session.currentRound}`,
     opportunityCount: opportunities.length,
     positionCount: positions.length,
     openPositionCount: openPositions.length,
+    opportunityPositionSummaryLabel: `${opportunities.length} opportunit${
+      opportunities.length === 1 ? 'y' : 'ies'
+    } / ${positions.length} position${positions.length === 1 ? '' : 's'}`,
     opportunityTitles: opportunities
       .map((opportunity) => opportunity.title)
       .join(' · '),
@@ -205,10 +276,20 @@ export function createMarketVisibilityViewData(
       ? {
           opportunityTitle: featuredPosition.opportunityTitle,
           ownerName: featuredPosition.ownerName,
-          principal: featuredPosition.principal,
+          principalLabel: featuredPosition.principalLabel,
           settlementRound: featuredPosition.settlementRound,
+          settlementRoundLabel: featuredPosition.settlementRoundLabel,
           statusLabel: featuredPosition.statusLabel,
         }
       : undefined,
+    featuredOpportunitySummary: opportunities[0]
+      ? `${opportunities[0].minCommitmentLabel} to ${opportunities[0].maxCommitmentLabel} · ${opportunities[0].estimatedNetReturnLabel} · ${opportunities[0].signalQualityLabel} · ${opportunities[0].holdingPeriodRounds} round hold`
+      : 'No live market opportunities are available in this session.',
+    featuredPositionSummary: featuredPosition
+      ? `${featuredPosition.opportunityTitle} · ${featuredPosition.principalLabel}`
+      : 'No market positions opened yet.',
+    featuredPositionDetail: featuredPosition
+      ? `${featuredPosition.ownerName} · ${featuredPosition.statusLabel} · ${featuredPosition.settlementRoundLabel}`
+      : 'Exposure appears here once a trader opens a position.',
   };
 }

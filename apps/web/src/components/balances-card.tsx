@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
 import type { BalanceAccountViewData } from '../features/session-overview/model/session-overview';
-import { formatCurrency } from '../lib/formatters';
 
 import {
   CardBody,
@@ -35,43 +34,18 @@ export function BalancesCard({
   }
 
   function renderPersonality(agent: BalanceAccountViewData) {
-    if (!agent.personalityProfile) {
+    if (agent.personalityRows.length === 0) {
       return <p className="balance-info-empty">No custom personality saved.</p>;
-    }
-
-    if (agent.personalityProfile.kind === 'banker') {
-      return (
-        <dl className="balance-info-list">
-          <div>
-            <dt>Warmth</dt>
-            <dd>{agent.personalityProfile.warmth}/10</dd>
-          </div>
-          <div>
-            <dt>Sales aggression</dt>
-            <dd>{agent.personalityProfile.salesAggression}/10</dd>
-          </div>
-          <div>
-            <dt>Risk discipline</dt>
-            <dd>{agent.personalityProfile.riskDiscipline}/10</dd>
-          </div>
-        </dl>
-      );
     }
 
     return (
       <dl className="balance-info-list">
-        <div>
-          <dt>Assertiveness</dt>
-          <dd>{agent.personalityProfile.assertiveness}/10</dd>
-        </div>
-        <div>
-          <dt>Risk appetite</dt>
-          <dd>{agent.personalityProfile.riskAppetite}/10</dd>
-        </div>
-        <div>
-          <dt>Conviction threshold</dt>
-          <dd>{agent.personalityProfile.convictionThreshold}/10</dd>
-        </div>
+        {agent.personalityRows.map((row) => (
+          <div key={row.label}>
+            <dt>{row.label}</dt>
+            <dd>{row.value}</dd>
+          </div>
+        ))}
       </dl>
     );
   }
@@ -104,11 +78,11 @@ export function BalancesCard({
         <dl>
           <div>
             <dt>Available</dt>
-            <dd>{formatCurrency(agent.availableBalance)}</dd>
+            <dd>{agent.availableBalanceLabel}</dd>
           </div>
           <div>
             <dt>Reserved</dt>
-            <dd>{formatCurrency(agent.reservedBalance)}</dd>
+            <dd>{agent.reservedBalanceLabel}</dd>
           </div>
         </dl>
         {isInspecting ? (

@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CSSProperties } from 'react';
 import { startTransition, useEffect, useRef, useState } from 'react';
 
 import {
@@ -14,6 +13,7 @@ import {
   useSessionEvents,
   type StreamedAuditMessageRecord,
 } from '../../audit-trail/view-model/use-session-events';
+import { useAuditTrailViewModel } from '../../audit-trail/view-model/use-audit-trail-view-model';
 import {
   createBalanceAccounts,
   createMarketVisibilityViewData,
@@ -25,11 +25,6 @@ import {
   toAgentDrafts,
   type AgentDraft,
 } from '../../session-setup/model/agent-drafts';
-
-interface DashboardCardViewModel {
-  className: string;
-  style: CSSProperties;
-}
 
 export function useOperatorDashboardViewModel() {
   const queryClient = useQueryClient();
@@ -240,6 +235,41 @@ export function useOperatorDashboardViewModel() {
     );
   }
 
+  function updateAgentDraftName(draftId: string, name: string) {
+    updateAgentDraft(draftId, (draft) => ({
+      ...draft,
+      name,
+    }));
+  }
+
+  function updateAgentDraftRole(draftId: string, role: AgentDraft['role']) {
+    updateAgentDraft(draftId, (draft) => ({
+      ...draft,
+      role,
+      personality: createDefaultPersonality(role),
+    }));
+  }
+
+  function updateAgentDraftPersonalityValue(
+    draftId: string,
+    key: string,
+    value: number,
+  ) {
+    updateAgentDraft(draftId, (draft) => {
+      if (!(key in draft.personality)) {
+        return draft;
+      }
+
+      return {
+        ...draft,
+        personality: {
+          ...draft.personality,
+          [key]: value,
+        },
+      } as AgentDraft;
+    });
+  }
+
   function addAgentDraft() {
     const nextIndex = nextAgentDraftId;
 
@@ -263,21 +293,18 @@ export function useOperatorDashboardViewModel() {
     );
   }
 
-  function createDashboardCardViewModel(delay: string): DashboardCardViewModel {
-    return {
-      className: shouldAnimateSessionCards
-        ? 'dashboard-card session-card-enter'
-        : 'dashboard-card',
-      style: { '--card-enter-delay': delay } as CSSProperties,
-    };
-  }
-
   useSessionEvents({
     queryClient,
     replay,
     selectedSessionId,
     setLatestRunSummary,
     setStreamedMessages,
+  });
+  const auditTrailViewModel = useAuditTrailViewModel({
+    isActive: hasSelectedSession,
+    replay,
+    streamedMessages,
+    selectedRound: selectedSession?.currentRound,
   });
   const sessionSetupMode: 'collapsed' | 'expanded' =
     hasSelectedSession && !isStartupVisible ? 'collapsed' : 'expanded';
@@ -298,7 +325,10 @@ export function useOperatorDashboardViewModel() {
       hasActiveSession: hasSelectedSession,
       selectedSessionId,
       selectedSessionName: selectedSession?.name,
-      availableSessions: sessionsQuery.data ?? [],
+      availableSessions: (sessionsQuery.data ?? []).map((session) => ({
+        value: session.id,
+        label: `${session.name} (${session.id})`,
+      })),
       sessionName,
       initialBalance,
       interestRateBps,
@@ -312,7 +342,9 @@ export function useOperatorDashboardViewModel() {
       onSelectedSessionIdChange: handleSelectedSessionIdChange,
       onAddAgentDraft: addAgentDraft,
       onRemoveAgentDraft: removeAgentDraft,
-      onUpdateAgentDraft: updateAgentDraft,
+      onAgentNameChange: updateAgentDraftName,
+      onAgentRoleChange: updateAgentDraftRole,
+      onAgentPersonalityValueChange: updateAgentDraftPersonalityValue,
       onCreateSession: () => createSessionMutation.mutate(),
       onShowStartupForm: showStartupForm,
       onHideStartupForm: hideStartupForm,
@@ -320,6 +352,7 @@ export function useOperatorDashboardViewModel() {
     },
     workspace: {
       isVisible: hasSelectedSession,
+      shouldAnimateCards: shouldAnimateSessionCards,
       operate: {
         selectedSessionId,
         currentRound: selectedSession?.currentRound,
@@ -333,9 +366,7 @@ export function useOperatorDashboardViewModel() {
         onAdvanceRound: () => advanceRoundMutation.mutate(),
       },
       auditTrail: {
-        replay,
-        streamedMessages,
-        selectedRound: selectedSession?.currentRound,
+        viewModel: auditTrailViewModel,
         isFetching: replayQuery.isFetching,
         isTurnFlowInProgress,
         inProgressLabel,
@@ -344,13 +375,6 @@ export function useOperatorDashboardViewModel() {
       balanceAccounts: createBalanceAccounts(selectedSession),
       treasury: createTreasuryViewData(selectedSession),
       market: createMarketVisibilityViewData(selectedSession),
-      cards: {
-        operate: createDashboardCardViewModel('0ms'),
-        auditTrail: createDashboardCardViewModel('160ms'),
-        balances: createDashboardCardViewModel('320ms'),
-        treasury: createDashboardCardViewModel('480ms'),
-        market: createDashboardCardViewModel('640ms'),
-      },
     },
     helpModal: {
       isOpen: isHelpOpen,

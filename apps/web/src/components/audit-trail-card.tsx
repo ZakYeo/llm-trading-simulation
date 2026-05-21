@@ -1,22 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
-
-import type { GameReplayRecord } from '../lib/api';
-import {
-  createAuditTrailViewData,
-  replayFilters,
-  type ReplayFilter,
-  type ReplayRoundWindow,
-  type ReplayWindow,
-} from '../features/audit-trail/model/audit-trail';
-import {
-  formatBasisPoints,
-  formatCurrency,
-  formatSignedCurrency,
-  formatTimestamp,
-  getReplayEventDetail,
-  getReplayEventLabel,
-} from '../lib/formatters';
-import type { StreamedAuditMessageRecord } from '../features/audit-trail/view-model/use-session-events';
+import type {
+  AuditTrailViewModel,
+  ReplayRoundWindow,
+  ReplayWindow,
+} from '../features/audit-trail/view-model/use-audit-trail-view-model';
 
 import {
   CardBody,
@@ -25,85 +11,40 @@ import {
   CardShell,
 } from './card-shell';
 
-interface AuditTrailCardProps {
-  replay?: GameReplayRecord;
-  streamedMessages?: StreamedAuditMessageRecord[];
-  selectedRound?: number;
+export interface AuditTrailCardProps {
+  inProgressLabel?: string;
   isFetching: boolean;
   isTurnFlowInProgress: boolean;
-  inProgressLabel?: string;
   latestRunSummary: string;
+  viewModel: AuditTrailViewModel;
 }
 
 export function AuditTrailCard({
-  replay,
-  streamedMessages = [],
-  selectedRound,
+  inProgressLabel,
   isFetching,
   isTurnFlowInProgress,
-  inProgressLabel,
   latestRunSummary,
+  viewModel,
 }: AuditTrailCardProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<ReplayFilter>('all');
-  const [activeWindow, setActiveWindow] = useState<ReplayWindow>('all');
-  const [activeRoundWindow, setActiveRoundWindow] =
-    useState<ReplayRoundWindow>('all');
-  const [animatedEventIds, setAnimatedEventIds] = useState<string[]>([]);
-  const timelineScrollRef = useRef<HTMLDivElement | null>(null);
-  const previousVisibleEventIds = useRef<string[]>([]);
-
   const {
-    eventsByRound,
-    mergedEvents,
-    visibleEvents,
-    visibleStreamedMessages,
-  } = createAuditTrailViewData({
-    replay,
-    streamedMessages,
-    selectedRound,
     activeFilter,
-    activeWindow,
     activeRoundWindow,
-  });
-
-  useEffect(() => {
-    const visibleAnimationKeys = visibleEvents.map(
-      (event) => event.animationKey ?? event.id,
-    );
-
-    if (!isExpanded) {
-      previousVisibleEventIds.current = visibleAnimationKeys;
-      return;
-    }
-
-    const previousIds = new Set(previousVisibleEventIds.current);
-    const appendedEventIds = visibleAnimationKeys.filter(
-      (eventId) => !previousIds.has(eventId),
-    );
-
-    previousVisibleEventIds.current = visibleAnimationKeys;
-
-    if (appendedEventIds.length === 0) {
-      return;
-    }
-
-    setAnimatedEventIds(appendedEventIds);
-    timelineScrollRef.current?.scrollTo({
-      top: timelineScrollRef.current.scrollHeight,
-      behavior: 'smooth',
-    });
-
-    const timer = window.setTimeout(() => {
-      setAnimatedEventIds((current) =>
-        current.filter((eventId) => !appendedEventIds.includes(eventId)),
-      );
-    }, 700);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [isExpanded, visibleEvents]);
+    activeWindow,
+    animatedEventIds,
+    eventsByRound,
+    filterOptions,
+    hasReplayActivity,
+    isExpanded,
+    mergedEventCount,
+    roundWindowOptions,
+    setActiveFilter,
+    setActiveRoundWindow,
+    setActiveWindow,
+    timelineScrollRef,
+    toggleExpanded,
+    visibleEventCount,
+    windowOptions,
+  } = viewModel;
 
   return (
     <CardShell className="replay-panel">
@@ -112,16 +53,16 @@ export function AuditTrailCard({
         title="Audit Trail"
         actions={
           <>
-            {replay || visibleStreamedMessages.length > 0 ? (
+            {hasReplayActivity ? (
               <span className="status-chip muted">
-                {visibleEvents.length} / {mergedEvents.length} events
+                {visibleEventCount} / {mergedEventCount} events
               </span>
             ) : null}
             <CardCollapseButton
               isExpanded={isExpanded}
               expandLabel="Maximise audit trail"
               collapseLabel="Minimise audit trail"
-              onToggle={() => setIsExpanded((current) => !current)}
+              onToggle={toggleExpanded}
             />
           </>
         }
@@ -143,18 +84,18 @@ export function AuditTrailCard({
 
           <div className="replay-toolbar">
             <div className="filter-row">
-              {replayFilters.map((filter) => (
+              {filterOptions.map((filter) => (
                 <button
-                  key={filter}
+                  key={filter.value}
                   className={
-                    filter === activeFilter
+                    filter.value === activeFilter
                       ? 'filter-chip active'
                       : 'filter-chip'
                   }
                   type="button"
-                  onClick={() => setActiveFilter(filter)}
+                  onClick={() => setActiveFilter(filter.value)}
                 >
-                  {filter}
+                  {filter.label}
                 </button>
               ))}
             </div>
@@ -167,10 +108,11 @@ export function AuditTrailCard({
                   setActiveWindow(event.target.value as ReplayWindow)
                 }
               >
-                <option value="5">Last 5</option>
-                <option value="10">Last 10</option>
-                <option value="20">Last 20</option>
-                <option value="all">All</option>
+                {windowOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </label>
 
@@ -182,10 +124,11 @@ export function AuditTrailCard({
                   setActiveRoundWindow(event.target.value as ReplayRoundWindow)
                 }
               >
-                <option value="1">Last 1 round</option>
-                <option value="3">Last 3 rounds</option>
-                <option value="5">Last 5 rounds</option>
-                <option value="all">All rounds</option>
+                {roundWindowOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </label>
           </div>
@@ -193,8 +136,8 @@ export function AuditTrailCard({
           {isFetching ? <p>Loading replay...</p> : null}
 
           <div ref={timelineScrollRef} className="timeline-scroll">
-            {replay || visibleStreamedMessages.length > 0 ? (
-              visibleEvents.length > 0 ? (
+            {hasReplayActivity ? (
+              visibleEventCount > 0 ? (
                 <div className="timeline">
                   {eventsByRound.map((group) => (
                     <section key={group.roundNumber} className="round-group">
@@ -204,36 +147,27 @@ export function AuditTrailCard({
                       </div>
 
                       {group.events.map((event) => {
-                        const eventDetail =
-                          event.isStreaming && event.type === 'message'
-                            ? (event.content ?? '')
-                            : getReplayEventDetail(event);
-                        const isMarketOpportunityEvent =
-                          event.type === 'market_opportunity_listed' ||
-                          event.type === 'market_opportunity_resolved';
-
                         return (
                           <article
                             key={event.id}
                             className={
-                              animatedEventIds.includes(
-                                event.animationKey ?? event.id,
-                              )
-                                ? `timeline-event${isMarketOpportunityEvent ? ' market-opportunity-event' : ''} timeline-event-enter`
-                                : `timeline-event${isMarketOpportunityEvent ? ' market-opportunity-event' : ''}`
+                              animatedEventIds.includes(event.animationId)
+                                ? `timeline-event${event.isMarketOpportunityEvent ? ' market-opportunity-event' : ''} timeline-event-enter`
+                                : `timeline-event${event.isMarketOpportunityEvent ? ' market-opportunity-event' : ''}`
                             }
                           >
                             <div className={`event-badge event-${event.type}`}>
-                              {event.type.replace(/_/gu, ' ')}
+                              {event.badgeLabel}
                             </div>
                             <div className="event-content">
                               <div className="event-topline">
-                                <strong>{getReplayEventLabel(event)}</strong>
-                                <span>{formatTimestamp(event.createdAt)}</span>
+                                <strong>{event.label}</strong>
+                                <span>{event.timestampLabel}</span>
                               </div>
-                              {eventDetail && !isMarketOpportunityEvent ? (
+                              {event.detail &&
+                              !event.isMarketOpportunityEvent ? (
                                 <p className="event-detail">
-                                  {eventDetail}
+                                  {event.detail}
                                   {event.isStreaming ? (
                                     <span
                                       className="streaming-cursor"
@@ -251,78 +185,30 @@ export function AuditTrailCard({
                               ) : null}
                               {event.type === 'market_opportunity_listed' ? (
                                 <dl className="event-meta-grid">
-                                  <div>
-                                    <dt>Risk</dt>
-                                    <dd>{event.opportunityRiskLevel}</dd>
-                                  </div>
-                                  <div>
-                                    <dt>Window</dt>
-                                    <dd>
-                                      R{event.listedRound} to R
-                                      {event.settlementRound}
-                                    </dd>
-                                  </div>
-                                  <div>
-                                    <dt>Commitment</dt>
-                                    <dd>
-                                      {event.minCommitment &&
-                                      event.maxCommitment
-                                        ? `${formatCurrency(event.minCommitment)} - ${formatCurrency(event.maxCommitment)}`
-                                        : 'N/A'}
-                                    </dd>
-                                  </div>
-                                  <div>
-                                    <dt>Range</dt>
-                                    <dd>
-                                      {typeof event.worstCaseReturnBps ===
-                                        'number' &&
-                                      typeof event.bestCaseReturnBps ===
-                                        'number'
-                                        ? `${formatBasisPoints(event.worstCaseReturnBps)} to ${formatBasisPoints(event.bestCaseReturnBps)}`
-                                        : 'N/A'}
-                                    </dd>
-                                  </div>
+                                  {event.listedMeta.map((meta) => (
+                                    <div key={meta.label}>
+                                      <dt>{meta.label}</dt>
+                                      <dd>{meta.value}</dd>
+                                    </div>
+                                  ))}
                                 </dl>
                               ) : null}
                               {event.type === 'market_opportunity_resolved' ? (
                                 <>
                                   <dl className="event-meta-grid">
-                                    <div>
-                                      <dt>Participants</dt>
-                                      <dd>{event.participantCount ?? 0}</dd>
-                                    </div>
-                                    <div>
-                                      <dt>Total principal</dt>
-                                      <dd>
-                                        {event.totalPrincipal
-                                          ? formatCurrency(event.totalPrincipal)
-                                          : '0.00'}
-                                      </dd>
-                                    </div>
-                                    <div>
-                                      <dt>Net PnL</dt>
-                                      <dd>
-                                        {event.totalProfitOrLoss
-                                          ? formatSignedCurrency(
-                                              event.totalProfitOrLoss,
-                                            )
-                                          : '0.00'}
-                                      </dd>
-                                    </div>
-                                    <div>
-                                      <dt>Window</dt>
-                                      <dd>
-                                        R{event.listedRound} to R
-                                        {event.settlementRound}
-                                      </dd>
-                                    </div>
+                                    {event.resolvedMeta.map((meta) => (
+                                      <div key={meta.label}>
+                                        <dt>{meta.label}</dt>
+                                        <dd>{meta.value}</dd>
+                                      </div>
+                                    ))}
                                   </dl>
                                   <div className="event-participants">
-                                    {event.participantSettlements?.length ? (
-                                      event.participantSettlements.map(
+                                    {event.participantRows.length ? (
+                                      event.participantRows.map(
                                         (participant) => (
                                           <div
-                                            key={`${event.id}-${participant.ownerAgentId}`}
+                                            key={participant.key}
                                             className="event-participant-row"
                                           >
                                             <strong>
@@ -330,15 +216,11 @@ export function AuditTrailCard({
                                             </strong>
                                             <span>
                                               Principal{' '}
-                                              {formatCurrency(
-                                                participant.principal,
-                                              )}
+                                              {participant.principalLabel}
                                             </span>
                                             <span>
                                               PnL{' '}
-                                              {formatSignedCurrency(
-                                                participant.profitOrLoss,
-                                              )}
+                                              {participant.profitOrLossLabel}
                                             </span>
                                           </div>
                                         ),
@@ -351,12 +233,7 @@ export function AuditTrailCard({
                                   </div>
                                 </>
                               ) : null}
-                              <p className="event-meta">
-                                Round {event.roundNumber ?? selectedRound ?? 0}
-                                {event.turnNumber
-                                  ? ` / Turn ${event.turnNumber}`
-                                  : ''}
-                              </p>
+                              <p className="event-meta">{event.roundLabel}</p>
                             </div>
                           </article>
                         );

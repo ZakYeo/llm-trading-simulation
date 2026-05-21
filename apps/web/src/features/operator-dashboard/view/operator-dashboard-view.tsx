@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 import { AuditTrailCard } from '../../../components/audit-trail-card';
 import { BalancesCard } from '../../../components/balances-card';
 import { MarketVisibilityCard } from '../../../components/market-visibility-card';
@@ -7,8 +9,18 @@ import { TreasuryCard } from '../../../components/treasury-card';
 import { HelpModal } from './help-modal';
 import { useOperatorDashboardViewModel } from '../view-model/use-operator-dashboard-view-model';
 
+function createDashboardCardProps(shouldAnimate: boolean, delay: string) {
+  return {
+    className: shouldAnimate
+      ? 'dashboard-card session-card-enter'
+      : 'dashboard-card',
+    style: { '--card-enter-delay': delay } as CSSProperties,
+  };
+}
+
 export function OperatorDashboardView() {
   const viewModel = useOperatorDashboardViewModel();
+  const shouldAnimateWorkspaceCards = viewModel.workspace.shouldAnimateCards;
 
   return (
     <main className="app-shell">
@@ -87,14 +99,18 @@ export function OperatorDashboardView() {
           <div className="connected-workspace">
             <div className="workspace-main-lane">
               <div
-                className={viewModel.workspace.cards.operate.className}
-                style={viewModel.workspace.cards.operate.style}
+                {...createDashboardCardProps(
+                  shouldAnimateWorkspaceCards,
+                  '0ms',
+                )}
               >
                 <OperateCard {...viewModel.workspace.operate} />
               </div>
               <div
-                className={viewModel.workspace.cards.auditTrail.className}
-                style={viewModel.workspace.cards.auditTrail.style}
+                {...createDashboardCardProps(
+                  shouldAnimateWorkspaceCards,
+                  '160ms',
+                )}
               >
                 <AuditTrailCard {...viewModel.workspace.auditTrail} />
               </div>
@@ -102,8 +118,10 @@ export function OperatorDashboardView() {
 
             <aside className="workspace-side-lane">
               <div
-                className={viewModel.workspace.cards.balances.className}
-                style={viewModel.workspace.cards.balances.style}
+                {...createDashboardCardProps(
+                  shouldAnimateWorkspaceCards,
+                  '320ms',
+                )}
               >
                 <BalancesCard
                   accounts={viewModel.workspace.balanceAccounts}
@@ -111,8 +129,10 @@ export function OperatorDashboardView() {
                 />
               </div>
               <div
-                className={viewModel.workspace.cards.treasury.className}
-                style={viewModel.workspace.cards.treasury.style}
+                {...createDashboardCardProps(
+                  shouldAnimateWorkspaceCards,
+                  '480ms',
+                )}
               >
                 <TreasuryCard
                   treasury={viewModel.workspace.treasury}
@@ -120,8 +140,10 @@ export function OperatorDashboardView() {
                 />
               </div>
               <div
-                className={viewModel.workspace.cards.market.className}
-                style={viewModel.workspace.cards.market.style}
+                {...createDashboardCardProps(
+                  shouldAnimateWorkspaceCards,
+                  '640ms',
+                )}
               >
                 <MarketVisibilityCard
                   market={viewModel.workspace.market}

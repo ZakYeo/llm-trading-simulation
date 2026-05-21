@@ -6,22 +6,8 @@ import {
   type AgentSessionEventRecord,
   type GameReplayRecord,
 } from '../../../lib/api';
-
-export interface StreamedAuditMessageRecord {
-  streamId: string;
-  gameSessionId: string;
-  roundNumber: number;
-  turnNumber: number;
-  senderAgentId: string;
-  senderAgentName: string;
-  recipientAgentId: string | null;
-  recipientAgentName?: string;
-  visibility: 'public' | 'private';
-  content: string;
-  occurredAt: string;
-  status: 'streaming' | 'completed';
-  messageId?: string;
-}
+import type { StreamedAuditMessageRecord } from '../model/audit-trail';
+export type { StreamedAuditMessageRecord } from '../model/audit-trail';
 
 interface UseSessionEventsInput {
   queryClient: {
