@@ -1,4 +1,4 @@
-import type { GameReplayRecord } from '../../../lib/api';
+import type { GameReplayRecord } from '@llm-sim/shared-types';
 import {
   formatBasisPoints,
   formatCurrency,

@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import eslintConfigPrettier from 'eslint-config-prettier';
+import webArchitecture from './scripts/web-architecture-rule.mjs';
 
 export default tseslint.config(
   {
@@ -9,6 +10,12 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   eslintConfigPrettier,
+  {
+    files: ['apps/web/src/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.*', '**/*.spec.*'],
+    plugins: { architecture: { rules: { mvvm: webArchitecture } } },
+    rules: { 'architecture/mvvm': 'error' },
+  },
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {

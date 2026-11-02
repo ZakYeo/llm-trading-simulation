@@ -1,6 +1,6 @@
 import type { AgentPersonalityProfile } from '@llm-sim/shared-types';
 
-import type { GameSessionRecord } from '../../../lib/api';
+import type { GameSessionRecord } from '@llm-sim/shared-types';
 import { formatBasisPoints, formatCurrency } from '../../../lib/formatters';
 
 export interface BalanceAccountViewData {

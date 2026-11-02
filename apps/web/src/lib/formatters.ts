@@ -1,4 +1,4 @@
-import type { GameReplayRecord } from './api';
+import type { GameReplayRecord } from '@llm-sim/shared-types';
 
 export function formatCurrency(value: string) {
   const amount = Number.parseFloat(value);
