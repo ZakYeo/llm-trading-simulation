@@ -11,7 +11,7 @@ import type {
 } from '../../session-overview/model/session-overview';
 import { createEventDetail } from '../../audit-trail/model/event-detail';
 import type { AuditTrailTimelineEvent } from '../../audit-trail/model/audit-trail';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { workspaceTabs, type DetailContent } from '../model/workspace';
 import { useOperatorDashboardViewModel } from './use-operator-dashboard-view-model';
 import { useTheme } from './use-theme';
@@ -20,6 +20,9 @@ export function useWorkspaceViewModel() {
   const dashboard = useOperatorDashboardViewModel();
   const theme = useTheme();
   const [detail, setDetail] = useState<DetailContent | null>(null);
+  useEffect(() => {
+    setDetail(null);
+  }, [dashboard.navigation.sessionId, dashboard.navigation.section]);
   return {
     ...dashboard,
     theme,
@@ -33,7 +36,6 @@ export function useWorkspaceViewModel() {
     inspectPosition: (position: MarketPositionViewData) =>
       setDetail(createPositionDetail(position, dashboard.topbar.currentRound)),
     detail,
-    showDetail: setDetail,
     inspectEvent: (event: AuditTrailTimelineEvent) =>
       setDetail(createEventDetail(event)),
     closeDetail: () => setDetail(null),

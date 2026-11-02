@@ -92,235 +92,183 @@
   margin-top: 8px;
 }
 
+.read-only-note {
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: 0.78rem;
+  margin-bottom: 16px;
+}
+.finance-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
 .ledger-section {
-  margin-bottom: 36px;
-  border-top: 1px solid var(--line);
-  padding-top: 24px;
+  padding: 20px;
+  margin-bottom: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.ledger-section > .section-heading {
+  margin-bottom: 16px;
+}
+.ledger-section .balance-card {
+  background: var(--surface);
+  padding: 16px;
+}
+.balance-card dl > div,
+.custody-totals > div {
+  background: var(--inset);
+  padding: 12px;
+  border-radius: 6px;
   min-width: 0;
 }
-
-.ledger-section > .section-heading {
-  margin-bottom: 24px;
+.balance-card dd,
+.custody-totals dd,
+.context-amount {
+  font-family: inherit;
+  font-weight: 600;
+}
+.custody-totals {
+  gap: 8px;
+}
+.custody-totals dd {
+  font-size: 1rem;
+}
+.custody-breakdown {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 16px;
+  background: var(--inset);
+  padding: 14px;
+  gap: 12px;
+}
+.market-shell {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+  margin-top: 16px;
+}
+.market-card-list {
+  display: grid;
+  gap: 12px;
+}
+.market-card {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--inset);
+  min-width: 0;
+}
+.market-card h3 {
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+.market-card .section-heading > span {
+  font-size: 0.72rem;
+}
+.market-terms {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.market-terms dd {
+  font-size: 0.78rem;
+  margin-top: 4px;
+}
+.market-terms dt {
+  font-size: 0.7rem;
 }
 
-.ledger-section .balance-card {
-  padding: 20px;
-  background: var(--surface);
+.risk-high {
+  color: var(--warning);
+}
+.risk-low,
+.position-settled {
+  color: var(--positive);
+}
+.position-open {
+  color: var(--accent);
+}
+.agent-balance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: 16px;
+}
+.balance-card {
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: 6px;
 }
-
+.balance-card header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.balance-card header > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.balance-card header strong,
+.balance-card header span {
+  display: block;
+}
+.balance-card header span {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
 .balance-card header button {
   margin-left: auto;
 }
-
+.balance-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.balance-card dd {
+  font-size: 0.9rem;
+}
 .custody-totals {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
 }
-
 .custody-totals dd {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 1.35rem;
   margin-top: 4px;
 }
-
 .custody-breakdown {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 20px;
-  margin-top: 24px;
-  padding: 20px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: var(--surface);
 }
-
 .custody-breakdown dd {
   margin-top: 8px;
   font-size: 0.9rem;
 }
-
-.ledger-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  table-layout: fixed;
-}
-
-.ledger-table th,
-.ledger-table td {
-  padding: 18px 14px 18px 0;
-  border-bottom: 1px solid var(--line);
-  font-size: 0.85rem;
-  vertical-align: top;
-  font-weight: 400;
-  overflow-wrap: anywhere;
-}
-
-.ledger-table thead th {
-  color: var(--muted);
-  font-size: 0.72rem;
-  padding-top: 0;
-}
-
-.ledger-table th:first-child {
-  width: 36%;
-}
-
-.positions-table th:first-child {
-  width: 30%;
-}
-
-.ledger-table th:last-child {
-  width: 100px;
-}
-
-.table-summary {
-  font-size: 0.75rem;
-  color: var(--muted);
-  margin-top: 6px;
-}
-
-.cell-label {
-  display: none;
-}
-
-@media (max-width: 767px) {
-  .custody-totals,
-  .custody-breakdown {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px;
+@media (min-width: 1440px) {
+  .finance-summary {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    align-items: start;
   }
-
+}
+@media (max-width: 1100px) {
+  .market-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 767px) {
+  .ledger-section {
+    padding: 16px;
+  }
+  .custody-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .custody-totals > div:first-child {
     grid-column: 1/-1;
-  }
-
-  .ledger-table,
-  .ledger-table tbody {
-    display: block;
-  }
-
-  .ledger-table thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-  }
-
-  .ledger-table tr {
-    display: grid;
-    gap: 12px;
-    padding: 20px 0;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .ledger-table th,
-  .ledger-table td {
-    display: block;
-    width: auto !important;
-    border: 0;
-    padding: 0;
-  }
-
-  .ledger-table td {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 16px;
-  }
-
-  .ledger-table td:last-child {
-    display: block;
-  }
-
-  .cell-label {
-    display: block;
-    color: var(--muted);
-    font-size: 0.75rem;
-  }
-
-  .ledger-table .text-button {
-    min-height: 44px;
-  }
-}
-
-.event-detail,
-.event-label,
-.message-attribution,
-.session-identity,
-.account-link {
-  overflow-wrap: anywhere;
-}
-
-.session-identity > * {
-  min-width: 0;
-  max-width: 100%;
-}
-
-.app-header {
-  min-height: 88px;
-  padding-block: 18px;
-}
-
-.operate-toolbar {
-  padding-block: 16px;
-}
-
-.advance-controls {
-  grid-template-columns: auto minmax(0, 1fr);
-  max-width: 440px;
-  gap: 6px 12px;
-  align-items: center;
-}
-
-.advance-controls small {
-  grid-column: 1/-1;
-}
-
-.round-options {
-  position: relative;
-}
-
-.round-options summary {
-  font-size: 0.8rem;
-}
-
-.round-options[open] .field {
-  position: absolute;
-  z-index: 5;
-  top: 100%;
-  right: 0;
-  width: min(280px, calc(100vw - 32px));
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--surface);
-  box-shadow: 0 8px 24px #0002;
-}
-
-.run-status {
-  min-height: 36px;
-  padding-block: 6px;
-}
-
-.workspace-nav {
-  margin-top: 8px;
-}
-
-.workspace-nav a {
-  padding-block: 12px;
-}
-
-@media (max-width: 767px) {
-  .advance-controls {
-    max-width: none;
-  }
-
-  .round-options[open] .field {
-    right: auto;
-    left: 0;
   }
 }

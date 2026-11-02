@@ -1,3 +1,4 @@
+import { ResponsiveDisclosure } from './execution-disclosure';
 import { Skeleton } from '../../../shared/ui/skeleton';
 import { Disclosure } from '../../../shared/ui/disclosure';
 import { FinancialContext } from '../../session-overview/view/financial-context';
@@ -156,10 +157,9 @@ export function OperatorDashboardView() {
               ))}
             </nav>
             <div className="workspace-layout">
-              <details className="execution-disclosure" open>
-                <summary>Run turns &amp; settlement</summary>
+              <ResponsiveDisclosure>
                 <OperateCard {...vm.workspace.operate} />
-              </details>
+              </ResponsiveDisclosure>
               <section
                 className="workspace-panel"
                 role="region"

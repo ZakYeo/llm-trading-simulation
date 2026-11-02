@@ -1,6 +1,6 @@
 .startup-page-shell {
-  max-width: 1040px;
-  margin: 60px auto;
+  max-width: 1200px;
+  margin: 32px auto;
 }
 
 .page-intro {
@@ -62,8 +62,10 @@
 }
 
 .startup-agent-card {
-  border-top: 1px solid var(--line);
-  padding-top: 24px;
+  border: 1px solid var(--line);
+  padding: 16px;
+  background: var(--inset);
+  border-radius: 8px;
   display: grid;
   gap: 16px;
   min-width: 0;
@@ -78,121 +80,6 @@
   width: min(760px, 100%);
   max-height: calc(100dvh - 48px);
   overflow: auto;
-}
-
-.help-grid {
-  display: grid;
-  gap: 20px;
-}
-
-.help-card p {
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-@media (max-width: 1199px) {
-  .simulation-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .context-column {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-  }
-
-  .session-identity {
-    order: 3;
-    flex-basis: 100%;
-  }
-}
-
-@media (max-width: 767px) {
-  .app-header {
-    gap: 16px;
-  }
-
-  .header-actions {
-    gap: 4px;
-  }
-
-  .theme-control select {
-    max-width: 135px;
-  }
-
-  .wordmark {
-    font-size: 1rem;
-  }
-
-  .brand-mark {
-    display: none;
-  }
-
-  .operate-toolbar {
-    align-items: stretch;
-    gap: 16px;
-  }
-
-  .run-controls,
-  .advance-controls {
-    width: 100%;
-    max-width: none;
-    margin: 0;
-  }
-
-  .run-controls .action-button {
-    flex: 1 1 100%;
-  }
-
-  .turn-preset-row {
-    flex: 1;
-  }
-
-  .turn-preset {
-    flex: 1;
-  }
-
-  .workspace-nav {
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .workspace-panel {
-    padding-top: 28px;
-  }
-
-  .panel {
-    padding: 18px;
-  }
-
-  .startup-page-shell {
-    margin-top: 36px;
-  }
-
-  .startup-parameter-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .replay-window-field {
-    flex: 1;
-    max-width: none;
-  }
-
-  .context-column {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .detail-drawer {
-    width: 100%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation: none !important;
-    transition: none !important;
-    scroll-behavior: auto !important;
-  }
 }
 
 .connect-section {
@@ -214,7 +101,7 @@
 
 .setup-section {
   border-top: 1px solid var(--line);
-  padding-top: 32px;
+  padding-top: 24px;
 }
 
 .setup-section-heading {
@@ -313,5 +200,25 @@ summary {
 
   .startup-roster-header .setup-section-heading {
     margin-bottom: 0;
+  }
+}
+.help-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.help-card {
+  padding: 20px;
+  background: var(--inset);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.help-card p {
+  font-size: 0.8rem;
+}
+
+@media (max-width: 767px) {
+  .startup-parameter-grid,
+  .help-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
