@@ -88,6 +88,9 @@ for (const theme of ['light', 'dark'])
       const initial = populatedState();
       await mockSessionApiScenario(page, { initial });
       await page.goto('/');
+      await page
+        .getByRole('button', { name: 'Appearance', exact: true })
+        .click();
       await page.getByLabel('Color theme').selectOption(theme);
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
       await fits(page);

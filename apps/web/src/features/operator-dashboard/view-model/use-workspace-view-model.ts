@@ -25,10 +25,6 @@ export function useWorkspaceViewModel() {
     theme,
     tabs: workspaceTabs,
     activeTab: dashboard.navigation.section,
-    setActiveTab: (tab: WorkspaceTab) => {
-      setDetail(null);
-      window.location.hash = dashboard.navigation.href(tab);
-    },
     upcomingSettlements: createUpcomingSettlements(dashboard.workspace.market),
     inspectAccount: (account: BalanceAccountViewData) =>
       setDetail(createAccountDetail(account)),

@@ -37,7 +37,7 @@ export function useOperatorDashboardViewModel() {
     StreamedAuditMessageRecord[]
   >([]);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const [isStartupVisible, setIsStartupVisible] = useState(true);
+  const [isStartupVisible, setIsStartupVisible] = useState(!selectedSessionId);
 
   const sessionQuery = useQuery({
     queryKey: ['game-session', selectedSessionId],

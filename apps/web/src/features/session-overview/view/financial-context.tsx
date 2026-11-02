@@ -6,13 +6,9 @@ export function FinancialContext({ vm }: { vm: WorkspaceViewModel }) {
       <section className="context-section">
         <div className="section-heading">
           <h2>At a glance</h2>
-          <button
-            type="button"
-            className="text-button"
-            onClick={() => vm.setActiveTab('Finances')}
-          >
+          <a className="text-button" href={vm.navigation.href('Finances')}>
             Full ledger ↗
-          </button>
+          </a>
         </div>
         <div className="account-summaries">
           {vm.workspace.balanceAccounts.map((account) => (

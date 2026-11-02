@@ -45,6 +45,7 @@ test('@smoke connects, changes views and opens help', async ({
   await expect(
     page.getByRole('link', { name: 'Conversation', exact: true }),
   ).toHaveAttribute('aria-current', 'page');
+  await page.getByRole('button', { name: 'Session menu' }).click();
   await expect(
     page.getByRole('button', { name: 'Change session' }),
   ).toBeVisible();

@@ -21,6 +21,7 @@ test('keeps session and turn controls while switching views and themes', async (
   await expect(
     page.getByRole('button', { name: 'Run next 4 turns' }),
   ).toBeVisible();
+  await page.getByRole('button', { name: 'Appearance', exact: true }).click();
   await page.getByLabel('Color theme').selectOption('dark');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.reload();

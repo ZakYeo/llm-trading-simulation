@@ -1,3 +1,4 @@
+import { Disclosure } from '../../../shared/ui/disclosure';
 import { FinancialContext } from '../../session-overview/view/financial-context';
 import { SimulationJournal } from '../../audit-trail/view/simulation-journal';
 import { AuditTrailCard } from '../../../components/audit-trail-card';
@@ -28,34 +29,71 @@ export function OperatorDashboardView() {
           </span>
         </a>
         {vm.workspace.isVisible && (
-          <div className="session-identity">
-            <span className="topbar-metric">
-              <span className="sr-only">Session</span>
-              <strong>
-                {vm.topbar.selectedSessionName ?? 'Loading session…'}
-              </strong>
-            </span>
-            <span className="topbar-metric">
-              <span className="sr-only">Round</span>Round{' '}
-              {vm.topbar.currentRound}
-            </span>
-            <span className="session-status">{vm.topbar.status}</span>
-          </div>
+          <Disclosure
+            accessibleName="Session menu"
+            label={
+              <span className="session-identity">
+                <span className="status-dot" aria-hidden="true" />{' '}
+                <strong>
+                  {vm.topbar.selectedSessionName ?? 'Loading session…'}
+                </strong>
+                <span>
+                  Round {vm.topbar.currentRound} · {vm.topbar.status}
+                </span>
+              </span>
+            }
+          >
+            <p className="eyebrow">Current session</p>
+            <strong>
+              {vm.topbar.selectedSessionName ?? 'Loading session…'}
+            </strong>
+            <p className="session-id">{vm.sessionSetup.selectedSessionId}</p>
+            {vm.sessionSetup.mode === 'collapsed' && (
+              <label className="field">
+                <span>Connect to session</span>
+                <select
+                  value={vm.sessionSetup.selectedSessionId}
+                  onChange={(event) =>
+                    vm.sessionSetup.onSelectedSessionIdChange(
+                      event.target.value,
+                    )
+                  }
+                >
+                  {vm.sessionSetup.availableSessions.map((session) => (
+                    <option key={session.value} value={session.value}>
+                      {session.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <div className="disclosure-actions">
+              <button type="button" onClick={vm.sessionSetup.onShowStartupForm}>
+                Change session
+              </button>
+              <button type="button" onClick={vm.sessionSetup.onStartNewSession}>
+                New session +
+              </button>
+            </div>
+          </Disclosure>
         )}
         <div className="header-actions">
-          <label className="theme-control">
-            <span className="sr-only">Color theme</span>
-            <select
-              value={vm.theme.preference}
-              onChange={(event) =>
-                vm.theme.setPreference(event.target.value as ThemePreference)
-              }
-            >
-              <option value="system">System theme</option>
-              <option value="light">Light theme</option>
-              <option value="dark">Dark theme</option>
-            </select>
-          </label>
+          <Disclosure label="Appearance">
+            <p className="eyebrow">Appearance</p>
+            <label className="field">
+              <span>Color theme</span>
+              <select
+                value={vm.theme.preference}
+                onChange={(event) =>
+                  vm.theme.setPreference(event.target.value as ThemePreference)
+                }
+              >
+                <option value="system">System theme</option>
+                <option value="light">Light theme</option>
+                <option value="dark">Dark theme</option>
+              </select>
+            </label>
+          </Disclosure>
           <button
             className="quiet-button"
             type="button"
@@ -85,7 +123,9 @@ export function OperatorDashboardView() {
           </section>
         ) : (
           <>
-            <SessionSetupCard {...vm.sessionSetup} />
+            {vm.sessionSetup.mode === 'expanded' && (
+              <SessionSetupCard {...vm.sessionSetup} />
+            )}
             {vm.workspace.isLoading && <p role="status">Loading session…</p>}
             {vm.workspace.loadError && (
               <p className="error-copy" role="alert">
@@ -98,7 +138,11 @@ export function OperatorDashboardView() {
               </p>
             )}
             <OperateCard {...vm.workspace.operate} />
-            <div className="run-status topbar-metric" role="status">
+            <div
+              className="run-status"
+              role="status"
+              aria-label="Latest activity"
+            >
               <span className="sr-only">Latest activity</span>
               {vm.workspace.auditTrail.isTurnFlowInProgress ? (
                 <span className="live-run-banner">

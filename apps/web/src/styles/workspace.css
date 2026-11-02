@@ -496,3 +496,123 @@
   color: var(--muted);
   font-size: 0.75rem;
 }
+
+.header-disclosure {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+}
+.header-disclosure > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--ink);
+  font-size: 0.8rem;
+}
+.header-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.header-disclosure > summary > span:first-child {
+  min-width: 0;
+}
+.disclosure-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  left: 0;
+  width: min(380px, calc(100vw - 24px));
+  padding: 20px;
+  display: grid;
+  gap: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 12px 36px #0002;
+  overflow-wrap: anywhere;
+}
+.header-actions .disclosure-panel {
+  left: auto;
+  right: 0;
+  width: min(260px, calc(100vw - 24px));
+}
+.disclosure-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.disclosure-actions > button {
+  flex: 1;
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  background: var(--positive);
+  border-radius: 50%;
+}
+.session-id {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.session-identity {
+  gap: 6px;
+}
+.app-header {
+  gap: 16px;
+  min-height: 76px;
+  padding-block: 14px;
+}
+.brand-mark {
+  width: 30px;
+  height: 32px;
+  font-size: 1rem;
+}
+.wordmark {
+  font-size: 0.95rem;
+}
+.startup-page-shell {
+  margin: 32px auto;
+  max-width: 1200px;
+}
+.startup-agent-card {
+  padding: 16px;
+  background: var(--inset);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.setup-section {
+  padding-top: 24px;
+}
+.startup-section-heading {
+  margin-bottom: 16px;
+}
+@media (max-width: 767px) {
+  .app-header > .header-disclosure {
+    order: 3;
+    flex: 1 1 100%;
+  }
+  .app-header > .header-disclosure > summary {
+    width: 100%;
+  }
+  .wordmark {
+    font-size: 0.8rem;
+  }
+  .header-actions {
+    gap: 0;
+  }
+  .header-actions > .quiet-button {
+    padding-inline: 8px;
+  }
+  .header-actions .header-disclosure > summary {
+    gap: 4px;
+    padding-inline: 8px;
+  }
+  .disclosure-panel {
+    max-height: calc(100dvh - 160px);
+    overflow-y: auto;
+  }
+}

@@ -71,7 +71,7 @@ export function SessionSetupCard(props: SessionSetupCardProps) {
       </div>
     );
   return (
-    <div className="session-startup-card">
+    <div className="session-startup-card panel">
       {props.hasActiveSession && (
         <div className="startup-active-row">
           <h2>Session settings</h2>
@@ -135,18 +135,6 @@ export function SessionSetupCard(props: SessionSetupCardProps) {
                 props.onInitialBalanceChange(event.target.value)
               }
               placeholder="100.0000"
-            />
-          </label>
-          <label className="field">
-            <span>Treasury interest per round (bps)</span>
-            <input
-              type="number"
-              min={0}
-              step={1}
-              value={props.interestRateBps}
-              onChange={(event) =>
-                props.onInterestRateBpsChange(event.target.value)
-              }
             />
           </label>
         </div>
