@@ -23,6 +23,7 @@ export function OperateCard(props: OperateCardProps) {
           </span>
           <input
             type="number"
+            aria-label="Turn count"
             min={1}
             max={10}
             value={props.turnCount}

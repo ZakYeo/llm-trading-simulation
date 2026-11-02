@@ -92,6 +92,7 @@ for (const theme of ['light', 'dark'])
         .getByRole('button', { name: 'Appearance', exact: true })
         .click();
       await page.getByLabel('Color theme').selectOption(theme);
+      await page.keyboard.press('Escape');
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
       await fits(page);
       await mkdir('tmp/ui-redesign', { recursive: true });

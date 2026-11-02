@@ -1,0 +1,85 @@
+.skeleton-region {
+  min-width: 0;
+}
+.skeleton-content {
+  display: grid;
+  gap: 16px;
+}
+.skeleton-card {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  display: grid;
+  gap: 14px;
+}
+.skeleton-line {
+  display: block;
+  height: 16px;
+  border-radius: 4px;
+  background: linear-gradient(
+    100deg,
+    var(--inset) 20%,
+    var(--line) 50%,
+    var(--inset) 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+.skeleton-heading {
+  height: 24px;
+  width: 45%;
+}
+.skeleton-short {
+  width: 65%;
+}
+.header-disclosure[open] .disclosure-panel,
+.dialog[open],
+.workspace-panel,
+.timeline-event {
+  animation: reveal 180ms ease-out;
+}
+button,
+a,
+summary {
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+.streaming-cursor {
+  color: var(--accent);
+  animation: typing 1s ease-in-out infinite;
+}
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes typing {
+  50% {
+    opacity: 0.25;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

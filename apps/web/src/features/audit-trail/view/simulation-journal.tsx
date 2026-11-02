@@ -1,3 +1,4 @@
+import { Skeleton } from '../../../shared/ui/skeleton';
 import type { AuditTrailTimelineEvent } from '../model/audit-trail';
 import type { SimulationJournalViewModel } from '../view-model/use-simulation-journal';
 import { EventEntry } from './event-entry';
@@ -6,10 +7,12 @@ export function SimulationJournal({
   viewModel,
   onInspect,
   isFetching,
+  isLoading,
 }: {
   viewModel: SimulationJournalViewModel;
   onInspect: (event: AuditTrailTimelineEvent) => void;
   isFetching: boolean;
+  isLoading: boolean;
 }) {
   return (
     <section className="journal" aria-label="Simulation journal">
@@ -44,8 +47,12 @@ export function SimulationJournal({
           </label>
         </div>
       </header>
-      {isFetching && <p className="empty-copy">Updating activity…</p>}
-      {viewModel.groups.length === 0 ? (
+      {isFetching && !isLoading && (
+        <p className="empty-copy">Updating activity…</p>
+      )}
+      {isLoading ? (
+        <Skeleton label="Loading activity" />
+      ) : viewModel.groups.length === 0 ? (
         <div className="journal-empty">
           <span className="journal-empty-mark" aria-hidden="true">
             “

@@ -224,6 +224,7 @@ export function useOperatorDashboardViewModel() {
       interestRateBps,
       agentDrafts,
       canRemoveAgent,
+      isLoadingSessions: sessionsQuery.isPending,
       isCreating: createSessionMutation.isPending,
       createError: createSessionMutation.error?.message,
       sessionsError: sessionsQuery.error?.message,
@@ -244,12 +245,13 @@ export function useOperatorDashboardViewModel() {
     workspace: {
       isVisible: hasSelectedSession,
       isLoading: sessionQuery.isPending,
+      isLoadingReplay: replayQuery.isPending,
       loadError: sessionQuery.error?.message,
       replayError: replayQuery.error?.message,
       operate: {
         interestRateBps,
         onInterestRateBpsChange: setInterestRateBps,
-        selectedSessionId,
+        selectedSessionId: selectedSession?.id ?? '',
         currentRound: selectedSession?.currentRound,
         turnCount,
         isRunning: orchestrateMutation.isPending,
@@ -263,6 +265,7 @@ export function useOperatorDashboardViewModel() {
       journal,
       auditTrail: {
         viewModel: auditTrailViewModel,
+        isLoading: replayQuery.isPending,
         isFetching: replayQuery.isFetching,
         isTurnFlowInProgress,
         inProgressLabel,

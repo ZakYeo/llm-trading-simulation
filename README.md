@@ -126,11 +126,11 @@ out elsewhere.
 
 ## Using the redesigned workspace
 
-The dashboard has three views. **Simulation** follows the current round's conversation and actions, with account balances, custody totals, and the next settlements alongside it. Choose **All rounds** in the journal to read earlier activity. **Finances** contains the full account, custody, opportunity, and position ledger; open Details or Full terms to inspect an item. **History** keeps the complete audit trail and its category, event-count, and round-window filters independently of the journal.
+The dashboard has three linked views. **Conversation** follows the current round's conversation and actions, with account balances, custody totals, and the next settlements alongside it. Choose **All rounds** in the conversation to read earlier activity. **Finances** contains the full account, custody, opportunity, and position ledger; open Details or Full terms to inspect an item. **History** keeps the complete audit trail and its category, event-count, and round-window filters independently of the journal.
 
-Run controls remain available in every view. Turns do not advance the round. **Advance round settlement** applies custody interest and eligible market settlements; **Round options** contains the editable interest rate in basis points. This rate is used on advancement, not included in session creation.
+Each view has a direct URL (`#/sessions/:id/conversation`, `finances`, or `history`) and supports reloads and browser Back/Forward. Run controls remain available in every view; on narrow screens they sit in a collapsible region below the content. Turns do not advance the round. **Advance round settlement** applies custody interest and eligible market settlements; the settlement card contains the editable interest rate in basis points. This rate is used on advancement, not included in session creation.
 
-The theme selector supports Light, Dark, and System. Explicit choices persist in this browser. Layouts adapt from narrow portrait screens to wide desktops, and detail drawers become full-width dialogs on small screens. Dialogs support Escape and return keyboard focus to the opening control.
+The Appearance menu supports Light, Dark, and System. The Session menu contains saved-session switching, the session ID, and change/new-session actions. Explicit choices persist in this browser. Layouts adapt from narrow portrait screens to wide desktops, and detail drawers become full-width dialogs on small screens. Dialogs and header disclosures support Escape and return keyboard focus to the opening control. Initial requests show skeleton loading; background refreshes retain current content. Brief reveal and typing animations respect reduced-motion preferences.
 
 ### Frontend MVVM boundaries
 

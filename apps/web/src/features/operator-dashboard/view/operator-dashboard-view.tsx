@@ -1,3 +1,4 @@
+import { Skeleton } from '../../../shared/ui/skeleton';
 import { Disclosure } from '../../../shared/ui/disclosure';
 import { FinancialContext } from '../../session-overview/view/financial-context';
 import { SimulationJournal } from '../../audit-trail/view/simulation-journal';
@@ -16,11 +17,18 @@ export function OperatorDashboardView() {
   const vm = useWorkspaceViewModel();
   return (
     <div className="app-shell">
-      <a className="skip-link" href="#workspace">
+      <a
+        className="skip-link"
+        href="#workspace"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById('workspace')?.focus();
+        }}
+      >
         Skip to content
       </a>
       <header className="app-header">
-        <a className="wordmark" href="#workspace">
+        <a className="wordmark" href={vm.navigation.href('Conversation')}>
           <span className="brand-mark" aria-hidden="true">
             ↗
           </span>
@@ -126,7 +134,6 @@ export function OperatorDashboardView() {
             {vm.sessionSetup.mode === 'expanded' && (
               <SessionSetupCard {...vm.sessionSetup} />
             )}
-            {vm.workspace.isLoading && <p role="status">Loading session…</p>}
             {vm.workspace.loadError && (
               <p className="error-copy" role="alert">
                 Could not load this session: {vm.workspace.loadError}
@@ -174,70 +181,84 @@ export function OperatorDashboardView() {
                     vm.topbar.latestRunSummary || 'Ready when you are.'
                   )}
                 </div>
-                {vm.activeTab === 'Conversation' && (
-                  <div className="simulation-layout">
-                    <div>
+                {vm.workspace.isLoading && <Skeleton label="Loading session" />}
+                {!vm.workspace.isLoading &&
+                  !vm.workspace.loadError &&
+                  vm.activeTab === 'Conversation' && (
+                    <div className="simulation-layout">
+                      <div>
+                        <div className="view-intro">
+                          <p className="eyebrow">
+                            The conversation, in context
+                          </p>
+                          <h1>Conversation</h1>
+                          <p>
+                            Follow your agents as they negotiate, move funds,
+                            and take positions.
+                          </p>
+                        </div>
+                        {!vm.workspace.replayError && (
+                          <SimulationJournal
+                            viewModel={vm.workspace.journal}
+                            onInspect={vm.inspectEvent}
+                            isFetching={vm.workspace.auditTrail.isFetching}
+                            isLoading={vm.workspace.isLoadingReplay}
+                          />
+                        )}
+                      </div>
+                      <FinancialContext vm={vm} />
+                    </div>
+                  )}
+                {!vm.workspace.isLoading &&
+                  !vm.workspace.loadError &&
+                  vm.activeTab === 'Finances' && (
+                    <>
                       <div className="view-intro">
-                        <p className="eyebrow">The conversation, in context</p>
-                        <h1>Conversation</h1>
+                        <p className="eyebrow">Follow the money</p>
+                        <h1>Finances</h1>
                         <p>
-                          Follow your agents as they negotiate, move funds, and
-                          take positions.
+                          Balances, custody, and market exposure from the
+                          current session state.
                         </p>
                       </div>
-                      <SimulationJournal
-                        viewModel={vm.workspace.journal}
-                        onInspect={vm.inspectEvent}
-                        isFetching={vm.workspace.auditTrail.isFetching}
-                      />
-                    </div>
-                    <FinancialContext vm={vm} />
-                  </div>
-                )}
-                {vm.activeTab === 'Finances' && (
-                  <>
-                    <div className="view-intro">
-                      <p className="eyebrow">Follow the money</p>
-                      <h1>Finances</h1>
-                      <p>
-                        Balances, custody, and market exposure from the current
-                        session state.
+                      <p className="read-only-note">
+                        Read-only inspection · Agents choose their own trades
+                        and transfers.
                       </p>
-                    </div>
-                    <p className="read-only-note">
-                      Read-only inspection · Agents choose their own trades and
-                      transfers.
-                    </p>
-                    <div className="finance-summary">
-                      <BalancesCard
-                        accounts={vm.workspace.balanceAccounts}
-                        onInspect={vm.inspectAccount}
+                      <div className="finance-summary">
+                        <BalancesCard
+                          accounts={vm.workspace.balanceAccounts}
+                          onInspect={vm.inspectAccount}
+                        />
+                        <TreasuryCard treasury={vm.workspace.treasury} />
+                      </div>
+                      <MarketVisibilityCard
+                        market={vm.workspace.market}
+                        onInspectOpportunity={vm.inspectOpportunity}
+                        onInspectPosition={vm.inspectPosition}
                       />
-                      <TreasuryCard treasury={vm.workspace.treasury} />
-                    </div>
-                    <MarketVisibilityCard
-                      market={vm.workspace.market}
-                      onInspectOpportunity={vm.inspectOpportunity}
-                      onInspectPosition={vm.inspectPosition}
-                    />
-                  </>
-                )}
-                {vm.activeTab === 'History' && (
-                  <>
-                    <div className="view-intro">
-                      <p className="eyebrow">Every decision leaves a trace</p>
-                      <h1>History</h1>
-                      <p>
-                        Inspect the complete activity record, one round at a
-                        time.
-                      </p>
-                    </div>
-                    <AuditTrailCard
-                      {...vm.workspace.auditTrail}
-                      onInspect={vm.inspectEvent}
-                    />
-                  </>
-                )}
+                    </>
+                  )}
+                {!vm.workspace.isLoading &&
+                  !vm.workspace.loadError &&
+                  vm.activeTab === 'History' && (
+                    <>
+                      <div className="view-intro">
+                        <p className="eyebrow">Every decision leaves a trace</p>
+                        <h1>History</h1>
+                        <p>
+                          Inspect the complete activity record, one round at a
+                          time.
+                        </p>
+                      </div>
+                      {!vm.workspace.replayError && (
+                        <AuditTrailCard
+                          {...vm.workspace.auditTrail}
+                          onInspect={vm.inspectEvent}
+                        />
+                      )}
+                    </>
+                  )}
               </section>
             </div>
           </>

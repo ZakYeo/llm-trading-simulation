@@ -1,3 +1,4 @@
+import { Skeleton } from '../shared/ui/skeleton';
 import type { AgentDraft } from '../features/session-setup/model/agent-drafts';
 
 const bankerSliderFields = [
@@ -19,14 +20,13 @@ interface SessionSetupCardProps {
   availableSessions: Array<{ value: string; label: string }>;
   sessionName: string;
   initialBalance: string;
-  interestRateBps: string;
   agentDrafts: AgentDraft[];
   canRemoveAgent: boolean;
   isCreating: boolean;
+  isLoadingSessions: boolean;
   createError?: string;
   onSessionNameChange: (value: string) => void;
   onInitialBalanceChange: (value: string) => void;
-  onInterestRateBpsChange: (value: string) => void;
   onSelectedSessionIdChange: (value: string) => void;
   onAddAgentDraft: () => void;
   onRemoveAgentDraft: (draftId: string) => void;
@@ -91,7 +91,11 @@ export function SessionSetupCard(props: SessionSetupCardProps) {
         </div>
         <label className="field">
           <span>Connect to session</span>
+          {props.isLoadingSessions && (
+            <Skeleton label="Loading saved sessions" rows={1} />
+          )}
           <select
+            disabled={props.isLoadingSessions}
             value={props.selectedSessionId}
             onChange={(event) =>
               props.onSelectedSessionIdChange(event.target.value)

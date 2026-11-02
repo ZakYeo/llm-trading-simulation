@@ -1,3 +1,4 @@
+import { Skeleton } from '../shared/ui/skeleton';
 import type {
   AuditTrailViewModel,
   ReplayRoundWindow,
@@ -9,6 +10,7 @@ import { EventEntry } from '../features/audit-trail/view/event-entry';
 export interface AuditTrailCardProps {
   inProgressLabel?: string;
   isFetching: boolean;
+  isLoading?: boolean;
   isTurnFlowInProgress: boolean;
   latestRunSummary: string;
   viewModel: AuditTrailViewModel;
@@ -18,6 +20,7 @@ export function AuditTrailCard({
   viewModel: vm,
   onInspect,
   isFetching,
+  isLoading = false,
   isTurnFlowInProgress,
   inProgressLabel,
   latestRunSummary,
@@ -97,9 +100,13 @@ export function AuditTrailCard({
             ))}
           </div>
         </div>
-        {isFetching && <p className="empty-copy">Loading replay…</p>}
+        {isFetching && !isLoading && (
+          <p className="empty-copy">Loading replay…</p>
+        )}
         <div ref={vm.timelineScrollRef} className="timeline-scroll">
-          {vm.visibleEventCount > 0 ? (
+          {isLoading ? (
+            <Skeleton label="Loading activity" />
+          ) : vm.visibleEventCount > 0 ? (
             <table
               className="history-table"
               aria-label="Recorded events in order"
