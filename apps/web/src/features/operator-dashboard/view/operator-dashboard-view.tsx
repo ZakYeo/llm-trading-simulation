@@ -76,10 +76,26 @@ export function OperatorDashboardView() {
               </p>
             </div>
             <SessionSetupCard {...vm.sessionSetup} />
+            {vm.sessionSetup.sessionsError && (
+              <p className="error-copy" role="alert">
+                Could not load saved sessions: {vm.sessionSetup.sessionsError}
+              </p>
+            )}
           </section>
         ) : (
           <>
             <SessionSetupCard {...vm.sessionSetup} />
+            {vm.workspace.isLoading && <p role="status">Loading session…</p>}
+            {vm.workspace.loadError && (
+              <p className="error-copy" role="alert">
+                Could not load this session: {vm.workspace.loadError}
+              </p>
+            )}
+            {vm.workspace.replayError && (
+              <p className="error-copy" role="alert">
+                Could not load activity: {vm.workspace.replayError}
+              </p>
+            )}
             <OperateCard {...vm.workspace.operate} />
             <div className="run-status topbar-metric" role="status">
               <span className="sr-only">Latest activity</span>

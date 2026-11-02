@@ -1,47 +1,14 @@
 import type { AgentDraft } from '../features/session-setup/model/agent-drafts';
 
-import { CardShell } from './card-shell';
-
 const bankerSliderFields = [
-  {
-    key: 'warmth',
-    label: 'Warmth',
-    lowLabel: 'Cold',
-    highLabel: 'Warm',
-  },
-  {
-    key: 'salesAggression',
-    label: 'Sales aggression',
-    lowLabel: 'Soft',
-    highLabel: 'Pushy',
-  },
-  {
-    key: 'riskDiscipline',
-    label: 'Risk discipline',
-    lowLabel: 'Loose',
-    highLabel: 'Strict',
-  },
+  { key: 'warmth', label: 'Warmth' },
+  { key: 'salesAggression', label: 'Sales aggression' },
+  { key: 'riskDiscipline', label: 'Risk discipline' },
 ] as const;
-
 const traderSliderFields = [
-  {
-    key: 'assertiveness',
-    label: 'Assertiveness',
-    lowLabel: 'Cautious',
-    highLabel: 'Direct',
-  },
-  {
-    key: 'riskAppetite',
-    label: 'Risk appetite',
-    lowLabel: 'Defensive',
-    highLabel: 'Aggressive',
-  },
-  {
-    key: 'convictionThreshold',
-    label: 'Conviction threshold',
-    lowLabel: 'Acts early',
-    highLabel: 'Needs edge',
-  },
+  { key: 'assertiveness', label: 'Assertiveness' },
+  { key: 'riskAppetite', label: 'Risk appetite' },
+  { key: 'convictionThreshold', label: 'Conviction threshold' },
 ] as const;
 
 interface SessionSetupCardProps {
@@ -49,10 +16,7 @@ interface SessionSetupCardProps {
   hasActiveSession: boolean;
   selectedSessionId: string;
   selectedSessionName?: string;
-  availableSessions: Array<{
-    value: string;
-    label: string;
-  }>;
+  availableSessions: Array<{ value: string; label: string }>;
   sessionName: string;
   initialBalance: string;
   interestRateBps: string;
@@ -79,300 +43,254 @@ interface SessionSetupCardProps {
   onStartNewSession: () => void;
 }
 
-const agentRoleOptions = ['banker', 'trader'] as const;
-
-export function SessionSetupCard({
-  mode,
-  hasActiveSession,
-  selectedSessionId,
-  selectedSessionName,
-  availableSessions,
-  sessionName,
-  initialBalance,
-  interestRateBps,
-  agentDrafts,
-  canRemoveAgent,
-  isCreating,
-  createError,
-  onSessionNameChange,
-  onInitialBalanceChange,
-  onInterestRateBpsChange,
-  onSelectedSessionIdChange,
-  onAddAgentDraft,
-  onRemoveAgentDraft,
-  onAgentNameChange,
-  onAgentRoleChange,
-  onAgentPersonalityValueChange,
-  onCreateSession,
-  onShowStartupForm,
-  onHideStartupForm,
-  onStartNewSession,
-}: SessionSetupCardProps) {
-  if (mode === 'collapsed') {
+export function SessionSetupCard(props: SessionSetupCardProps) {
+  if (props.mode === 'collapsed')
     return (
-      <CardShell className="startup-strip">
-        <span className="visually-hidden">
-          Connected to {selectedSessionName ?? 'Active session'}{' '}
-          {selectedSessionId}
-        </span>
+      <div className="startup-strip">
         <div className="startup-strip-row">
-          <div className="startup-strip-copy">
-            <p className="panel-kicker">Startup</p>
-            <h2>Session Startup</h2>
-            <p>
-              Connected to{' '}
-              <strong>{selectedSessionName ?? 'Active session'}</strong>
-            </p>
-          </div>
-
+          <span className="session-caption">
+            Connected to {props.selectedSessionName ?? 'your session'}
+          </span>
           <div className="startup-strip-actions">
-            <span className="status-chip muted mono">{selectedSessionId}</span>
             <button
-              className="ghost-button"
+              className="quiet-button"
               type="button"
-              onClick={onShowStartupForm}
+              onClick={props.onShowStartupForm}
             >
-              <span className="material-symbols-outlined" aria-hidden="true">
-                swap_horiz
-              </span>
               Change session
             </button>
             <button
-              className="ghost-button"
+              className="quiet-button"
               type="button"
-              onClick={onStartNewSession}
+              onClick={props.onStartNewSession}
             >
-              <span className="material-symbols-outlined" aria-hidden="true">
-                add_circle
-              </span>
-              New session
+              New session +
             </button>
           </div>
         </div>
-      </CardShell>
+      </div>
     );
-  }
-
   return (
     <div className="session-startup-card">
-      {hasActiveSession ? (
+      {props.hasActiveSession && (
         <div className="startup-active-row">
-          <span className="status-chip">Active session</span>
+          <h2>Session settings</h2>
           <button
-            className="ghost-button"
             type="button"
-            onClick={onHideStartupForm}
+            className="quiet-button"
+            onClick={props.onHideStartupForm}
           >
-            Hide startup
+            Back to simulation
           </button>
         </div>
-      ) : null}
-
-      <CardShell className="startup-panel startup-parameters-panel">
-        <h2 className="startup-section-title">Global Parameters</h2>
-
+      )}
+      <section className="connect-section">
+        <div>
+          <h2>Pick up where you left off</h2>
+          <p>Open a saved session to continue the conversation.</p>
+        </div>
+        <label className="field">
+          <span>Connect to session</span>
+          <select
+            value={props.selectedSessionId}
+            onChange={(event) =>
+              props.onSelectedSessionIdChange(event.target.value)
+            }
+          >
+            <option value="">Select a saved session</option>
+            {props.availableSessions.map((session) => (
+              <option key={session.value} value={session.value}>
+                {session.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </section>
+      <section className="setup-section">
+        <div className="setup-section-heading">
+          <span className="step-number" aria-hidden="true">
+            01
+          </span>
+          <div>
+            <h2>Set the starting conditions</h2>
+            <p>Every agent starts with the same available balance.</p>
+          </div>
+        </div>
         <div className="startup-parameter-grid">
-          <label className="field startup-field startup-field-full">
+          <label className="field startup-field-full">
             <span>Session name</span>
             <input
-              value={sessionName}
-              onChange={(event) => onSessionNameChange(event.target.value)}
+              value={props.sessionName}
+              onChange={(event) =>
+                props.onSessionNameChange(event.target.value)
+              }
               placeholder="Morning liquidity drill"
             />
           </label>
-
-          <label className="field startup-field">
+          <label className="field">
             <span>Initial balance (SIM)</span>
             <input
-              value={initialBalance}
-              onChange={(event) => onInitialBalanceChange(event.target.value)}
+              value={props.initialBalance}
+              onChange={(event) =>
+                props.onInitialBalanceChange(event.target.value)
+              }
               placeholder="100.0000"
             />
           </label>
-
-          <label className="field startup-field">
+          <label className="field">
             <span>Treasury interest per round (bps)</span>
             <input
               type="number"
               min={0}
               step={1}
-              value={interestRateBps}
-              onChange={(event) => onInterestRateBpsChange(event.target.value)}
-              placeholder="250"
+              value={props.interestRateBps}
+              onChange={(event) =>
+                props.onInterestRateBpsChange(event.target.value)
+              }
             />
           </label>
-
-          <label className="field startup-field startup-field-full startup-connect-field">
-            <span>Connect to session</span>
-            <select
-              value={selectedSessionId}
-              onChange={(event) =>
-                onSelectedSessionIdChange(event.target.value)
-              }
-            >
-              <option value="">Select a saved session</option>
-              {availableSessions.map((session) => (
-                <option key={session.value} value={session.value}>
-                  {session.label}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
-      </CardShell>
-
-      <CardShell className="startup-panel startup-roster-panel">
+        <p className="field-note">
+          The interest rate is applied when you advance a round, not when you
+          create the session.
+        </p>
+      </section>
+      <section className="setup-section">
         <div className="startup-roster-header">
-          <h2 className="startup-section-title">Agent Roster</h2>
-          <button
-            className="agent-stack-button"
-            type="button"
-            onClick={onAddAgentDraft}
-            disabled={hasActiveSession}
-          >
-            <span className="material-symbols-outlined" aria-hidden="true">
-              add
+          <div className="setup-section-heading">
+            <span className="step-number" aria-hidden="true">
+              02
             </span>
+            <div>
+              <h2>Meet your agents</h2>
+              <p>Choose their roles. Adjust their personalities if you like.</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="ghost-button"
+            disabled={props.hasActiveSession}
+            onClick={props.onAddAgentDraft}
+          >
             Add agent
           </button>
         </div>
-
-        <div className="agent-stack">
-          {agentDrafts.map((agent) => (
-            <div key={agent.id} className="agent-editor-card">
-              <div className="agent-card-header">
-                <div className="agent-card-identity">
-                  <input
-                    aria-label={`${agent.name} name`}
-                    value={agent.name}
-                    disabled={hasActiveSession}
-                    onChange={(event) =>
-                      onAgentNameChange(agent.id, event.target.value)
-                    }
-                    placeholder="Agent name"
-                  />
-                  <label>
-                    <span className="sr-only">Role</span>
-                    <select
-                      value={agent.role}
-                      disabled={hasActiveSession}
-                      onChange={(event) =>
-                        onAgentRoleChange(
-                          agent.id,
-                          event.target.value as AgentDraft['role'],
-                        )
-                      }
-                    >
-                      {agentRoleOptions.map((role) => (
-                        <option key={role} value={role}>
-                          Role: {role}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
+        <div className="startup-agent-grid">
+          {props.agentDrafts.map((agent, index) => (
+            <article className="startup-agent-card" key={agent.id}>
+              <div className="section-heading">
+                <span className="agent-number">
+                  Agent {String(index + 1).padStart(2, '0')}
+                </span>
                 <button
-                  className="agent-remove-button"
                   type="button"
+                  className="quiet-button"
                   aria-label={`Remove ${agent.name}`}
-                  disabled={hasActiveSession || !canRemoveAgent}
-                  onClick={() => onRemoveAgentDraft(agent.id)}
+                  disabled={props.hasActiveSession || !props.canRemoveAgent}
+                  onClick={() => props.onRemoveAgentDraft(agent.id)}
                 >
-                  <span
-                    className="material-symbols-outlined"
-                    aria-hidden="true"
-                  >
-                    close
-                  </span>
+                  Remove
                 </button>
               </div>
-
-              <div className="agent-personality-panel">
-                {agent.personality.kind === 'banker'
-                  ? renderPersonalitySliders(
-                      agent,
-                      bankerSliderFields,
-                      hasActiveSession,
-                      onAgentPersonalityValueChange,
+              <label className="field">
+                <span>Agent name</span>
+                <input
+                  aria-label={`${agent.name} name`}
+                  value={agent.name}
+                  disabled={props.hasActiveSession}
+                  onChange={(event) =>
+                    props.onAgentNameChange(agent.id, event.target.value)
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Role</span>
+                <select
+                  aria-label={`${agent.name} role`}
+                  value={agent.role}
+                  disabled={props.hasActiveSession}
+                  onChange={(event) =>
+                    props.onAgentRoleChange(
+                      agent.id,
+                      event.target.value as AgentDraft['role'],
                     )
-                  : renderPersonalitySliders(
-                      agent,
-                      traderSliderFields,
-                      hasActiveSession,
-                      onAgentPersonalityValueChange,
-                    )}
-              </div>
-            </div>
+                  }
+                >
+                  <option value="banker">Banker</option>
+                  <option value="trader">Trader</option>
+                </select>
+              </label>
+              <details className="personality-disclosure">
+                <summary>Customize {agent.name} personality</summary>
+                <div className="startup-personality-grid">
+                  {renderPersonalitySliders(
+                    agent,
+                    agent.personality.kind === 'banker'
+                      ? bankerSliderFields
+                      : traderSliderFields,
+                    props.hasActiveSession,
+                    props.onAgentPersonalityValueChange,
+                  )}
+                </div>
+              </details>
+            </article>
           ))}
         </div>
-      </CardShell>
-
+      </section>
       <div className="startup-create-row">
-        {createError ? <p className="error-copy">{createError}</p> : null}
+        {props.createError && (
+          <p className="error-copy" role="alert">
+            {props.createError}
+          </p>
+        )}
+        <p className="field-note">
+          Your agents will negotiate independently. You control the pace.
+        </p>
         <button
-          className="action-button primary startup-create-button"
           type="button"
-          disabled={isCreating || agentDrafts.length === 0}
-          onClick={onCreateSession}
+          className="action-button primary"
+          disabled={props.isCreating || props.agentDrafts.length === 0}
+          onClick={props.onCreateSession}
         >
-          <span className="material-symbols-outlined" aria-hidden="true">
-            rocket_launch
-          </span>
-          {isCreating ? 'Creating session...' : 'Create session'}
+          {props.isCreating ? 'Creating session…' : 'Create session'}
         </button>
       </div>
     </div>
   );
 }
-
-function renderPersonalitySliders<
-  TField extends
-    | (typeof bankerSliderFields)[number]
-    | (typeof traderSliderFields)[number],
->(
+function renderPersonalitySliders(
   agent: AgentDraft,
-  sliderFields: readonly TField[],
-  hasActiveSession: boolean,
-  onAgentPersonalityValueChange: (
-    draftId: string,
-    key: string,
-    value: number,
-  ) => void,
+  fields: readonly { key: string; label: string }[],
+  disabled: boolean,
+  onChange: SessionSetupCardProps['onAgentPersonalityValueChange'],
 ) {
-  return sliderFields.map((slider) => {
-    const value =
-      slider.key in agent.personality
-        ? Number(
-            agent.personality[slider.key as keyof typeof agent.personality],
-          )
-        : 0;
-
-    return (
-      <label key={slider.key} className="field personality-slider-field">
-        <span>
-          {slider.label} <strong>{value}</strong>
-        </span>
-        <input
-          className={
-            agent.personality.kind === 'banker'
-              ? 'personality-range banker'
-              : 'personality-range trader'
-          }
-          type="range"
-          min={0}
-          max={10}
-          step={1}
-          value={value}
-          disabled={hasActiveSession}
-          onChange={(event) =>
-            onAgentPersonalityValueChange(
-              agent.id,
-              slider.key,
-              Number.parseInt(event.target.value, 10),
-            )
-          }
-        />
-      </label>
-    );
-  });
+  return fields.map((field) => (
+    <label key={field.key} className="field">
+      <span>
+        {field.label}{' '}
+        <strong>
+          {Number(
+            agent.personality[field.key as keyof typeof agent.personality],
+          )}
+        </strong>
+      </span>
+      <input
+        type="range"
+        min={0}
+        max={10}
+        step={1}
+        value={Number(
+          agent.personality[field.key as keyof typeof agent.personality],
+        )}
+        disabled={disabled}
+        onChange={(event) =>
+          onChange(agent.id, field.key, Number.parseInt(event.target.value, 10))
+        }
+      />
+      <span className="slider-scale">
+        <span>0</span>
+        <span>10</span>
+      </span>
+    </label>
+  ));
 }

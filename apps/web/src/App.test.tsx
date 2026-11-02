@@ -28,9 +28,9 @@ describe('App', () => {
     expect(html).toContain(
       'Create a session, set their personalities, and watch the negotiation unfold.',
     );
-    expect(html).toContain('Global Parameters');
+    expect(html).toContain('Set the starting conditions');
     expect(html).toContain('Connect to session');
-    expect(html).toContain('Agent Roster');
+    expect(html).toContain('Meet your agents');
     expect(html).toContain('Add agent');
     expect(html).toContain('Banker Bot');
     expect(html).toContain('Trader Bot');

@@ -9,6 +9,8 @@ interface OperateCardProps {
   onTurnCountChange: (value: number) => void;
   onRunTurns: () => void;
   onAdvanceRound: () => void;
+  interestRateBps: string;
+  onInterestRateBpsChange: (value: string) => void;
 }
 export function OperateCard(props: OperateCardProps) {
   return (
@@ -59,6 +61,21 @@ export function OperateCard(props: OperateCardProps) {
         </button>
       </div>
       <div className="advance-controls">
+        <details className="round-options">
+          <summary>Round options</summary>
+          <label className="field">
+            <span>Treasury interest per round (bps)</span>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={props.interestRateBps}
+              onChange={(event) =>
+                props.onInterestRateBpsChange(event.target.value)
+              }
+            />
+          </label>
+        </details>
         <button
           className="action-button secondary"
           type="button"

@@ -1,111 +1,49 @@
+import { Dialog } from '../../../shared/ui/dialog';
 interface HelpModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
 const helpSections = [
   {
-    icon: 'add_circle',
-    title: 'Create or connect',
-    body: 'Use Session Startup to create a new simulation or connect to a saved session from the dropdown list.',
+    title: 'Start a session',
+    body: 'Create a session with the starting balance and agent personalities you want, or connect to a saved session. The banker and traders negotiate independently.',
   },
   {
-    icon: 'play_arrow',
-    title: 'Run the session',
-    body: 'Choose a turn count, run the next turns, and watch balances, status, and replay update.',
+    title: 'Run turns',
+    body: 'Choose 1–10 turns and run them at your own pace. Messages and actions appear in Simulation as they happen. Running turns does not advance the round.',
   },
   {
-    icon: 'gavel',
-    title: 'Settle rounds',
-    body: 'Advance the round when you want custody interest and market settlement effects applied.',
+    title: 'Advance the round',
+    body: 'Advance when you want to apply custody interest and settle eligible market positions. You can adjust the interest rate in Round options before advancing.',
   },
   {
-    icon: 'troubleshoot',
-    title: 'Inspect state',
-    body: 'Review balances, custody, market exposure, and the audit trail in one place.',
+    title: 'Follow the finances',
+    body: 'Finances shows account balances, custody principal and interest, opportunities, and market positions. Open an item to inspect its details.',
   },
   {
-    icon: 'account_balance',
-    title: 'Custody overview',
-    body: "Custody Overview shows banker-led custody totals, principal, accrued interest, and the trader's currently redeemable balance with the banker.",
-  },
-  {
-    icon: 'visibility',
-    title: 'Market visibility',
-    body: 'Market Visibility shows the current opportunity board and any trader market positions.',
-  },
-  {
-    icon: 'history',
-    title: 'Audit history',
-    body: 'Filter the Audit Trail by treasury, market, messages, actions, or transfers, and limit the view to recent events or recent rounds.',
-    className: 'help-card-wide',
+    title: 'Review the history',
+    body: 'History contains the complete audit trail. Filter by treasury, market, messages, actions or transfers, and choose an event or round window.',
   },
 ];
-
 export function HelpModal({ isOpen, onClose }: HelpModalProps) {
-  if (!isOpen) {
-    return null;
-  }
-
+  if (!isOpen) return null;
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
-      <section
-        className="help-modal panel"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Help and usage guide"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="help-modal-header">
-          <div>
-            <p className="panel-kicker">Help</p>
-            <h2>How To Use The Dashboard</h2>
-          </div>
-          <button
-            className="icon-button"
-            type="button"
-            aria-label="Close help"
-            onClick={onClose}
-          >
-            <span className="material-symbols-outlined" aria-hidden="true">
-              close
-            </span>
-          </button>
-        </div>
-
-        <div className="help-grid">
-          {helpSections.map((section, index) => (
-            <article
-              key={section.title}
-              className={
-                section.className
-                  ? `help-card ${section.className}`
-                  : 'help-card'
-              }
-            >
-              <div className="help-card-heading">
-                <span className="material-symbols-outlined" aria-hidden="true">
-                  {section.icon}
-                </span>
-                <strong>
-                  {index + 1}. {section.title}
-                </strong>
-              </div>
-              <p>{section.body}</p>
-            </article>
-          ))}
-        </div>
-
-        <footer className="help-modal-footer">
-          <button
-            className="action-button primary"
-            type="button"
-            onClick={onClose}
-          >
-            Acknowledge
-          </button>
-        </footer>
-      </section>
-    </div>
+    <Dialog title="A guide to your trading journal" onClose={onClose}>
+      <p className="help-intro">
+        A simulation of negotiation, trust, and financial decisions. You set the
+        pace; the agents make the choices.
+      </p>
+      <div className="help-grid">
+        {helpSections.map((section, index) => (
+          <section key={section.title} className="help-card">
+            <h3>
+              <span className="help-number">0{index + 1}</span>
+              {section.title}
+            </h3>
+            <p>{section.body}</p>
+          </section>
+        ))}
+      </div>
+    </Dialog>
   );
 }

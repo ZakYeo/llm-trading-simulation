@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { startTransition, useEffect, useRef, useState } from 'react';
+import { startTransition, useState } from 'react';
 
 import {
   advanceGameRound,
@@ -19,12 +19,7 @@ import {
   createMarketVisibilityViewData,
   createTreasuryViewData,
 } from '../../session-overview/model/session-overview';
-import {
-  createDefaultPersonality,
-  defaultAgentSetup,
-  toAgentDrafts,
-  type AgentDraft,
-} from '../../session-setup/model/agent-drafts';
+import { useAgentDrafts } from '../../session-setup/view-model/use-agent-drafts';
 
 export function useOperatorDashboardViewModel() {
   const queryClient = useQueryClient();
@@ -38,19 +33,7 @@ export function useOperatorDashboardViewModel() {
     StreamedAuditMessageRecord[]
   >([]);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const [agentDrafts, setAgentDrafts] =
-    useState<AgentDraft[]>(defaultAgentSetup);
-  const [nextAgentDraftId, setNextAgentDraftId] = useState(
-    defaultAgentSetup.length + 1,
-  );
   const [isStartupVisible, setIsStartupVisible] = useState(true);
-  const [revealedSessionId, setRevealedSessionId] = useState<string | null>(
-    null,
-  );
-  const [revealedHeaderSessionId, setRevealedHeaderSessionId] = useState<
-    string | null
-  >(null);
-  const previousVisibleSessionId = useRef<string | null>(null);
 
   const sessionQuery = useQuery({
     queryKey: ['game-session', selectedSessionId],
@@ -66,6 +49,16 @@ export function useOperatorDashboardViewModel() {
     queryKey: ['game-sessions'],
     queryFn: listGameSessions,
   });
+
+  const {
+    agentDrafts,
+    canRemoveAgent,
+    updateAgentDraftName,
+    updateAgentDraftRole,
+    updateAgentDraftPersonalityValue,
+    addAgentDraft,
+    removeAgentDraft,
+  } = useAgentDrafts(sessionQuery.data);
 
   const createSessionMutation = useMutation({
     mutationFn: () =>
@@ -154,7 +147,6 @@ export function useOperatorDashboardViewModel() {
   const replay = replayQuery.data;
   const hasSelectedSession = selectedSessionId.length > 0;
   const shouldShowHeaderMetrics = Boolean(selectedSession);
-  const canRemoveAgent = agentDrafts.length > 1;
   const isTurnFlowInProgress =
     orchestrateMutation.isPending || advanceRoundMutation.isPending;
   const inProgressLabel = orchestrateMutation.isPending
@@ -162,9 +154,6 @@ export function useOperatorDashboardViewModel() {
     : advanceRoundMutation.isPending
       ? 'Applying round settlement...'
       : '';
-  const shouldAnimateSessionCards = selectedSession?.id === revealedSessionId;
-  const shouldAnimateHeaderMetrics =
-    selectedSession?.id === revealedHeaderSessionId;
 
   function handleSelectedSessionIdChange(value: string) {
     setSelectedSessionId(value);
@@ -182,115 +171,6 @@ export function useOperatorDashboardViewModel() {
   function startNewSessionFlow() {
     setSelectedSessionId('');
     setIsStartupVisible(true);
-  }
-
-  useEffect(() => {
-    if (!selectedSession) {
-      return;
-    }
-
-    setAgentDrafts(toAgentDrafts(selectedSession));
-    setNextAgentDraftId(selectedSession.agents.length + 1);
-  }, [selectedSession]);
-
-  useEffect(() => {
-    if (!selectedSession) {
-      previousVisibleSessionId.current = null;
-      setRevealedSessionId(null);
-      setRevealedHeaderSessionId(null);
-      return;
-    }
-
-    if (previousVisibleSessionId.current === selectedSession.id) {
-      return;
-    }
-
-    previousVisibleSessionId.current = selectedSession.id;
-    setRevealedSessionId(selectedSession.id);
-    setRevealedHeaderSessionId(selectedSession.id);
-
-    const workspaceTimer = window.setTimeout(() => {
-      setRevealedSessionId((current) =>
-        current === selectedSession.id ? null : current,
-      );
-    }, 1250);
-    const headerTimer = window.setTimeout(() => {
-      setRevealedHeaderSessionId((current) =>
-        current === selectedSession.id ? null : current,
-      );
-    }, 980);
-
-    return () => {
-      window.clearTimeout(workspaceTimer);
-      window.clearTimeout(headerTimer);
-    };
-  }, [selectedSession]);
-
-  function updateAgentDraft(
-    draftId: string,
-    updater: (draft: AgentDraft) => AgentDraft,
-  ) {
-    setAgentDrafts((current) =>
-      current.map((draft) => (draft.id === draftId ? updater(draft) : draft)),
-    );
-  }
-
-  function updateAgentDraftName(draftId: string, name: string) {
-    updateAgentDraft(draftId, (draft) => ({
-      ...draft,
-      name,
-    }));
-  }
-
-  function updateAgentDraftRole(draftId: string, role: AgentDraft['role']) {
-    updateAgentDraft(draftId, (draft) => ({
-      ...draft,
-      role,
-      personality: createDefaultPersonality(role),
-    }));
-  }
-
-  function updateAgentDraftPersonalityValue(
-    draftId: string,
-    key: string,
-    value: number,
-  ) {
-    updateAgentDraft(draftId, (draft) => {
-      if (!(key in draft.personality)) {
-        return draft;
-      }
-
-      return {
-        ...draft,
-        personality: {
-          ...draft.personality,
-          [key]: value,
-        },
-      } as AgentDraft;
-    });
-  }
-
-  function addAgentDraft() {
-    const nextIndex = nextAgentDraftId;
-
-    setAgentDrafts((current) => [
-      ...current,
-      {
-        id: `agent-draft-${nextIndex}`,
-        name: `New Bot ${nextIndex}`,
-        role: 'trader',
-        personality: createDefaultPersonality('trader'),
-      },
-    ]);
-    setNextAgentDraftId(nextIndex + 1);
-  }
-
-  function removeAgentDraft(draftId: string) {
-    setAgentDrafts((current) =>
-      current.length === 1
-        ? current
-        : current.filter((draft) => draft.id !== draftId),
-    );
   }
 
   useSessionEvents({
@@ -313,7 +193,6 @@ export function useOperatorDashboardViewModel() {
     topbar: {
       hasSelectedSession,
       shouldShowHeaderMetrics,
-      shouldAnimateHeaderMetrics,
       selectedSessionName: selectedSession?.name,
       currentRound: selectedSession?.currentRound ?? 1,
       status: selectedSession?.status ?? 'setup',
@@ -336,6 +215,7 @@ export function useOperatorDashboardViewModel() {
       canRemoveAgent,
       isCreating: createSessionMutation.isPending,
       createError: createSessionMutation.error?.message,
+      sessionsError: sessionsQuery.error?.message,
       onSessionNameChange: setSessionName,
       onInitialBalanceChange: setInitialBalance,
       onInterestRateBpsChange: setInterestRateBps,
@@ -352,8 +232,12 @@ export function useOperatorDashboardViewModel() {
     },
     workspace: {
       isVisible: hasSelectedSession,
-      shouldAnimateCards: shouldAnimateSessionCards,
+      isLoading: sessionQuery.isPending,
+      loadError: sessionQuery.error?.message,
+      replayError: replayQuery.error?.message,
       operate: {
+        interestRateBps,
+        onInterestRateBpsChange: setInterestRateBps,
         selectedSessionId,
         currentRound: selectedSession?.currentRound,
         turnCount,
