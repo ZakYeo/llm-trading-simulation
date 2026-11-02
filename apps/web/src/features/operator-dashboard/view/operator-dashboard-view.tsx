@@ -1,3 +1,4 @@
+import { SimulationJournal } from '../../audit-trail/view/simulation-journal';
 import { AuditTrailCard } from '../../../components/audit-trail-card';
 import { BalancesCard } from '../../../components/balances-card';
 import { MarketVisibilityCard } from '../../../components/market-visibility-card';
@@ -167,7 +168,11 @@ export function OperatorDashboardView() {
                         take positions.
                       </p>
                     </div>
-                    <AuditTrailCard {...vm.workspace.auditTrail} />
+                    <SimulationJournal
+                      viewModel={vm.workspace.journal}
+                      onInspect={vm.inspectEvent}
+                      isFetching={vm.workspace.auditTrail.isFetching}
+                    />
                   </div>
                   <aside className="context-column">
                     <BalancesCard accounts={vm.workspace.balanceAccounts} />
@@ -206,7 +211,10 @@ export function OperatorDashboardView() {
                       Inspect the complete activity record, one round at a time.
                     </p>
                   </div>
-                  <AuditTrailCard {...vm.workspace.auditTrail} />
+                  <AuditTrailCard
+                    {...vm.workspace.auditTrail}
+                    onInspect={vm.inspectEvent}
+                  />
                 </>
               )}
             </section>

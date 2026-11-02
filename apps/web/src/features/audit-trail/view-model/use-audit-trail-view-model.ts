@@ -145,10 +145,6 @@ export function useAuditTrailViewModel({
     }
 
     setAnimatedEventIds(appendedEventIds);
-    timelineScrollRef.current?.scrollTo({
-      top: timelineScrollRef.current.scrollHeight,
-      behavior: 'smooth',
-    });
 
     const timer = window.setTimeout(() => {
       setAnimatedEventIds((current) =>

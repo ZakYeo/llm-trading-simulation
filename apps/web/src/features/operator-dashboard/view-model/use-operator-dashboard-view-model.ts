@@ -1,3 +1,4 @@
+import { useSimulationJournal } from '../../audit-trail/view-model/use-simulation-journal';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { startTransition, useState } from 'react';
 
@@ -186,6 +187,12 @@ export function useOperatorDashboardViewModel() {
     streamedMessages,
     selectedRound: selectedSession?.currentRound,
   });
+  const journal = useSimulationJournal({
+    replay,
+    streamedMessages,
+    selectedRound: selectedSession?.currentRound,
+    sessionId: selectedSessionId,
+  });
   const sessionSetupMode: 'collapsed' | 'expanded' =
     hasSelectedSession && !isStartupVisible ? 'collapsed' : 'expanded';
 
@@ -249,6 +256,7 @@ export function useOperatorDashboardViewModel() {
         onRunTurns: () => orchestrateMutation.mutate(),
         onAdvanceRound: () => advanceRoundMutation.mutate(),
       },
+      journal,
       auditTrail: {
         viewModel: auditTrailViewModel,
         isFetching: replayQuery.isFetching,

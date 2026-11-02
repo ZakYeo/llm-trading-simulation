@@ -1,3 +1,5 @@
+import { createEventDetail } from '../../audit-trail/model/event-detail';
+import type { AuditTrailTimelineEvent } from '../../audit-trail/model/audit-trail';
 import { useState } from 'react';
 import {
   workspaceTabs,
@@ -29,6 +31,8 @@ export function useWorkspaceViewModel() {
     },
     detail,
     showDetail: setDetail,
+    inspectEvent: (event: AuditTrailTimelineEvent) =>
+      setDetail(createEventDetail(event)),
     closeDetail: () => setDetail(null),
   };
 }
