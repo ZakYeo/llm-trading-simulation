@@ -57,11 +57,13 @@
 
 .startup-agent-grid {
   display: grid;
+  align-items: start;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   gap: 24px;
 }
 
 .startup-agent-card {
+  align-content: start;
   border: 1px solid var(--line);
   padding: 16px;
   background: var(--inset);
@@ -221,4 +223,56 @@ summary {
   .help-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.personality-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 8px 0;
+  color: var(--accent);
+  font-size: 0.8rem;
+  text-align: left;
+}
+.disclosure-chevron {
+  display: inline-block;
+  transition: transform 260ms ease;
+  font-size: 1.2rem;
+}
+.personality-toggle[aria-expanded='true'] .disclosure-chevron {
+  transform: rotate(90deg);
+}
+.personality-expansion {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    grid-template-rows 280ms ease,
+    opacity 220ms ease,
+    visibility 280ms;
+}
+.personality-expansion[data-expanded='true'] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+}
+.personality-expansion-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+.personality-slider-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.startup-agent-card[data-role='trader'] input[type='range'] {
+  accent-color: var(--positive);
+}
+
+.disclosure-chevron::before {
+  content: '›';
 }

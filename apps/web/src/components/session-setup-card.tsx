@@ -1,3 +1,4 @@
+import { PersonalityDisclosure } from '../features/session-setup/view/personality-disclosure';
 import { Skeleton } from '../shared/ui/skeleton';
 import type { AgentDraft } from '../features/session-setup/model/agent-drafts';
 
@@ -169,7 +170,11 @@ export function SessionSetupCard(props: SessionSetupCardProps) {
         </div>
         <div className="startup-agent-grid">
           {props.agentDrafts.map((agent, index) => (
-            <article className="startup-agent-card" key={agent.id}>
+            <article
+              className="startup-agent-card"
+              data-role={agent.role}
+              key={agent.id}
+            >
               <div className="section-heading">
                 <span className="agent-number">
                   Agent {String(index + 1).padStart(2, '0')}
@@ -212,8 +217,7 @@ export function SessionSetupCard(props: SessionSetupCardProps) {
                   <option value="trader">Trader</option>
                 </select>
               </label>
-              <details className="personality-disclosure">
-                <summary>Customize {agent.name} personality</summary>
+              <PersonalityDisclosure name={agent.name}>
                 <div className="startup-personality-grid">
                   {renderPersonalitySliders(
                     agent,
@@ -224,7 +228,7 @@ export function SessionSetupCard(props: SessionSetupCardProps) {
                     props.onAgentPersonalityValueChange,
                   )}
                 </div>
-              </details>
+              </PersonalityDisclosure>
             </article>
           ))}
         </div>
@@ -258,12 +262,13 @@ function renderPersonalitySliders(
 ) {
   return fields.map((field) => (
     <label key={field.key} className="field">
-      <span>
+      <span className="personality-slider-label">
         {field.label}{' '}
         <strong>
           {Number(
             agent.personality[field.key as keyof typeof agent.personality],
           )}
+          /10
         </strong>
       </span>
       <input
