@@ -137,21 +137,6 @@ export function OperatorDashboardView() {
                 Could not load activity: {vm.workspace.replayError}
               </p>
             )}
-            <OperateCard {...vm.workspace.operate} />
-            <div
-              className="run-status"
-              role="status"
-              aria-label="Latest activity"
-            >
-              <span className="sr-only">Latest activity</span>
-              {vm.workspace.auditTrail.isTurnFlowInProgress ? (
-                <span className="live-run-banner">
-                  {vm.workspace.auditTrail.inProgressLabel}
-                </span>
-              ) : (
-                vm.topbar.latestRunSummary || 'Ready when you are.'
-              )}
-            </div>
             <nav className="workspace-nav" aria-label="Session views">
               {vm.tabs.map((tab) => (
                 <a
@@ -163,71 +148,92 @@ export function OperatorDashboardView() {
                 </a>
               ))}
             </nav>
-            <section
-              className="workspace-panel"
-              role="region"
-              id={`panel-${vm.activeTab}`}
-              aria-label={vm.activeTab}
-              tabIndex={0}
-            >
-              {vm.activeTab === 'Conversation' && (
-                <div className="simulation-layout">
-                  <div>
+            <div className="workspace-layout">
+              <details className="execution-disclosure" open>
+                <summary>Run turns &amp; settlement</summary>
+                <OperateCard {...vm.workspace.operate} />
+              </details>
+              <section
+                className="workspace-panel"
+                role="region"
+                id={`panel-${vm.activeTab}`}
+                aria-label={vm.activeTab}
+                tabIndex={0}
+              >
+                <div
+                  className="run-status"
+                  role="status"
+                  aria-label="Latest activity"
+                >
+                  <span className="sr-only">Latest activity</span>
+                  {vm.workspace.auditTrail.isTurnFlowInProgress ? (
+                    <span className="live-run-banner">
+                      {vm.workspace.auditTrail.inProgressLabel}
+                    </span>
+                  ) : (
+                    vm.topbar.latestRunSummary || 'Ready when you are.'
+                  )}
+                </div>
+                {vm.activeTab === 'Conversation' && (
+                  <div className="simulation-layout">
+                    <div>
+                      <div className="view-intro">
+                        <p className="eyebrow">The conversation, in context</p>
+                        <h1>Conversation</h1>
+                        <p>
+                          Follow your agents as they negotiate, move funds, and
+                          take positions.
+                        </p>
+                      </div>
+                      <SimulationJournal
+                        viewModel={vm.workspace.journal}
+                        onInspect={vm.inspectEvent}
+                        isFetching={vm.workspace.auditTrail.isFetching}
+                      />
+                    </div>
+                    <FinancialContext vm={vm} />
+                  </div>
+                )}
+                {vm.activeTab === 'Finances' && (
+                  <>
                     <div className="view-intro">
-                      <p className="eyebrow">The conversation, in context</p>
-                      <h1>Conversation</h1>
+                      <p className="eyebrow">Follow the money</p>
+                      <h1>Finances</h1>
                       <p>
-                        Follow your agents as they negotiate, move funds, and
-                        take positions.
+                        Balances, custody, and market exposure from the current
+                        session state.
                       </p>
                     </div>
-                    <SimulationJournal
-                      viewModel={vm.workspace.journal}
-                      onInspect={vm.inspectEvent}
-                      isFetching={vm.workspace.auditTrail.isFetching}
+                    <BalancesCard
+                      accounts={vm.workspace.balanceAccounts}
+                      onInspect={vm.inspectAccount}
                     />
-                  </div>
-                  <FinancialContext vm={vm} />
-                </div>
-              )}
-              {vm.activeTab === 'Finances' && (
-                <>
-                  <div className="view-intro">
-                    <p className="eyebrow">Follow the money</p>
-                    <h1>Finances</h1>
-                    <p>
-                      Balances, custody, and market exposure from the current
-                      session state.
-                    </p>
-                  </div>
-                  <BalancesCard
-                    accounts={vm.workspace.balanceAccounts}
-                    onInspect={vm.inspectAccount}
-                  />
-                  <TreasuryCard treasury={vm.workspace.treasury} />
-                  <MarketVisibilityCard
-                    market={vm.workspace.market}
-                    onInspectOpportunity={vm.inspectOpportunity}
-                    onInspectPosition={vm.inspectPosition}
-                  />
-                </>
-              )}
-              {vm.activeTab === 'History' && (
-                <>
-                  <div className="view-intro">
-                    <p className="eyebrow">Every decision leaves a trace</p>
-                    <h1>History</h1>
-                    <p>
-                      Inspect the complete activity record, one round at a time.
-                    </p>
-                  </div>
-                  <AuditTrailCard
-                    {...vm.workspace.auditTrail}
-                    onInspect={vm.inspectEvent}
-                  />
-                </>
-              )}
-            </section>
+                    <TreasuryCard treasury={vm.workspace.treasury} />
+                    <MarketVisibilityCard
+                      market={vm.workspace.market}
+                      onInspectOpportunity={vm.inspectOpportunity}
+                      onInspectPosition={vm.inspectPosition}
+                    />
+                  </>
+                )}
+                {vm.activeTab === 'History' && (
+                  <>
+                    <div className="view-intro">
+                      <p className="eyebrow">Every decision leaves a trace</p>
+                      <h1>History</h1>
+                      <p>
+                        Inspect the complete activity record, one round at a
+                        time.
+                      </p>
+                    </div>
+                    <AuditTrailCard
+                      {...vm.workspace.auditTrail}
+                      onInspect={vm.inspectEvent}
+                    />
+                  </>
+                )}
+              </section>
+            </div>
           </>
         )}
       </main>

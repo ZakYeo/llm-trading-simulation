@@ -15,7 +15,7 @@ export function SimulationJournal({
     <section className="journal" aria-label="Simulation journal">
       <header className="journal-heading">
         <div>
-          <span className="eyebrow">Field notes</span>
+          <span className="eyebrow">Live conversation &amp; activity</span>
           <h2>Round {viewModel.currentRound}</h2>
         </div>
         <div className="journal-navigation">

@@ -15,9 +15,12 @@ interface OperateCardProps {
 export function OperateCard(props: OperateCardProps) {
   return (
     <section className="operate-toolbar" aria-label="Run controls">
-      <div className="run-controls">
+      <div className="run-controls panel">
+        <h2>Run turns</h2>
         <label className="field turn-field">
-          <span>Turn count</span>
+          <span>
+            Turn count <small>1–10</small>
+          </span>
           <input
             type="number"
             min={1}
@@ -52,7 +55,9 @@ export function OperateCard(props: OperateCardProps) {
         <button
           className="action-button primary"
           type="button"
-          disabled={!props.selectedSessionId || props.isRunning}
+          disabled={
+            !props.selectedSessionId || props.isRunning || props.isAdvancing
+          }
           onClick={props.onRunTurns}
         >
           {props.isRunning
@@ -60,9 +65,9 @@ export function OperateCard(props: OperateCardProps) {
             : `Run next ${props.turnCount} turn${props.turnCount === 1 ? '' : 's'}`}
         </button>
       </div>
-      <div className="advance-controls">
-        <details className="round-options">
-          <summary>Round options</summary>
+      <div className="advance-controls panel">
+        <h2>Advance round</h2>
+        <div className="round-options">
           <label className="field">
             <span>Treasury interest per round (bps)</span>
             <input
@@ -75,11 +80,13 @@ export function OperateCard(props: OperateCardProps) {
               }
             />
           </label>
-        </details>
+        </div>
         <button
           className="action-button secondary"
           type="button"
-          disabled={!props.selectedSessionId || props.isAdvancing}
+          disabled={
+            !props.selectedSessionId || props.isRunning || props.isAdvancing
+          }
           onClick={props.onAdvanceRound}
         >
           {props.isAdvancing ? 'Advancing round…' : 'Advance round settlement'}
