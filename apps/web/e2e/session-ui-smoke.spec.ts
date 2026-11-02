@@ -170,3 +170,32 @@ test('@smoke preserves state when orchestration fails', async ({
   await expect(page.locator('.balance-card').nth(1)).toContainText('100.00');
   await expect(page.locator('.market-shell')).toContainText('0 positions');
 });
+
+test('@smoke generates and reloads the recorded round summary', async ({
+  page,
+  request,
+}) => {
+  const session = await createBankerTraderSession(
+    request,
+    'Playwright Round Summary',
+  );
+  await connectToSession(page, session.id);
+  const card = page.getByRole('region', { name: 'AI summary this round' });
+  await expect(card).toContainText('Run turns to generate');
+  await page.getByRole('button', { name: '1 turn', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Run next 1 turn', exact: true })
+    .click();
+  await expect(card).toContainText('Mock runtime');
+  await expect(card.locator('.round-summary-text')).toContainText(
+    'Round 1 recorded',
+  );
+  const text = await card.locator('.round-summary-text').textContent();
+  await page.reload();
+  await expect(card.locator('.round-summary-text')).toHaveText(text!);
+  await page
+    .getByRole('button', { name: 'Advance round settlement', exact: true })
+    .click();
+  await expect(card).toContainText('Round 2');
+  await expect(card).toContainText('Run turns to generate');
+});

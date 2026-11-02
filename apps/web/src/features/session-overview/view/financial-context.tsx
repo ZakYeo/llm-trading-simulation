@@ -1,3 +1,4 @@
+import { RoundSummaryCard } from '../../round-summary/view/round-summary-card';
 import type { WorkspaceViewModel } from '../../operator-dashboard/view-model/use-workspace-view-model';
 
 export function FinancialContext({ vm }: { vm: WorkspaceViewModel }) {
@@ -71,13 +72,7 @@ export function FinancialContext({ vm }: { vm: WorkspaceViewModel }) {
           </p>
         )}
       </section>
-      <section className="context-section context-note">
-        <span className="eyebrow">A note on the round</span>
-        <p>
-          Agents can talk and trade across several turns. Interest and eligible
-          market settlements happen when you advance.
-        </p>
-      </section>
+      <RoundSummaryCard vm={vm.workspace.roundSummary} />
     </aside>
   );
 }

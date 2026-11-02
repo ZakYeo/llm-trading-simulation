@@ -197,7 +197,10 @@ describe('createSessionEventHandlers', () => {
     await Promise.resolve();
 
     expect(streamedMessages).toEqual([]);
-    expect(invalidateQueries).toHaveBeenCalledTimes(6);
+    expect(invalidateQueries).toHaveBeenCalledTimes(7);
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['round-summary', 'session-3'],
+    });
     expect(setLatestRunSummary).toHaveBeenLastCalledWith(
       'Round 1 finished after 4 turns.',
     );

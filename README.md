@@ -132,6 +132,16 @@ Each view has a direct URL (`#/sessions/:id/conversation`, `finances`, or `histo
 
 The Appearance menu supports Light, Dark, and System. The Session menu contains saved-session switching, the session ID, and change/new-session actions. Explicit choices persist in this browser. Layouts adapt from narrow portrait screens to wide desktops, and detail drawers become full-width dialogs on small screens. Dialogs and header disclosures support Escape and return keyboard focus to the opening control. Initial requests show skeleton loading; background refreshes retain current content. Brief reveal and typing animations respect reduced-motion preferences.
 
+### Round summaries and conversation playback
+
+The **AI summary this round** card replaces the round note. After each successful **Run next N turns** operation, the backend summarizes the current round's persisted replay and saves the result by session and round. It refreshes after subsequent runs and survives reloads. Advancing starts a new round with an empty summary until turns run in that round.
+
+Summaries use the existing runtime configuration: OpenAI with `OPENAI_API_KEY` and `OPENAI_MODEL`, or a clearly labelled deterministic summary in mock mode. The model receives recorded events as untrusted data, has no tools, and is instructed to distinguish agent claims from recorded transactions. Large rounds use the latest 200 events, with coverage displayed below the summary. Generation has a 30-second timeout; a failed summary does not fail or repeat completed simulation actions. Replay remains the source of truth.
+
+The summary storage requires the additive migration included with this change. Run `corepack pnpm db:generate` and `corepack pnpm db:migrate:deploy` when updating an existing checkout. Summaries are available through `GET /api/agents/sessions/:id/rounds/:roundNumber/summary`, returning `{ summary: record | null }`.
+
+The conversation has a bounded scrollable window. Saved history is immediately available; newly appended activity appears at 180 ms intervals with a short reveal animation. It follows the latest activity while you are at the bottom and preserves your reading position when you scroll up. **Jump to latest activity** resumes following. Reduced-motion mode disables pacing and animation. Personality panels expand and collapse smoothly without stretching adjacent agent cards.
+
 ### Frontend MVVM boundaries
 
 React and strict TypeScript remain the frontend stack. Feature `model` folders contain pure typed data transformations; `view-model` folders own application state, requests, subscriptions, and commands; `view` folders and feature components render that data and bind commands. Shared UI under `shared/ui` owns only reusable presentation and accessibility behavior. HTTP/SSE transport stays in `lib/api.ts`; models consume shared transport types directly rather than importing the transport implementation.

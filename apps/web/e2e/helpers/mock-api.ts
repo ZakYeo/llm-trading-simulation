@@ -114,6 +114,10 @@ export async function mockSessionApiScenario(
   };
 
   await page.route(`${apiBaseUrl}/agents/sessions/**/events`, noContent);
+  await page.route(
+    `${apiBaseUrl}/agents/sessions/*/rounds/*/summary`,
+    (route) => json(route, { summary: null }),
+  );
 
   await page.route(`${apiBaseUrl}/game/sessions`, async (route) => {
     const request = route.request();

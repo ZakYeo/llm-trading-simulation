@@ -220,6 +220,9 @@ export function createSessionEventHandlers({
       `Round ${payload.roundNumber} finished after ${payload.turnCount} turn${payload.turnCount === 1 ? '' : 's'}.`,
     );
     refreshLiveState();
+    void queryClient.invalidateQueries({
+      queryKey: ['round-summary', payload.gameSessionId],
+    });
   }
 
   return {

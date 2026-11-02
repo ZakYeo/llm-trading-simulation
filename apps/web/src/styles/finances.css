@@ -86,12 +86,6 @@
   font-weight: 400;
 }
 
-.context-note p {
-  font-size: 0.82rem;
-  color: var(--muted);
-  margin-top: 8px;
-}
-
 .read-only-note {
   padding: 12px 16px;
   border: 1px solid var(--line);
@@ -271,4 +265,19 @@
   .custody-totals > div:first-child {
     grid-column: 1/-1;
   }
+}
+
+.round-summary {
+  grid-column: 1/-1;
+}
+.round-summary-text {
+  font-size: 0.9rem;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.round-summary .skeleton-card {
+  border: 0;
+  padding: 12px 0;
+  background: transparent;
 }

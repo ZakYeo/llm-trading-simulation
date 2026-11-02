@@ -4,6 +4,7 @@ import type {
   GameSessionRecord,
   GameSessionSummary,
   OrchestratedRoundRecord,
+  RoundSummaryRecord,
 } from '@llm-sim/shared-types';
 
 export type {
@@ -132,4 +133,14 @@ export function createAgentSessionEventSource(gameSessionId: string) {
   return new EventSource(
     `${apiBaseUrl}/agents/sessions/${gameSessionId}/events`,
   );
+}
+
+export async function getRoundSummary(
+  gameSessionId: string,
+  roundNumber: number,
+) {
+  const result = await request<{ summary: RoundSummaryRecord | null }>(
+    `/agents/sessions/${encodeURIComponent(gameSessionId)}/rounds/${roundNumber}/summary`,
+  );
+  return result.summary;
 }

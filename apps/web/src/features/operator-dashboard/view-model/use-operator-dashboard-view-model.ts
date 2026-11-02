@@ -1,3 +1,4 @@
+import { useRoundSummaryViewModel } from '../../round-summary/view-model/use-round-summary-view-model';
 import { useWorkspaceNavigation } from './use-workspace-navigation';
 import { useSimulationJournal } from '../../audit-trail/view-model/use-simulation-journal';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -117,6 +118,9 @@ export function useOperatorDashboardViewModel() {
       );
       void Promise.all([
         queryClient.invalidateQueries({
+          queryKey: ['round-summary', result.gameSessionId],
+        }),
+        queryClient.invalidateQueries({
           queryKey: ['game-session', selectedSessionId],
         }),
         queryClient.invalidateQueries({
@@ -153,6 +157,15 @@ export function useOperatorDashboardViewModel() {
   const shouldShowHeaderMetrics = Boolean(selectedSession);
   const isTurnFlowInProgress =
     orchestrateMutation.isPending || advanceRoundMutation.isPending;
+  const roundSummary = useRoundSummaryViewModel({
+    sessionId: selectedSessionId,
+    roundNumber: selectedSession?.currentRound ?? 1,
+    isRunning: orchestrateMutation.isPending,
+    recordedEventCount:
+      replay?.events.filter(
+        (event) => event.roundNumber === selectedSession?.currentRound,
+      ).length ?? 0,
+  });
   const inProgressLabel = orchestrateMutation.isPending
     ? `Running ${turnCount} turn${turnCount === 1 ? '' : 's'}...`
     : advanceRoundMutation.isPending
@@ -264,6 +277,7 @@ export function useOperatorDashboardViewModel() {
         onAdvanceRound: () => advanceRoundMutation.mutate(),
       },
       journal,
+      roundSummary,
       auditTrail: {
         viewModel: auditTrailViewModel,
         isLoading: replayQuery.isPending,
