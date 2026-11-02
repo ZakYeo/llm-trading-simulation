@@ -1,6 +1,6 @@
-export type WorkspaceTab = 'Simulation' | 'Finances' | 'History';
+export type WorkspaceTab = 'Conversation' | 'Finances' | 'History';
 export const workspaceTabs: WorkspaceTab[] = [
-  'Simulation',
+  'Conversation',
   'Finances',
   'History',
 ];

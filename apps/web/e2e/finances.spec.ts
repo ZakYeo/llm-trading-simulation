@@ -18,7 +18,7 @@ test('preserves full opportunity terms, account personalities and position detai
   await expect(
     page.getByRole('complementary', { name: 'Financial context' }),
   ).toContainText('Binary Event Volatility');
-  await page.getByRole('tab', { name: 'Finances', exact: true }).click();
+  await page.getByRole('link', { name: 'Finances', exact: true }).click();
   await page
     .getByRole('button', {
       name: 'Inspect opportunity Binary Event Volatility',

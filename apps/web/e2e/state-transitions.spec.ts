@@ -28,7 +28,7 @@ test('updates balances, exposure, and replay after a trader opens a market posit
     },
   });
   await connectToSession(page, scenario.initial.session.id);
-  await page.getByRole('tab', { name: 'Finances', exact: true }).click();
+  await page.getByRole('link', { name: 'Finances', exact: true }).click();
 
   await page.getByRole('button', { name: '1 turn' }).click();
   await page.getByRole('button', { name: /Run next 1 turn/ }).click();
@@ -43,7 +43,7 @@ test('updates balances, exposure, and replay after a trader opens a market posit
   await expect(page.locator('.market-shell')).toContainText('20.00');
   await expect(page.locator('.balance-card').nth(1)).toContainText('80.00');
   await expect(page.locator('.balance-card').nth(1)).toContainText('20.00');
-  await page.getByRole('tab', { name: 'History', exact: true }).click();
+  await page.getByRole('link', { name: 'History', exact: true }).click();
   await expect(page.locator('.replay-panel')).toContainText(
     'Trader Bot / open market position',
   );
@@ -67,7 +67,7 @@ test('updates treasury totals, replay, and round metrics after interest accrues'
     },
   });
   await connectToSession(page, scenario.initial.session.id);
-  await page.getByRole('tab', { name: 'Finances', exact: true }).click();
+  await page.getByRole('link', { name: 'Finances', exact: true }).click();
 
   await page.getByRole('button', { name: 'Advance round settlement' }).click();
 
@@ -78,7 +78,7 @@ test('updates treasury totals, replay, and round metrics after interest accrues'
   await expect(page.locator('.treasury-shell')).toContainText('10.25');
   await expect(page.locator('.treasury-shell')).toContainText('0.25');
   await expect(page.locator('.balance-card').first()).toContainText('110.25');
-  await page.getByRole('tab', { name: 'History', exact: true }).click();
+  await page.getByRole('link', { name: 'History', exact: true }).click();
   await expect(page.locator('.replay-panel')).toContainText(
     'Trader Bot accrued custody interest',
   );
@@ -99,7 +99,7 @@ test('updates market settlement status and replay after the round advances', asy
     },
   });
   await connectToSession(page, scenario.initial.session.id);
-  await page.getByRole('tab', { name: 'Finances', exact: true }).click();
+  await page.getByRole('link', { name: 'Finances', exact: true }).click();
 
   await page.getByRole('button', { name: 'Advance round settlement' }).click();
 
@@ -108,7 +108,7 @@ test('updates market settlement status and replay after the round advances', asy
   await expect(page.locator('.market-shell')).toContainText('Round 2');
   await expect(page.locator('.balance-card').nth(1)).toContainText('123.00');
   await expect(page.locator('.balance-card').nth(1)).toContainText('0.00');
-  await page.getByRole('tab', { name: 'History', exact: true }).click();
+  await page.getByRole('link', { name: 'History', exact: true }).click();
   await expect(page.locator('.replay-panel')).toContainText(
     'Trader Bot settled Binary Event Volatility',
   );

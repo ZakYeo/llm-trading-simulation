@@ -28,7 +28,7 @@ test('keeps previous session state visible when orchestration fails', async ({
     },
   });
   await connectToSession(page, initial.session.id);
-  await page.getByRole('tab', { name: 'Finances', exact: true }).click();
+  await page.getByRole('link', { name: 'Finances', exact: true }).click();
 
   await page.getByRole('button', { name: '1 turn' }).click();
   await page.getByRole('button', { name: /Run next 1 turn/ }).click();
@@ -60,7 +60,7 @@ test('does not fake a round increment when round advancement fails', async ({
     },
   });
   await connectToSession(page, initial.session.id);
-  await page.getByRole('tab', { name: 'Finances', exact: true }).click();
+  await page.getByRole('link', { name: 'Finances', exact: true }).click();
 
   await page.getByRole('button', { name: 'Advance round settlement' }).click();
 
@@ -89,7 +89,7 @@ test('shows the live in-progress banner while a mocked turn is still running', a
     },
   });
   await connectToSession(page, initial.session.id);
-  await page.getByRole('tab', { name: 'Finances', exact: true }).click();
+  await page.getByRole('link', { name: 'Finances', exact: true }).click();
 
   await page.getByRole('button', { name: '1 turn' }).click();
   await page.getByRole('button', { name: /Run next 1 turn/ }).click();
@@ -124,7 +124,7 @@ test('renders stable empty-state copy for replay and market visibility', async (
     },
   });
   await connectToSession(page, session.id);
-  await page.getByRole('tab', { name: 'Finances', exact: true }).click();
+  await page.getByRole('link', { name: 'Finances', exact: true }).click();
 
   await expect(page.locator('.market-shell')).toContainText(
     'No live market opportunities are available in this session.',
@@ -132,7 +132,7 @@ test('renders stable empty-state copy for replay and market visibility', async (
   await expect(page.locator('.market-shell')).toContainText(
     'No market positions opened yet.',
   );
-  await page.getByRole('tab', { name: 'History', exact: true }).click();
+  await page.getByRole('link', { name: 'History', exact: true }).click();
   await expect(page.locator('.replay-panel')).toContainText(
     'No replay events match the current filter yet.',
   );

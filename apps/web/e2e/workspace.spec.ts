@@ -10,14 +10,14 @@ test('keeps session and turn controls while switching views and themes', async (
   await mockSessionApiScenario(page, { initial });
   await connectToSession(page, initial.session.id);
   await expect(
-    page.getByRole('tab', { name: 'Simulation', exact: true }),
-  ).toHaveAttribute('aria-selected', 'true');
+    page.getByRole('link', { name: 'Conversation', exact: true }),
+  ).toHaveAttribute('aria-current', 'page');
   await page.getByLabel('Turn count', { exact: true }).fill('4');
-  await page.getByRole('tab', { name: 'Finances', exact: true }).click();
+  await page.getByRole('link', { name: 'Finances', exact: true }).click();
   await expect(
     page.getByRole('heading', { name: /current opportunities/i }),
   ).toBeVisible();
-  await page.getByRole('tab', { name: 'History', exact: true }).click();
+  await page.getByRole('link', { name: 'History', exact: true }).click();
   await expect(
     page.getByRole('button', { name: 'Run next 4 turns' }),
   ).toBeVisible();

@@ -1,17 +1,45 @@
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../assets/fonts/font-2-0.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../assets/fonts/font-2-1.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../assets/fonts/font-2-2.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../assets/fonts/font-2-3.ttf') format('truetype');
+}
 :root {
   color-scheme: light;
-  --paper: #f6f5f0;
-  --surface: #fffefa;
-  --inset: #eeeee8;
-  --ink: #252d30;
-  --muted: #626e71;
-  --line: #d8dcd5;
-  --accent: #245d80;
-  --accent-soft: #e4edf2;
-  --positive: #28664b;
+  --paper: #faf8f5;
+  --surface: #ffffff;
+  --inset: #f5f1ed;
+  --ink: #27313e;
+  --muted: #687483;
+  --line: #e9e1db;
+  --accent: #9d3e1a;
+  --accent-soft: #f9eae2;
+  --positive: #1d6b4b;
   --warning: #855a17;
   --negative: #a43c36;
-  font-family: Inter, system-ui, sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.6;
   color: var(--ink);
@@ -20,14 +48,14 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --paper: #181c1e;
-  --surface: #202628;
-  --inset: #292f31;
-  --ink: #e3e7e3;
-  --muted: #a7b2b4;
-  --line: #3c4648;
-  --accent: #a2c8e0;
-  --accent-soft: #293e4b;
+  --paper: #1d1b1a;
+  --surface: #272321;
+  --inset: #312b27;
+  --ink: #f5ede7;
+  --muted: #c1b5ac;
+  --line: #4b4039;
+  --accent: #ffb59c;
+  --accent-soft: #4b3026;
   --positive: #92cbaa;
   --warning: #dfbd7c;
   --negative: #f1a39b;
@@ -108,9 +136,9 @@ p {
 }
 
 h1 {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-weight: 400;
-  font-size: clamp(1.8rem, 3.2vw, 2.6rem);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
   line-height: 1.2;
   letter-spacing: -0.035em;
 }

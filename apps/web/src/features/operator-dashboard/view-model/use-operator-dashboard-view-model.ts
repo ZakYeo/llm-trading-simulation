@@ -1,3 +1,4 @@
+import { useWorkspaceNavigation } from './use-workspace-navigation';
 import { useSimulationJournal } from '../../audit-trail/view-model/use-simulation-journal';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { startTransition, useState } from 'react';
@@ -24,7 +25,9 @@ import { useAgentDrafts } from '../../session-setup/view-model/use-agent-drafts'
 
 export function useOperatorDashboardViewModel() {
   const queryClient = useQueryClient();
-  const [selectedSessionId, setSelectedSessionId] = useState<string>('');
+  const navigation = useWorkspaceNavigation();
+  const selectedSessionId = navigation.sessionId;
+  const setSelectedSessionId = navigation.connect;
   const [sessionName, setSessionName] = useState('Operator Demo Table');
   const [initialBalance, setInitialBalance] = useState('100.0000');
   const [turnCount, setTurnCount] = useState(2);
@@ -197,6 +200,7 @@ export function useOperatorDashboardViewModel() {
     hasSelectedSession && !isStartupVisible ? 'collapsed' : 'expanded';
 
   return {
+    navigation,
     topbar: {
       hasSelectedSession,
       shouldShowHeaderMetrics,

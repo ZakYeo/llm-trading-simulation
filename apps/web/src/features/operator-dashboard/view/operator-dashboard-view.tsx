@@ -8,7 +8,7 @@ import { SessionSetupCard } from '../../../components/session-setup-card';
 import { TreasuryCard } from '../../../components/treasury-card';
 import { Dialog } from '../../../shared/ui/dialog';
 import { useWorkspaceViewModel } from '../view-model/use-workspace-view-model';
-import type { ThemePreference, WorkspaceTab } from '../model/workspace';
+import type { ThemePreference } from '../model/workspace';
 import { HelpModal } from './help-modal';
 
 export function OperatorDashboardView() {
@@ -24,8 +24,7 @@ export function OperatorDashboardView() {
             ↗
           </span>
           <span>
-            Trading <strong>journal</strong>
-            <small>LLM Trading Simulator</small>
+            <strong>LLM Trading Simulator</strong>
           </span>
         </a>
         {vm.workspace.isVisible && (
@@ -109,61 +108,30 @@ export function OperatorDashboardView() {
                 vm.topbar.latestRunSummary || 'Ready when you are.'
               )}
             </div>
-            <div
-              className="workspace-nav"
-              role="tablist"
-              aria-label="Session views"
-            >
+            <nav className="workspace-nav" aria-label="Session views">
               {vm.tabs.map((tab) => (
-                <button
+                <a
                   key={tab}
-                  type="button"
-                  role="tab"
-                  id={`tab-${tab}`}
-                  aria-controls={`panel-${tab}`}
-                  aria-selected={vm.activeTab === tab}
-                  tabIndex={vm.activeTab === tab ? 0 : -1}
-                  onClick={() => vm.setActiveTab(tab)}
-                  onKeyDown={(event) => {
-                    if (
-                      !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(
-                        event.key,
-                      )
-                    )
-                      return;
-                    event.preventDefault();
-                    const index = vm.tabs.indexOf(tab);
-                    const next =
-                      event.key === 'Home'
-                        ? 0
-                        : event.key === 'End'
-                          ? vm.tabs.length - 1
-                          : (index +
-                              (event.key === 'ArrowRight' ? 1 : -1) +
-                              vm.tabs.length) %
-                            vm.tabs.length;
-                    const target: WorkspaceTab = vm.tabs[next];
-                    vm.setActiveTab(target);
-                    document.getElementById(`tab-${target}`)?.focus();
-                  }}
+                  href={vm.navigation.href(tab)}
+                  aria-current={vm.activeTab === tab ? 'page' : undefined}
                 >
                   {tab}
-                </button>
+                </a>
               ))}
-            </div>
+            </nav>
             <section
               className="workspace-panel"
-              role="tabpanel"
+              role="region"
               id={`panel-${vm.activeTab}`}
-              aria-labelledby={`tab-${vm.activeTab}`}
+              aria-label={vm.activeTab}
               tabIndex={0}
             >
-              {vm.activeTab === 'Simulation' && (
+              {vm.activeTab === 'Conversation' && (
                 <div className="simulation-layout">
                   <div>
                     <div className="view-intro">
                       <p className="eyebrow">The conversation, in context</p>
-                      <h1>Inside the simulation</h1>
+                      <h1>Conversation</h1>
                       <p>
                         Follow your agents as they negotiate, move funds, and
                         take positions.
@@ -182,7 +150,7 @@ export function OperatorDashboardView() {
                 <>
                   <div className="view-intro">
                     <p className="eyebrow">Follow the money</p>
-                    <h1>The financial ledger</h1>
+                    <h1>Finances</h1>
                     <p>
                       Balances, custody, and market exposure from the current
                       session state.
@@ -204,7 +172,7 @@ export function OperatorDashboardView() {
                 <>
                   <div className="view-intro">
                     <p className="eyebrow">Every decision leaves a trace</p>
-                    <h1>Session history</h1>
+                    <h1>History</h1>
                     <p>
                       Inspect the complete activity record, one round at a time.
                     </p>

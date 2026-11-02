@@ -19,11 +19,11 @@ test('@smoke connects to persisted custody and financial state', async ({
   await connectToSession(page, session.id);
   await expect(topbarMetric(page, 'Session')).toContainText(session.name);
   await expect(topbarMetric(page, 'Round')).toContainText('2');
-  await page.getByRole('tab', { name: 'Finances', exact: true }).click();
+  await page.getByRole('link', { name: 'Finances', exact: true }).click();
   await expect(page.locator('.balance-card').first()).toContainText('110.25');
   await expect(page.locator('.balance-card').nth(1)).toContainText('90.00');
   await expect(page.locator('.treasury-shell')).toContainText('10.25');
-  await page.getByRole('tab', { name: 'History', exact: true }).click();
+  await page.getByRole('link', { name: 'History', exact: true }).click();
   await expect(page.locator('.replay-panel')).toContainText(
     /custody placement/i,
   );
@@ -43,8 +43,8 @@ test('@smoke connects, changes views and opens help', async ({
   await expect(page.getByRole('tab')).toHaveCount(0);
   await page.getByLabel('Connect to session').selectOption(session.id);
   await expect(
-    page.getByRole('tab', { name: 'Simulation', exact: true }),
-  ).toHaveAttribute('aria-selected', 'true');
+    page.getByRole('link', { name: 'Conversation', exact: true }),
+  ).toHaveAttribute('aria-current', 'page');
   await expect(
     page.getByRole('button', { name: 'Change session' }),
   ).toBeVisible();
@@ -69,12 +69,12 @@ test('@smoke runs a turn and preserves results across views', async ({
   await expect(topbarMetric(page, 'Latest activity')).toContainText(
     `Ran 1 turn for session ${session.id}`,
   );
-  await page.getByRole('tab', { name: 'Finances', exact: true }).click();
+  await page.getByRole('link', { name: 'Finances', exact: true }).click();
   await expect(page.locator('.market-shell')).toContainText('1 position');
   await expect(page.locator('.balance-card').nth(1)).not.toContainText(
     'Available100.00',
   );
-  await page.getByRole('tab', { name: 'History', exact: true }).click();
+  await page.getByRole('link', { name: 'History', exact: true }).click();
   await expect(page.locator('.replay-panel')).toContainText(
     /market position opened/i,
   );
@@ -106,7 +106,7 @@ test('@smoke displays pending feedback across view changes', async ({
     .getByRole('button', { name: 'Run next 1 turn', exact: true })
     .click();
   await expect(page.getByRole('status')).toContainText('Running 1 turn');
-  await page.getByRole('tab', { name: 'History', exact: true }).click();
+  await page.getByRole('link', { name: 'History', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Running 1 turn');
   release();
   await expect(topbarMetric(page, 'Latest activity')).toContainText(
@@ -128,7 +128,7 @@ test('@smoke advances a round and renders persisted interest', async ({
     .getByRole('button', { name: 'Advance round settlement', exact: true })
     .click();
   await expect(topbarMetric(page, 'Round')).toContainText('2');
-  await page.getByRole('tab', { name: 'Finances', exact: true }).click();
+  await page.getByRole('link', { name: 'Finances', exact: true }).click();
   await expect(page.locator('.treasury-shell')).toContainText('10.25');
   await expect(page.locator('.treasury-shell')).toContainText('0.25');
   await expect(page.locator('.balance-card').first()).toContainText('110.25');
@@ -160,7 +160,7 @@ test('@smoke preserves state when orchestration fails', async ({
     'Synthetic orchestrate failure.',
   );
   await expect(topbarMetric(page, 'Round')).toContainText('1');
-  await page.getByRole('tab', { name: 'Finances', exact: true }).click();
+  await page.getByRole('link', { name: 'Finances', exact: true }).click();
   await expect(page.locator('.balance-card').first()).toContainText('100.00');
   await expect(page.locator('.balance-card').nth(1)).toContainText('100.00');
   await expect(page.locator('.market-shell')).toContainText('0 positions');

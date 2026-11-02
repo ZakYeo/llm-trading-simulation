@@ -109,7 +109,7 @@ for (const theme of ['light', 'dark'])
         fullPage: true,
       });
       for (const tab of ['Finances', 'History']) {
-        await page.getByRole('tab', { name: tab, exact: true }).click();
+        await page.getByRole('link', { name: tab, exact: true }).click();
         await fits(page);
         if (size.width === 390 || size.width === 1366)
           await page.screenshot({
@@ -117,7 +117,7 @@ for (const theme of ['light', 'dark'])
             fullPage: true,
           });
       }
-      await page.getByRole('tab', { name: 'Finances', exact: true }).click();
+      await page.getByRole('link', { name: 'Finances', exact: true }).click();
       const trigger = page.getByRole('button', {
         name: 'Inspect opportunity Carry Ladder',
         exact: true,
@@ -146,13 +146,13 @@ test('adapts to resizing, reduced motion and 200 percent zoom without losing sta
   await page.goto('/');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.getByLabel('Connect to session').selectOption(initial.session.id);
-  await page.getByRole('tab', { name: 'Finances', exact: true }).click();
+  await page.getByRole('link', { name: 'Finances', exact: true }).click();
   for (const size of sizes) {
     await page.setViewportSize(size);
     await fits(page);
     await expect(
-      page.getByRole('tab', { name: 'Finances', exact: true }),
-    ).toHaveAttribute('aria-selected', 'true');
+      page.getByRole('link', { name: 'Finances', exact: true }),
+    ).toHaveAttribute('aria-current', 'page');
   }
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.evaluate(() => {

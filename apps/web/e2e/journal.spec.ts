@@ -37,9 +37,9 @@ test('keeps current-round journal selection independent of history filters', asy
   await expect(
     page.getByText('Previous round conversation.', { exact: true }),
   ).toHaveCount(0);
-  await page.getByRole('tab', { name: 'History', exact: true }).click();
+  await page.getByRole('link', { name: 'History', exact: true }).click();
   await page.getByRole('button', { name: 'market', exact: true }).click();
-  await page.getByRole('tab', { name: 'Simulation', exact: true }).click();
+  await page.getByRole('link', { name: 'Conversation', exact: true }).click();
   await expect(
     page.getByText('Current round negotiation.', { exact: true }),
   ).toBeVisible();

@@ -35,7 +35,7 @@ test('creates a session with the same typed roster and personality payload', asy
     .getByRole('button', { name: 'Create session', exact: true })
     .click();
   await expect(
-    page.getByRole('tab', { name: 'Simulation', exact: true }),
+    page.getByRole('link', { name: 'Conversation', exact: true }),
   ).toBeVisible();
   expect(body).toMatchObject({
     name: 'Calm experiment',
