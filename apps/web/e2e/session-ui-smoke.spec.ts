@@ -106,9 +106,13 @@ test('@smoke displays pending feedback across view changes', async ({
   await page
     .getByRole('button', { name: 'Run next 1 turn', exact: true })
     .click();
-  await expect(page.getByRole('status')).toContainText('Running 1 turn');
+  await expect(
+    page.getByRole('status', { name: 'Latest activity' }),
+  ).toContainText('Running 1 turn');
   await page.getByRole('link', { name: 'History', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Running 1 turn');
+  await expect(
+    page.getByRole('status', { name: 'Latest activity' }),
+  ).toContainText('Running 1 turn');
   release();
   await expect(topbarMetric(page, 'Latest activity')).toContainText(
     `Ran 1 turn for session ${session.id}`,

@@ -62,6 +62,7 @@ model GameSession {
   currentRound Int          @default(1)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
+  roundSummaries RoundSummary[]
   agents       Agent[]
   rounds       GameRound[]
   agentMessages AgentMessage[]
@@ -390,4 +391,25 @@ model MarketOpportunityResolutionParticipant {
   ownerAgent              Agent @relation(fields: [ownerAgentId], references: [id], onDelete: Cascade)
 
   @@unique([marketOpportunityResolvedId, marketPositionSettlementId])
+}
+
+enum RoundSummaryStatus {
+  READY
+  UNAVAILABLE
+}
+enum RoundSummaryProvider {
+  OPENAI
+  MOCK
+}
+model RoundSummary {
+  gameSessionId String
+  roundNumber Int
+  status RoundSummaryStatus
+  provider RoundSummaryProvider
+  text String?
+  eventCount Int
+  includedEventCount Int
+  generatedAt DateTime
+  gameSession GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  @@id([gameSessionId, roundNumber])
 }

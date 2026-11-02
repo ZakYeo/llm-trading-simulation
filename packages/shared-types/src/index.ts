@@ -317,3 +317,15 @@ export type AgentSessionEventRecord =
       turnCount: number;
       occurredAt: string;
     };
+
+/** Persisted narrative of recorded activity, separate from the authoritative audit trail. */
+export interface RoundSummaryRecord {
+  gameSessionId: string;
+  roundNumber: number;
+  status: 'ready' | 'unavailable';
+  provider: 'openai' | 'mock';
+  text: string | null;
+  generatedAt: string;
+  eventCount: number;
+  includedEventCount: number;
+}

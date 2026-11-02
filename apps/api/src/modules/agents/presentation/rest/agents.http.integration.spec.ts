@@ -1,3 +1,4 @@
+import { PrismaRoundSummaryRepository } from '../../infrastructure/prisma/prisma-round-summary.repository.js';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../../../app.factory.js';
@@ -29,53 +30,36 @@ async function createAgentSession(baseUrl: string) {
   return (await createResponse.json()) as { id: string };
 }
 
-async function readNextSseEvent(
-  reader: ReadableStreamDefaultReader<Uint8Array>,
-): Promise<{ event: string; data: string }> {
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-
-    if (done) {
-      throw new Error('SSE stream closed before an event was received');
-    }
-
-    buffer += decoder.decode(value, { stream: true });
-    const separatorIndex = buffer.indexOf('\n\n');
-
-    if (separatorIndex === -1) {
-      continue;
-    }
-
-    const rawEvent = buffer.slice(0, separatorIndex);
-    const event = rawEvent.match(/^event:\s*(.+)$/m)?.[1];
-    const data = rawEvent
-      .split('\n')
-      .filter((line) => line.startsWith('data: '))
-      .map((line) => line.slice(6))
-      .join('\n');
-
-    if (!event || !data) {
-      buffer = buffer.slice(separatorIndex + 2);
-      continue;
-    }
-
-    return { event, data };
-  }
-}
-
 async function readSseEvents(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   count: number,
 ) {
+  const decoder = new TextDecoder();
+  let buffer = '';
   const events: Array<{ event: string; data: string }> = [];
-
-  for (let index = 0; index < count; index += 1) {
-    events.push(await readNextSseEvent(reader));
+  const types = new Set<string>();
+  while (types.size < count) {
+    const { done, value } = await reader.read();
+    if (done)
+      throw new Error('SSE stream closed before expected events arrived');
+    buffer += decoder.decode(value, { stream: true });
+    let separator = buffer.indexOf('\n\n');
+    while (separator !== -1 && types.size < count) {
+      const frame = buffer.slice(0, separator);
+      buffer = buffer.slice(separator + 2);
+      const event = frame.match(/^event:\s*(.+)$/m)?.[1];
+      const data = frame
+        .split('\n')
+        .filter((line) => line.startsWith('data: '))
+        .map((line) => line.slice(6))
+        .join('\n');
+      if (event && data) {
+        events.push({ event, data });
+        types.add(event);
+      }
+      separator = buffer.indexOf('\n\n');
+    }
   }
-
   return events;
 }
 
@@ -184,6 +168,9 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
     );
 
     expect(turnResponse.status).toBe(201);
+    const completedTurn = (await turnResponse.json()) as {
+      roundNumber: number;
+    };
 
     let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
 
@@ -215,7 +202,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
       }>;
     };
 
-    expect(streamedEvents.map((event) => event.event)).toEqual([
+    expect([...new Set(streamedEvents.map((event) => event.event))]).toEqual([
       'message_stream_started',
       'message_stream_delta',
       'message_stream_completed',
@@ -225,7 +212,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
       expect.objectContaining({
         type: 'message_stream_started',
         gameSessionId: createdSession.id,
-        roundNumber: 0,
+        roundNumber: completedTurn.roundNumber,
         turnNumber: 1,
       }),
     );
@@ -237,18 +224,29 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
         content: expect.any(String),
       }),
     );
-    expect(JSON.parse(streamedEvents[2].data)).toEqual(
+    expect(
+      JSON.parse(
+        streamedEvents.find(
+          (event) => event.event === 'message_stream_completed',
+        )!.data,
+      ),
+    ).toEqual(
       expect.objectContaining({
         type: 'message_stream_completed',
         gameSessionId: createdSession.id,
         content: expect.any(String),
       }),
     );
-    expect(JSON.parse(streamedEvents[3].data)).toEqual(
+    expect(
+      JSON.parse(
+        streamedEvents.find((event) => event.event === 'action_progressed')!
+          .data,
+      ),
+    ).toEqual(
       expect.objectContaining({
         type: 'action_progressed',
         gameSessionId: createdSession.id,
-        roundNumber: 0,
+        roundNumber: completedTurn.roundNumber,
         turnNumber: 1,
         streamId: expect.any(String),
         messageId: expect.any(String),
@@ -258,7 +256,12 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
       replay.events.some(
         (event) =>
           event.type === 'message' &&
-          event.id === JSON.parse(streamedEvents[3].data).messageId &&
+          event.id ===
+            JSON.parse(
+              streamedEvents.find(
+                (event) => event.event === 'action_progressed',
+              )!.data,
+            ).messageId &&
           typeof event.content === 'string' &&
           event.content.length > 0,
       ),
@@ -486,5 +489,54 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
     expect(trader?.availableBalance).toBe('101.0000');
 
     delete process.env.AGENT_MOCK_SCENARIO;
+  });
+  it('persists a summary after each completed run and scopes it to the session and round', async () => {
+    const session = await createAgentSession(baseUrl);
+    const summaryUrl = `${baseUrl}/api/agents/sessions/${session.id}/rounds/1/summary`;
+    const before = await fetch(summaryUrl);
+    expect(before.status).toBe(200);
+    expect(await before.json()).toEqual({ summary: null });
+    const run = () =>
+      fetch(`${baseUrl}/api/agents/sessions/${session.id}/rounds/orchestrate`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ turnCount: 1 }),
+      });
+    expect((await run()).status).toBe(201);
+    const { summary: first } = await (await fetch(summaryUrl)).json();
+    expect(first).toMatchObject({
+      gameSessionId: session.id,
+      roundNumber: 1,
+      status: 'ready',
+      provider: 'mock',
+    });
+    expect(first.eventCount).toBeGreaterThan(0);
+    expect(first.text).toContain('Round 1');
+    expect((await run()).status).toBe(201);
+    const { summary: second } = await (await fetch(summaryUrl)).json();
+    expect(second.eventCount).toBeGreaterThan(first.eventCount);
+    const repository = new PrismaRoundSummaryRepository(prismaService);
+    await repository.save({ ...first, text: 'Outdated summary' });
+    expect(await (await fetch(summaryUrl)).json()).toEqual({ summary: second });
+    await fetch(`${baseUrl}/api/game/sessions/${session.id}/rounds/advance`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ interestRateBps: 250 }),
+    });
+    expect(
+      await (
+        await fetch(
+          `${baseUrl}/api/agents/sessions/${session.id}/rounds/2/summary`,
+        )
+      ).json(),
+    ).toEqual({ summary: null });
+    expect(await (await fetch(summaryUrl)).json()).toEqual({ summary: second });
+    expect(
+      (
+        await fetch(
+          `${baseUrl}/api/agents/sessions/${session.id}/rounds/-1/summary`,
+        )
+      ).status,
+    ).toBe(400);
   });
 });

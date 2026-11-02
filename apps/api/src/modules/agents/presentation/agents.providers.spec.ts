@@ -1,3 +1,4 @@
+import { GenerateRoundSummaryUseCase } from '../application/use-cases/generate-round-summary.use-case.js';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { OpenMarketPositionUseCase } from '../../game/application/use-cases/open-market-position.use-case.js';
@@ -114,6 +115,7 @@ describe('createAgentsProviders', () => {
         RunAgentCommunicationTurnUseCase,
         TransferFundsUseCase,
         AgentSessionEventStreamService,
+        GenerateRoundSummaryUseCase,
       ],
     });
   });

@@ -40,6 +40,7 @@ describe('OrchestrateAgentRoundUseCase', () => {
       runAgentCommunicationTurnUseCase as never,
       transferFundsUseCase as never,
       agentSessionEventStreamService as never,
+      { execute: vi.fn() } as never,
     );
 
     await expect(
@@ -126,6 +127,7 @@ describe('OrchestrateAgentRoundUseCase', () => {
       {
         publish: vi.fn(),
       } as never,
+      { execute: vi.fn() } as never,
     );
 
     await expect(
@@ -213,6 +215,7 @@ describe('OrchestrateAgentRoundUseCase', () => {
       runAgentCommunicationTurnUseCase as never,
       transferFundsUseCase as never,
       agentSessionEventStreamService as never,
+      { execute: vi.fn() } as never,
     );
 
     await useCase.execute({
@@ -317,6 +320,7 @@ describe('OrchestrateAgentRoundUseCase', () => {
       runAgentCommunicationTurnUseCase as never,
       transferFundsUseCase as never,
       agentSessionEventStreamService as never,
+      { execute: vi.fn() } as never,
     );
 
     await useCase.execute({
@@ -424,6 +428,7 @@ describe('OrchestrateAgentRoundUseCase', () => {
       runAgentCommunicationTurnUseCase as never,
       transferFundsUseCase as never,
       agentSessionEventStreamService as never,
+      { execute: vi.fn() } as never,
     );
 
     await useCase.execute({
@@ -437,5 +442,47 @@ describe('OrchestrateAgentRoundUseCase', () => {
       destinationAgentId: 'banker-1',
       amount: '8.5000',
     });
+  });
+  it('summarizes after completed turns and preserves success when summary storage fails', async () => {
+    const turn = {
+      gameSessionId: 'game-1',
+      roundNumber: 2,
+      turnNumber: 1,
+      actions: [],
+      actionRecords: [],
+      messages: [],
+    };
+    const calls: string[] = [];
+    const summarize = {
+      execute: vi.fn(async () => {
+        calls.push('summary');
+        throw new Error('Storage offline');
+      }),
+    };
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const useCase = new OrchestrateAgentRoundUseCase(
+        { findRecentByGameSessionId: vi.fn().mockResolvedValue([]) } as never,
+        {
+          execute: vi.fn(async () => {
+            calls.push('turn');
+            return turn;
+          }),
+        } as never,
+        { execute: vi.fn() } as never,
+        { publish: vi.fn() } as never,
+        summarize as never,
+      );
+      await expect(
+        useCase.execute({ gameSessionId: 'game-1', turnCount: 1 }),
+      ).resolves.toMatchObject({ turns: [turn] });
+      expect(calls).toEqual(['turn', 'summary']);
+      expect(summarize.execute).toHaveBeenCalledWith({
+        gameSessionId: 'game-1',
+        roundNumber: 2,
+      });
+    } finally {
+      warning.mockRestore();
+    }
   });
 });

@@ -1,3 +1,5 @@
+import { RoundSummaryController } from './rest/round-summary.controller.js';
+import { createRoundSummaryProviders } from './round-summary.providers.js';
 import { Module } from '@nestjs/common';
 
 import { GameModule } from '../../game/presentation/game.module.js';
@@ -8,11 +10,12 @@ import { AgentsController } from './rest/agents.controller.js';
 
 @Module({
   imports: [GameModule],
-  controllers: [AgentsController],
+  controllers: [AgentsController, RoundSummaryController],
   providers: [
     PrismaService,
     AgentSessionEventStreamService,
     ...createAgentsProviders(),
+    ...createRoundSummaryProviders(),
   ],
 })
 export class AgentsModule {}

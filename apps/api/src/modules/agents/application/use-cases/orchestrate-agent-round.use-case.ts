@@ -1,3 +1,4 @@
+import type { GenerateRoundSummaryUseCase } from './generate-round-summary.use-case.js';
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import type { TransferFundsUseCase } from '../../../game/application/use-cases/transfer-funds.use-case.js';
 import type { AgentActionRepositoryPort } from '../ports/agent-action-repository.port.js';
@@ -29,6 +30,7 @@ export class OrchestrateAgentRoundUseCase {
     private readonly runAgentCommunicationTurnUseCase: RunAgentCommunicationTurnUseCase,
     private readonly transferFundsUseCase: TransferFundsUseCase,
     private readonly agentSessionEventStreamService: AgentSessionEventStreamService,
+    private readonly generateRoundSummary: GenerateRoundSummaryUseCase,
   ) {}
 
   async execute(
@@ -71,6 +73,16 @@ export class OrchestrateAgentRoundUseCase {
       );
     }
 
+    try {
+      await this.generateRoundSummary.execute({
+        gameSessionId: latestTurn.gameSessionId,
+        roundNumber: latestTurn.roundNumber,
+      });
+    } catch {
+      console.warn(
+        'Round summary could not be saved; completed turns remain recorded.',
+      );
+    }
     this.publishRoundCompleted(
       latestTurn.gameSessionId,
       latestTurn.roundNumber,

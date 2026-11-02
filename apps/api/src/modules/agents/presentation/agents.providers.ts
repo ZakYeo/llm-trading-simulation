@@ -1,3 +1,4 @@
+import { GenerateRoundSummaryUseCase } from '../application/use-cases/generate-round-summary.use-case.js';
 import OpenAI from 'openai';
 
 import { GAME_SESSION_REPOSITORY } from '../../shared/application/tokens.js';
@@ -152,18 +153,21 @@ export function createAgentsProviders() {
         runAgentCommunicationTurnUseCase: RunAgentCommunicationTurnUseCase,
         transferFundsUseCase: TransferFundsUseCase,
         agentSessionEventStreamService: AgentSessionEventStreamService,
+        generateRoundSummary: GenerateRoundSummaryUseCase,
       ) =>
         new OrchestrateAgentRoundUseCase(
           agentActionRepository,
           runAgentCommunicationTurnUseCase,
           transferFundsUseCase,
           agentSessionEventStreamService,
+          generateRoundSummary,
         ),
       inject: [
         AGENT_ACTION_REPOSITORY,
         RunAgentCommunicationTurnUseCase,
         TransferFundsUseCase,
         AgentSessionEventStreamService,
+        GenerateRoundSummaryUseCase,
       ],
     },
   ];
