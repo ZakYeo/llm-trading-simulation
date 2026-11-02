@@ -1,148 +1,51 @@
-import { useState } from 'react';
-
 import type { BalanceAccountViewData } from '../features/session-overview/model/session-overview';
-
-import {
-  CardBody,
-  CardCollapseButton,
-  CardHeader,
-  CardShell,
-} from './card-shell';
-
-interface BalancesCardProps {
-  accounts?: BalanceAccountViewData[];
-  variant?: 'default' | 'compact';
-}
 
 export function BalancesCard({
   accounts = [],
-  variant = 'default',
-}: BalancesCardProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [inspectedAgentIds, setInspectedAgentIds] = useState<string[]>([]);
-
-  if (accounts.length === 0) {
-    return null;
-  }
-
-  function toggleInspectedAgent(agentId: string) {
-    setInspectedAgentIds((current) =>
-      current.includes(agentId)
-        ? current.filter((currentAgentId) => currentAgentId !== agentId)
-        : [...current, agentId],
-    );
-  }
-
-  function renderPersonality(agent: BalanceAccountViewData) {
-    if (agent.personalityRows.length === 0) {
-      return <p className="balance-info-empty">No custom personality saved.</p>;
-    }
-
-    return (
-      <dl className="balance-info-list">
-        {agent.personalityRows.map((row) => (
-          <div key={row.label}>
-            <dt>{row.label}</dt>
-            <dd>{row.value}</dd>
-          </div>
-        ))}
-      </dl>
-    );
-  }
-
-  function renderBalanceCard(
-    agent: BalanceAccountViewData,
-    extraClassName = '',
-    showPersonality = false,
-  ) {
-    const isInspecting = inspectedAgentIds.includes(agent.id);
-    const initial = agent.name.trim().charAt(0).toUpperCase() || '?';
-    const roleClassName = agent.role.toLowerCase();
-
-    return (
-      <article
-        key={agent.id}
-        className={`balance-card balance-card-${roleClassName}${extraClassName ? ` ${extraClassName}` : ''}${isInspecting ? ' balance-card-inspecting' : ''}`}
-      >
-        <header>
-          <span className="balance-agent-avatar" aria-hidden="true">
-            {initial}
-          </span>
-          <div>
-            <strong>{agent.name}</strong>
-            <span>{agent.role}</span>
-          </div>
-          <button
-            className="icon-button balance-info-button"
-            type="button"
-            aria-label={`Show account details for ${agent.name}`}
-            onClick={() => toggleInspectedAgent(agent.id)}
-          >
-            i
-          </button>
-        </header>
-        <dl>
-          <div>
-            <dt>Available</dt>
-            <dd>{agent.availableBalanceLabel}</dd>
-          </div>
-          <div>
-            <dt>Reserved</dt>
-            <dd>{agent.reservedBalanceLabel}</dd>
-          </div>
-        </dl>
-        {showPersonality || isInspecting ? (
-          <div className="balance-info-panel">
-            <div className="balance-info-section">
-              <span className="balance-info-heading">Personality</span>
-              {renderPersonality(agent)}
-            </div>
-          </div>
-        ) : null}
-      </article>
-    );
-  }
-
-  if (variant === 'compact') {
-    return (
-      <CardShell className="summary-shell balances-summary-shell">
-        <CardHeader
-          kicker="Accounts"
-          title="Agent Accounts"
-          compact
-          icon="smart_toy"
-          iconTone="secondary"
-        />
-
-        <div className="summary-stack">
-          {accounts.map((agent) =>
-            renderBalanceCard(agent, 'summary-balance-card', true),
-          )}
-        </div>
-      </CardShell>
-    );
-  }
-
+  onInspect,
+}: {
+  accounts?: BalanceAccountViewData[];
+  onInspect?: (account: BalanceAccountViewData) => void;
+}) {
+  if (!accounts.length) return null;
   return (
-    <CardShell>
-      <CardHeader
-        kicker="Balances"
-        title="Agent Accounts"
-        actions={
-          <CardCollapseButton
-            isExpanded={isExpanded}
-            expandLabel="Maximise balances"
-            collapseLabel="Minimise balances"
-            onToggle={() => setIsExpanded((current) => !current)}
-          />
-        }
-      />
-
-      <CardBody isExpanded={isExpanded}>
-        <div className="agent-balance-grid">
-          {accounts.map((agent) => renderBalanceCard(agent))}
-        </div>
-      </CardBody>
-    </CardShell>
+    <section className="ledger-section" aria-label="Agent accounts">
+      <header className="section-heading">
+        <h2>Agent accounts</h2>
+        <span className="field-note">Available and reserved · SIM</span>
+      </header>
+      <div className="agent-balance-grid">
+        {accounts.map((account) => (
+          <article key={account.id} className="balance-card">
+            <header>
+              <div>
+                <strong>{account.name}</strong>
+                <span>{account.role}</span>
+              </div>
+              {onInspect && (
+                <button
+                  type="button"
+                  className="text-button"
+                  aria-label={`Show account details for ${account.name}`}
+                  onClick={() => onInspect(account)}
+                >
+                  Details ↗
+                </button>
+              )}
+            </header>
+            <dl>
+              <div>
+                <dt>Available</dt>
+                <dd>{account.availableBalanceLabel}</dd>
+              </div>
+              <div>
+                <dt>Reserved</dt>
+                <dd>{account.reservedBalanceLabel}</dd>
+              </div>
+            </dl>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }

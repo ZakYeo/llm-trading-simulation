@@ -1,3 +1,4 @@
+import { FinancialContext } from '../../session-overview/view/financial-context';
 import { SimulationJournal } from '../../audit-trail/view/simulation-journal';
 import { AuditTrailCard } from '../../../components/audit-trail-card';
 import { BalancesCard } from '../../../components/balances-card';
@@ -174,17 +175,7 @@ export function OperatorDashboardView() {
                       isFetching={vm.workspace.auditTrail.isFetching}
                     />
                   </div>
-                  <aside className="context-column">
-                    <BalancesCard accounts={vm.workspace.balanceAccounts} />
-                    <TreasuryCard
-                      treasury={vm.workspace.treasury}
-                      variant="compact"
-                    />
-                    <MarketVisibilityCard
-                      market={vm.workspace.market}
-                      variant="compact"
-                    />
-                  </aside>
+                  <FinancialContext vm={vm} />
                 </div>
               )}
               {vm.activeTab === 'Finances' && (
@@ -197,9 +188,16 @@ export function OperatorDashboardView() {
                       session state.
                     </p>
                   </div>
-                  <BalancesCard accounts={vm.workspace.balanceAccounts} />
+                  <BalancesCard
+                    accounts={vm.workspace.balanceAccounts}
+                    onInspect={vm.inspectAccount}
+                  />
                   <TreasuryCard treasury={vm.workspace.treasury} />
-                  <MarketVisibilityCard market={vm.workspace.market} />
+                  <MarketVisibilityCard
+                    market={vm.workspace.market}
+                    onInspectOpportunity={vm.inspectOpportunity}
+                    onInspectPosition={vm.inspectPosition}
+                  />
                 </>
               )}
               {vm.activeTab === 'History' && (

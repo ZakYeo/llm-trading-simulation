@@ -17,6 +17,7 @@ test('renders a connected session with live opportunities and no trader exposure
     initial,
   });
   await connectToSession(page, initial.session.id);
+  await page.getByRole('tab', { name: 'Finances', exact: true }).click();
 
   await expect(topbarMetric(page, 'Session')).toContainText(
     initial.session.name,
@@ -43,6 +44,7 @@ test('renders custody totals and balances from a controlled backend state', asyn
     initial,
   });
   await connectToSession(page, initial.session.id);
+  await page.getByRole('tab', { name: 'Finances', exact: true }).click();
 
   await expect(page.locator('.treasury-shell')).toContainText(
     'Total custodied',
@@ -59,6 +61,7 @@ test('renders custody totals and balances from a controlled backend state', asyn
   );
   await expect(page.locator('.balance-card').first()).toContainText('110.00');
   await expect(page.locator('.balance-card').nth(1)).toContainText('90.00');
+  await page.getByRole('tab', { name: 'History', exact: true }).click();
   await expect(page.locator('.replay-panel')).toContainText(
     'Trader Bot placed funds with Banker Bot',
   );
@@ -73,6 +76,7 @@ test('renders existing trader market exposure from a controlled backend state', 
     initial: nextState,
   });
   await connectToSession(page, nextState.session.id);
+  await page.getByRole('tab', { name: 'Finances', exact: true }).click();
 
   await expect(page.locator('.market-shell')).toContainText(
     '2 opportunities / 1 position',

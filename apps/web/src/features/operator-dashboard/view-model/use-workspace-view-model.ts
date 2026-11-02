@@ -1,3 +1,14 @@
+import {
+  createAccountDetail,
+  createOpportunityDetail,
+  createPositionDetail,
+  createUpcomingSettlements,
+} from '../../session-overview/model/financial-details';
+import type {
+  BalanceAccountViewData,
+  MarketOpportunityViewData,
+  MarketPositionViewData,
+} from '../../session-overview/model/session-overview';
 import { createEventDetail } from '../../audit-trail/model/event-detail';
 import type { AuditTrailTimelineEvent } from '../../audit-trail/model/audit-trail';
 import { useState } from 'react';
@@ -29,6 +40,13 @@ export function useWorkspaceViewModel() {
       setDetail(null);
       setSelection({ sessionId, tab });
     },
+    upcomingSettlements: createUpcomingSettlements(dashboard.workspace.market),
+    inspectAccount: (account: BalanceAccountViewData) =>
+      setDetail(createAccountDetail(account)),
+    inspectOpportunity: (opportunity: MarketOpportunityViewData) =>
+      setDetail(createOpportunityDetail(opportunity)),
+    inspectPosition: (position: MarketPositionViewData) =>
+      setDetail(createPositionDetail(position, dashboard.topbar.currentRound)),
     detail,
     showDetail: setDetail,
     inspectEvent: (event: AuditTrailTimelineEvent) =>
