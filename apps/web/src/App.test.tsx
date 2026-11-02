@@ -24,9 +24,9 @@ describe('App', () => {
     );
 
     expect(html).toContain('LLM Trading Simulator');
-    expect(html).toContain('Session Startup');
+    expect(html).toContain('Give your agents a starting point.');
     expect(html).toContain(
-      'Initialize simulation parameters and assemble agent roster.',
+      'Create a session, set their personalities, and watch the negotiation unfold.',
     );
     expect(html).toContain('Global Parameters');
     expect(html).toContain('Connect to session');
