@@ -100,21 +100,54 @@ export function AuditTrailCard({
         {isFetching && <p className="empty-copy">Loading replay…</p>}
         <div ref={vm.timelineScrollRef} className="timeline-scroll">
           {vm.visibleEventCount > 0 ? (
-            vm.eventsByRound.map((group) => (
-              <section key={group.roundNumber} className="round-group">
-                <div className="round-divider">
-                  <span>Round {group.roundNumber}</span>
-                  <strong>{group.events.length} events</strong>
-                </div>
-                {group.events.map((event) => (
-                  <EventEntry
-                    key={event.animationId}
-                    event={event}
-                    onInspect={onInspect}
-                  />
-                ))}
-              </section>
-            ))
+            <table
+              className="history-table"
+              aria-label="Recorded events in order"
+            >
+              <thead>
+                <tr>
+                  <th scope="col">Round / turn</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Event</th>
+                  <th scope="col">Recorded at</th>
+                  <th scope="col">
+                    <span className="sr-only">Inspection</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {vm.eventsByRound.flatMap((group) =>
+                  group.events.map((event) => (
+                    <tr key={event.animationId}>
+                      <td data-label="Round / turn">{event.roundLabel}</td>
+                      <td data-label="Category">
+                        <span className="event-badge">{event.badgeLabel}</span>
+                      </td>
+                      <td className="history-event">
+                        <EventEntry event={event} compact />
+                      </td>
+                      <td data-label="Recorded at">
+                        <time dateTime={event.createdAt}>
+                          {event.timestampLabel}
+                        </time>
+                      </td>
+                      <td>
+                        {onInspect && (
+                          <button
+                            type="button"
+                            className="text-button"
+                            aria-label={`Inspect ${event.badgeLabel}`}
+                            onClick={() => onInspect(event)}
+                          >
+                            Inspect ↗
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )),
+                )}
+              </tbody>
+            </table>
           ) : (
             <p className="empty-copy">
               {vm.hasReplayActivity

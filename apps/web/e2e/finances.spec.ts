@@ -19,6 +19,7 @@ test('preserves full opportunity terms, account personalities and position detai
     page.getByRole('complementary', { name: 'Financial context' }),
   ).toContainText('Binary Event Volatility');
   await page.getByRole('link', { name: 'Finances', exact: true }).click();
+  await expect(page.locator('.market-shell')).not.toContainText('undefined');
   await page
     .getByRole('button', {
       name: 'Inspect opportunity Binary Event Volatility',
@@ -59,4 +60,19 @@ test('preserves full opportunity terms, account personalities and position detai
     .click();
   await expect(dialog).toContainText('20.00');
   await expect(dialog).toContainText('Round 2');
+});
+
+test('history exposes an Inspect action in the event table', async ({
+  page,
+}) => {
+  const { nextState: initial } = buildOpenMarketPositionTransition();
+  await mockSessionApiScenario(page, { initial });
+  await page.goto(`/#/sessions/${initial.session.id}/history`);
+  const table = page.getByRole('table', { name: 'Recorded events in order' });
+  await expect(table).toBeVisible();
+  await table
+    .getByRole('button', { name: /Inspect/ })
+    .first()
+    .click();
+  await expect(page.getByRole('dialog')).toBeVisible();
 });

@@ -204,11 +204,17 @@ export function OperatorDashboardView() {
                         session state.
                       </p>
                     </div>
-                    <BalancesCard
-                      accounts={vm.workspace.balanceAccounts}
-                      onInspect={vm.inspectAccount}
-                    />
-                    <TreasuryCard treasury={vm.workspace.treasury} />
+                    <p className="read-only-note">
+                      Read-only inspection · Agents choose their own trades and
+                      transfers.
+                    </p>
+                    <div className="finance-summary">
+                      <BalancesCard
+                        accounts={vm.workspace.balanceAccounts}
+                        onInspect={vm.inspectAccount}
+                      />
+                      <TreasuryCard treasury={vm.workspace.treasury} />
+                    </div>
                     <MarketVisibilityCard
                       market={vm.workspace.market}
                       onInspectOpportunity={vm.inspectOpportunity}

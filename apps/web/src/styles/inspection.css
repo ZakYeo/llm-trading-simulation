@@ -1,0 +1,216 @@
+.read-only-note {
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: 0.78rem;
+  margin-bottom: 16px;
+}
+.finance-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+.ledger-section {
+  padding: 20px;
+  margin-bottom: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.ledger-section > .section-heading {
+  margin-bottom: 16px;
+}
+.ledger-section .balance-card {
+  background: var(--surface);
+  padding: 16px;
+}
+.balance-card dl > div,
+.custody-totals > div {
+  background: var(--inset);
+  padding: 12px;
+  border-radius: 6px;
+  min-width: 0;
+}
+.balance-card dd,
+.custody-totals dd,
+.context-amount {
+  font-family: inherit;
+  font-weight: 600;
+}
+.custody-totals {
+  gap: 8px;
+}
+.custody-totals dd {
+  font-size: 1rem;
+}
+.custody-breakdown {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 16px;
+  background: var(--inset);
+  padding: 14px;
+  gap: 12px;
+}
+.market-shell {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+  margin-top: 16px;
+}
+.market-card-list {
+  display: grid;
+  gap: 12px;
+}
+.market-card {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--inset);
+  min-width: 0;
+}
+.market-card h3 {
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+.market-card .section-heading > span {
+  font-size: 0.72rem;
+}
+.market-terms {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.market-terms dd {
+  font-size: 0.78rem;
+  margin-top: 4px;
+}
+.market-terms dt {
+  font-size: 0.7rem;
+}
+.replay-panel {
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  text-align: left;
+  font-size: 0.75rem;
+}
+.history-table th {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+.history-table th,
+.history-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 12px 8px;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+.history-table th:nth-child(3) {
+  width: 44%;
+}
+.history-table th:last-child {
+  width: 76px;
+}
+.history-table .timeline-event {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.history-table .event-topline,
+.history-table .event-bottom {
+  display: none;
+}
+.history-table .event-detail {
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+.history-table .journal-message .event-detail {
+  padding: 0;
+  background: transparent;
+}
+.history-table .message-attribution {
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.history-table .event-label {
+  font-size: 0.8rem;
+}
+.history-table .text-button {
+  padding: 0;
+}
+.help-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.help-card {
+  padding: 20px;
+  background: var(--inset);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.help-card p {
+  font-size: 0.8rem;
+}
+@media (min-width: 1440px) {
+  .finance-summary {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+@media (max-width: 1100px) {
+  .market-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 767px) {
+  .ledger-section,
+  .replay-panel {
+    padding: 16px;
+  }
+  .help-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .history-table,
+  .history-table tbody {
+    display: block;
+  }
+  .history-table thead {
+    display: none;
+  }
+  .history-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  .history-table td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+  .history-event {
+    grid-column: 1/-1;
+    grid-row: 2;
+  }
+  .history-table td:last-child {
+    text-align: right;
+  }
+  .history-table td[data-label='Recorded at'] {
+    color: var(--muted);
+    align-self: center;
+  }
+}

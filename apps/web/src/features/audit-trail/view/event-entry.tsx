@@ -96,7 +96,7 @@ export function EventEntry({
             aria-label={`Inspect ${event.badgeLabel}`}
             onClick={() => onInspect(event)}
           >
-            Details ↗
+            Inspect ↗
           </button>
         )}
       </div>
