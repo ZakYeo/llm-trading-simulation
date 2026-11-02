@@ -195,6 +195,7 @@ export function useOperatorDashboardViewModel() {
     streamedMessages,
     selectedRound: selectedSession?.currentRound,
     sessionId: selectedSessionId,
+    isLoading: replayQuery.isPending,
   });
   const sessionSetupMode: 'collapsed' | 'expanded' =
     hasSelectedSession && !isStartupVisible ? 'collapsed' : 'expanded';
