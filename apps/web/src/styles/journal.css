@@ -1,0 +1,152 @@
+.journal {
+  min-width: 0;
+}
+
+.journal-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-top: 2px solid var(--ink);
+  padding: 20px 0;
+}
+
+.journal-heading h2 {
+  font-family: Georgia, serif;
+  font-weight: 400;
+  font-size: 1.6rem;
+  margin-top: 4px;
+}
+
+.journal-heading select {
+  width: auto;
+}
+
+.journal .round-divider {
+  color: var(--muted);
+}
+
+.journal-message {
+  padding: 24px;
+  margin: 16px 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 3px 10px 10px 10px;
+}
+
+.message-attribution {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+
+.message-attribution > span {
+  font-size: 0.73rem;
+  color: var(--muted);
+}
+
+.journal-message .event-detail {
+  line-height: 1.8;
+}
+
+.journal-action .event-label {
+  font-size: 0.88rem;
+}
+
+.action-detail {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+
+.event-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.text-button {
+  border: 0;
+  padding: 8px 0;
+  background: transparent;
+  font-size: 0.75rem;
+  color: var(--accent);
+  min-height: 44px;
+}
+
+.text-button:hover {
+  background: transparent;
+  text-decoration: underline;
+}
+
+.event-meta {
+  margin-top: 0;
+}
+
+.journal-empty {
+  padding: 36px 20px;
+  max-width: 480px;
+  margin: 0 auto 32px;
+  text-align: center;
+}
+
+.journal-empty-mark {
+  color: var(--accent);
+  font-family: Georgia, serif;
+  font-size: 5rem;
+  line-height: 1;
+}
+
+.journal-empty h3 {
+  font-family: Georgia, serif;
+  font-size: 1.4rem;
+  font-weight: 400;
+}
+
+.journal-empty p {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-top: 12px;
+}
+
+.history-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+
+@media (max-width: 767px) {
+  .journal-message {
+    padding: 18px;
+  }
+
+  .history-controls {
+    width: 100%;
+  }
+
+  .history-controls .field {
+    flex: 1;
+  }
+
+  .history-controls > button {
+    width: 100%;
+  }
+}
+.journal-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+.journal-navigation > button {
+  font-size: 0.75rem;
+}
+.journal-end {
+  min-height: 1px;
+}

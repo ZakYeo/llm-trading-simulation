@@ -58,4 +58,9 @@ test('keeps current-round journal selection independent of history filters', asy
   await expect(
     page.getByRole('button', { name: 'Inspect message', exact: true }).last(),
   ).toBeFocused();
+  await page
+    .getByRole('button', { name: 'Jump to latest activity ↓', exact: true })
+    .click();
+  await expect(page.locator('#journal-latest')).toBeFocused();
+  await expect(page.locator('#journal-latest')).toBeInViewport();
 });

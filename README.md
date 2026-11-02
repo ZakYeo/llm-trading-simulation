@@ -4,8 +4,6 @@ A pnpm workspace for a backend-driven multi-agent trading simulation.
 
 The current codebase consists of:
 
-
-
 - `apps/api`: a NestJS API for session state, agent orchestration, replay reads, and SSE session events
 - `apps/web`: a React + Vite operator UI for creating sessions, running turns, advancing rounds, and inspecting state
 - `packages/shared-types`: shared transport DTOs and enums used across API and web
@@ -26,6 +24,7 @@ The active simulation loop is centered on a banker and trader. Agents negotiate,
 - Run unit, integration, and Playwright coverage from the workspace root
 
 ## Screenshots / Video
+
 <img width="2559" height="1352" alt="image" src="https://github.com/user-attachments/assets/7467725a-15ae-4854-a041-86aecafbe16a" />
 
 <img width="2555" height="1346" alt="image" src="https://github.com/user-attachments/assets/d143cffa-0807-4d0f-81a2-ac03bea5e00c" />
@@ -124,6 +123,22 @@ Current frontend feature areas under `apps/web/src/features` are centered on:
 This structure is intended as an internal refactor only. The dashboard visuals,
 routes, and operator behavior should remain unchanged unless explicitly called
 out elsewhere.
+
+## Using the redesigned workspace
+
+The dashboard has three views. **Simulation** follows the current round's conversation and actions, with account balances, custody totals, and the next settlements alongside it. Choose **All rounds** in the journal to read earlier activity. **Finances** contains the full account, custody, opportunity, and position ledger; open Details or Full terms to inspect an item. **History** keeps the complete audit trail and its category, event-count, and round-window filters independently of the journal.
+
+Run controls remain available in every view. Turns do not advance the round. **Advance round settlement** applies custody interest and eligible market settlements; **Round options** contains the editable interest rate in basis points. This rate is used on advancement, not included in session creation.
+
+The theme selector supports Light, Dark, and System. Explicit choices persist in this browser. Layouts adapt from narrow portrait screens to wide desktops, and detail drawers become full-width dialogs on small screens. Dialogs support Escape and return keyboard focus to the opening control.
+
+### Frontend MVVM boundaries
+
+React and strict TypeScript remain the frontend stack. Feature `model` folders contain pure typed data transformations; `view-model` folders own application state, requests, subscriptions, and commands; `view` folders and feature components render that data and bind commands. Shared UI under `shared/ui` owns only reusable presentation and accessibility behavior. HTTP/SSE transport stays in `lib/api.ts`; models consume shared transport types directly rather than importing the transport implementation.
+
+`corepack pnpm --filter @llm-sim/web lint` enforces these dependency directions and runs positive/negative architecture fixtures. Model imports of views, view-models, React, and transport are rejected; views cannot import transport or query/store libraries; shared UI cannot import features. Dynamic and CommonJS imports are rejected inside these layers to prevent boundary bypasses. Feature-specific components in `src/components` are treated as views.
+
+Browser validation uses `corepack pnpm test:e2e:deterministic` for mocked API scenarios without Docker and `corepack pnpm test:e2e:ui-smoke` for the real mock-runtime/Postgres stack. Responsive scenarios cover both themes at seven portrait, landscape, tablet, desktop, and ultrawide sizes, live resizing, reduced motion, and 200% CSS zoom. Screenshots are written to the ignored `tmp/ui-redesign` directory.
 
 ## Session Model
 

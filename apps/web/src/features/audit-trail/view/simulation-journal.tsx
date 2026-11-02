@@ -18,16 +18,31 @@ export function SimulationJournal({
           <span className="eyebrow">Field notes</span>
           <h2>Round {viewModel.currentRound}</h2>
         </div>
-        <label className="field">
-          <span className="sr-only">Journal rounds</span>
-          <select
-            value={viewModel.rounds}
-            onChange={(event) => viewModel.setRounds(event.target.value)}
-          >
-            <option value="current">Current round</option>
-            <option value="all">All rounds</option>
-          </select>
-        </label>
+        <div className="journal-navigation">
+          {viewModel.groups.length > 0 && (
+            <button
+              className="quiet-button"
+              type="button"
+              onClick={() => {
+                const latest = document.getElementById('journal-latest');
+                latest?.scrollIntoView({ block: 'end' });
+                latest?.focus({ preventScroll: true });
+              }}
+            >
+              Jump to latest activity ↓
+            </button>
+          )}
+          <label className="field">
+            <span className="sr-only">Journal rounds</span>
+            <select
+              value={viewModel.rounds}
+              onChange={(event) => viewModel.setRounds(event.target.value)}
+            >
+              <option value="current">Current round</option>
+              <option value="all">All rounds</option>
+            </select>
+          </label>
+        </div>
       </header>
       {isFetching && <p className="empty-copy">Updating activity…</p>}
       {viewModel.groups.length === 0 ? (
@@ -64,18 +79,9 @@ export function SimulationJournal({
         ))
       )}
       {viewModel.groups.length > 0 && (
-        <button
-          className="quiet-button latest-activity-button"
-          type="button"
-          onClick={(event) =>
-            event.currentTarget.scrollIntoView({
-              block: 'end',
-              behavior: 'instant',
-            })
-          }
-        >
-          Jump to latest activity ↓
-        </button>
+        <div id="journal-latest" className="journal-end" tabIndex={-1}>
+          <span className="sr-only">Latest journal activity</span>
+        </div>
       )}
     </section>
   );
