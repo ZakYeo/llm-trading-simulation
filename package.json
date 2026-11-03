@@ -45,5 +45,9 @@
     "{apps,packages}/**/src/**/*.{ts,tsx,js,jsx}": [
       "eslint --fix"
     ]
+  },
+  "volta": {
+    "node": "22.23.4",
+    "npm": "10.9.9"
   }
 }
