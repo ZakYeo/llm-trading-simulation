@@ -239,11 +239,14 @@ function buildTreasuryContext(
   const banker = session.agents.find(
     (candidate) => candidate.role === 'banker',
   );
-  const totalCustodiedPrincipal = session.bankerCustodyPositions.reduce(
+  const visiblePositions = session.bankerCustodyPositions.filter(
+    (p) => p.bankerAgentId === agentId || p.ownerAgentId === agentId,
+  );
+  const totalCustodiedPrincipal = visiblePositions.reduce(
     (total, position) => total.add(position.principal),
     Money.zero(),
   );
-  const totalCustodiedAccruedInterest = session.bankerCustodyPositions.reduce(
+  const totalCustodiedAccruedInterest = visiblePositions.reduce(
     (total, position) => total.add(position.accruedInterest),
     Money.zero(),
   );
@@ -256,6 +259,18 @@ function buildTreasuryContext(
     : null;
 
   return {
+    selfCustodyPositions: visiblePositions
+      .filter((p) => p.ownerAgentId === agentId)
+      .map((p) => ({
+        bankerAgentId: p.bankerAgentId,
+        principal: p.principal.toDecimal(),
+        accruedInterest: p.accruedInterest.toDecimal(),
+        totalBalance: p.totalBalance().toDecimal(),
+        lots: p.lots.map((lot) => ({
+          principal: lot.principal,
+          rateBps: lot.rateBps,
+        })),
+      })),
     bankerAgentId: banker?.id ?? null,
     bankerName: banker?.name ?? null,
     totalCustodiedPrincipal: totalCustodiedPrincipal.toDecimal(),
@@ -272,17 +287,19 @@ function buildTreasuryContext(
         }
       : null,
     obligationsForBanker:
-      banker?.id === agentId
-        ? session.bankerCustodyPositions.map((position) => ({
-            ownerAgentId: position.ownerAgentId,
-            ownerName:
-              session.agents.find(
-                (candidate) => candidate.id === position.ownerAgentId,
-              )?.name ?? 'Unknown Agent',
-            principal: position.principal.toDecimal(),
-            accruedInterest: position.accruedInterest.toDecimal(),
-            totalBalance: position.totalBalance().toDecimal(),
-          }))
+      session.agents.find((a) => a.id === agentId)?.role === 'banker'
+        ? visiblePositions
+            .filter((p) => p.bankerAgentId === agentId)
+            .map((position) => ({
+              ownerAgentId: position.ownerAgentId,
+              ownerName:
+                session.agents.find(
+                  (candidate) => candidate.id === position.ownerAgentId,
+                )?.name ?? 'Unknown Agent',
+              principal: position.principal.toDecimal(),
+              accruedInterest: position.accruedInterest.toDecimal(),
+              totalBalance: position.totalBalance().toDecimal(),
+            }))
         : [],
   };
 }
@@ -299,11 +316,6 @@ function buildMarketContext(
     throw new Error('Agent must exist in the session to build market context.');
   }
 
-  const primaryCounterparty = findPrimaryCounterparty(
-    session,
-    agentId,
-    agent.role,
-  );
   const selfOpenPositions = session.marketPositions
     .filter((position) => position.ownerAgentId === agentId)
     .map((position) => ({
@@ -316,20 +328,6 @@ function buildMarketContext(
       entrySlippageBps: position.entrySlippageBps,
       effectiveResolutionReturnBps: position.effectiveResolutionReturnBps,
     }));
-  const primaryCounterpartyOpenPositions = primaryCounterparty
-    ? session.marketPositions
-        .filter((position) => position.ownerAgentId === primaryCounterparty.id)
-        .map((position) => ({
-          opportunityId: position.opportunityId,
-          opportunityTitle: position.opportunityTitle,
-          principal: position.principal.toDecimal(),
-          entryRound: position.entryRound,
-          settlementRound: position.settlementRound,
-          entryFeeAmount: position.entryFeeAmount.toDecimal(),
-          entrySlippageBps: position.entrySlippageBps,
-          effectiveResolutionReturnBps: position.effectiveResolutionReturnBps,
-        }))
-    : [];
   const summarizeExposure = (ownerAgentId: string, custodiedBalance: Money) => {
     const owner = session.agents.find(
       (candidate) => candidate.id === ownerAgentId,
@@ -386,38 +384,10 @@ function buildMarketContext(
       custodiedBalance: custodiedBalance.toDecimal(),
     };
   };
-  const selfCustodiedBalance =
-    session.bankerCustodyPositions
-      .find(
-        (position) =>
-          position.ownerAgentId === agentId &&
-          position.bankerAgentId ===
-            session.agents.find((candidate) => candidate.role === 'banker')?.id,
-      )
-      ?.totalBalance() ?? Money.zero();
-  const primaryCounterpartyCustodiedBalance = primaryCounterparty
-    ? session.bankerCustodyPositions
-        .filter((position) => position.ownerAgentId === primaryCounterparty.id)
-        .reduce(
-          (total, position) => total.add(position.totalBalance()),
-          Money.zero(),
-        )
-    : Money.zero();
+  const selfCustodiedBalance = session.bankerCustodyPositions
+    .filter((position) => position.ownerAgentId === agentId)
+    .reduce((sum, position) => sum.add(position.totalBalance()), Money.zero());
   const selfExposureSummary = summarizeExposure(agentId, selfCustodiedBalance);
-  const primaryCounterpartyExposureSummary = primaryCounterparty
-    ? summarizeExposure(
-        primaryCounterparty.id,
-        primaryCounterpartyCustodiedBalance,
-      )
-    : {
-        openPositionCount: 0,
-        openPrincipal: Money.zero().toDecimal(),
-        openWorstCaseDownside: Money.zero().toDecimal(),
-        openBestCaseUpside: Money.zero().toDecimal(),
-        liquidBalance: Money.zero().toDecimal(),
-        reservedBalance: Money.zero().toDecimal(),
-        custodiedBalance: Money.zero().toDecimal(),
-      };
 
   return {
     visibleOpportunities: session.marketOpportunities.map((opportunity) => ({
@@ -436,7 +406,6 @@ function buildMarketContext(
       holdingPeriodRounds: opportunity.holdingPeriodRounds,
     })),
     selfOpenPositions,
-    primaryCounterpartyOpenPositions,
     recentSettlements: [],
     exposureSummary: {
       selfOpenPositionCount: selfExposureSummary.openPositionCount,
@@ -446,23 +415,6 @@ function buildMarketContext(
       selfLiquidBalance: selfExposureSummary.liquidBalance,
       selfReservedBalance: selfExposureSummary.reservedBalance,
       selfCustodiedBalance: selfExposureSummary.custodiedBalance,
-      primaryCounterpartyAgentId: primaryCounterparty?.id ?? null,
-      primaryCounterpartyName: primaryCounterparty?.name ?? null,
-      primaryCounterpartyRole: primaryCounterparty?.role ?? null,
-      primaryCounterpartyOpenPositionCount:
-        primaryCounterpartyExposureSummary.openPositionCount,
-      primaryCounterpartyOpenPrincipal:
-        primaryCounterpartyExposureSummary.openPrincipal,
-      primaryCounterpartyOpenWorstCaseDownside:
-        primaryCounterpartyExposureSummary.openWorstCaseDownside,
-      primaryCounterpartyOpenBestCaseUpside:
-        primaryCounterpartyExposureSummary.openBestCaseUpside,
-      primaryCounterpartyLiquidBalance:
-        primaryCounterpartyExposureSummary.liquidBalance,
-      primaryCounterpartyReservedBalance:
-        primaryCounterpartyExposureSummary.reservedBalance,
-      primaryCounterpartyCustodiedBalance:
-        primaryCounterpartyExposureSummary.custodiedBalance,
     },
     executionCostModel: {
       entryFeeBps: DEFAULT_MARKET_POSITION_ENTRY_FEE_BPS,
@@ -488,6 +440,13 @@ export class AgentTurnContextFactory {
       throw new Error('Agent must exist in the session to build context.');
     }
 
+    recentActions = recentActions.filter(
+      (action) =>
+        !action.decisionFailure &&
+        (action.agentId === agentId ||
+          action.recipientAgentId === agentId ||
+          action.actionType === 'send_public_message'),
+    );
     const self = {
       agentId: agent.id,
       name: agent.name,
@@ -501,6 +460,13 @@ export class AgentTurnContextFactory {
     );
 
     return {
+      depositNegotiations: session.depositNegotiations.filter(
+        (o) => o.traderAgentId === agentId || o.bankerAgentId === agentId,
+      ),
+      depositPolicy:
+        agent.role === 'banker'
+          ? 'Only quote after a trader request. Rates must be integer 0–250 bps per round. Deposits generate 250 bps; you keep the spread above the promised rate. Never reveal or assume private trader financial positions.'
+          : 'Discover deposit rates by asking a banker. A deposit requires a current offer, and earns its fixed rate on remaining principal each round. Withdrawal is flexible. Compare offers through conversation.',
       gameId: session.id,
       sessionName: session.name,
       round: session.currentRound,

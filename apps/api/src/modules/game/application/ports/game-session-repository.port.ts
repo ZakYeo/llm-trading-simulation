@@ -43,6 +43,7 @@ export interface CustodyRedemptionHistoryRecord {
 }
 
 export interface CustodyAccrualHistoryRecord {
+  bankerIncome?: string;
   type: 'custody_accrual';
   gameSessionId: string;
   roundNumber: number;
@@ -115,7 +116,19 @@ export interface MarketOpportunityResolvedHistoryRecord {
   totalProfitOrLoss: string;
 }
 
+export interface NegotiationMessageHistoryRecord {
+  type: 'negotiation_message';
+  id: string;
+  gameSessionId: string;
+  roundNumber: number;
+  turnNumber: number;
+  senderAgentId: string;
+  recipientAgentId: string;
+  content: string;
+  createdAt: string;
+}
 export type GameSessionHistoryRecord =
+  | NegotiationMessageHistoryRecord
   | TransferHistoryRecord
   | DepositHistoryRecord
   | WithdrawalHistoryRecord

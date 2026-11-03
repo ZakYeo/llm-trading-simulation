@@ -68,20 +68,9 @@ export function OperateCard(props: OperateCardProps) {
       </div>
       <div className="advance-controls panel">
         <h2>Advance round</h2>
-        <div className="round-options">
-          <label className="field">
-            <span>Treasury interest per round (bps)</span>
-            <input
-              type="number"
-              min={0}
-              step={1}
-              value={props.interestRateBps}
-              onChange={(event) =>
-                props.onInterestRateBpsChange(event.target.value)
-              }
-            />
-          </label>
-        </div>
+        <p className="field-note">
+          Deposits earn their negotiated rates at settlement.
+        </p>
         <button
           className="action-button secondary"
           type="button"

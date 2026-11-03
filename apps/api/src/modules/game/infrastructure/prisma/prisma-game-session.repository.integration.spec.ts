@@ -121,8 +121,9 @@ describe.runIf(Boolean(testDatabaseUrl))(
       });
 
       await repository.save(initialSession);
-      await repository.save(initialSession.advanceRound());
-      await repository.save(initialSession.advanceRound().advanceRound());
+      const nextRound = initialSession.advanceRound();
+      await repository.save(nextRound);
+      await repository.save(nextRound.advanceRound());
 
       const rounds = await prisma.gameRound.findMany({
         where: { gameSessionId: initialSession.id },

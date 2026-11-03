@@ -22,6 +22,8 @@ export class GameSessionResponseMapper {
           bankerAgentId: position.bankerAgentId,
           ownerAgentId: position.ownerAgentId,
           principal: position.principal.toDecimal(),
+          lots: position.lots,
+          expectedInterest: position.interestForNextRound().toDecimal(),
           accruedInterest: position.accruedInterest.toDecimal(),
           totalBalance: position.totalBalance().toDecimal(),
         }),

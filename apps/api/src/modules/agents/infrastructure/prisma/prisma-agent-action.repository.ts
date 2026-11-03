@@ -63,6 +63,10 @@ function fromPrismaActionType(
 }
 
 interface PrismaAgentTurnActionRecord {
+  decisionExplanation?: string;
+  decisionFailure?: string;
+  personalitySnapshot?: AgentActionRecord['personalitySnapshot'];
+  depositTerms?: AgentActionRecord['depositTerms'];
   id: string;
   gameSessionId: string;
   roundNumber: number;
@@ -103,11 +107,19 @@ export class PrismaAgentActionRepository implements AgentActionRepositoryPort {
         actionType: toPrismaActionType(action.actionType),
         amount: action.amount,
         content: action.content,
+        decisionExplanation: action.decisionExplanation,
+        decisionFailure: action.decisionFailure,
+        personalitySnapshot: action.personalitySnapshot,
+        depositTerms: action.depositTerms,
       },
     });
 
     return {
       id: record.id,
+      decisionExplanation: record.decisionExplanation ?? undefined,
+      decisionFailure: record.decisionFailure ?? undefined,
+      personalitySnapshot: record.personalitySnapshot ?? undefined,
+      depositTerms: record.depositTerms ?? undefined,
       gameSessionId: record.gameSessionId,
       roundNumber: record.roundNumber,
       turnNumber: record.turnNumber,
@@ -138,17 +150,21 @@ export class PrismaAgentActionRepository implements AgentActionRepositoryPort {
       where: { gameSessionId },
       orderBy: [
         {
-          createdAt: 'asc',
+          createdAt: 'desc',
         },
         {
-          id: 'asc',
+          id: 'desc',
         },
       ],
       take: limit,
     });
 
-    return records.map((record) => ({
+    return records.reverse().map((record) => ({
       id: record.id,
+      decisionExplanation: record.decisionExplanation ?? undefined,
+      decisionFailure: record.decisionFailure ?? undefined,
+      personalitySnapshot: record.personalitySnapshot ?? undefined,
+      depositTerms: record.depositTerms ?? undefined,
       gameSessionId: record.gameSessionId,
       roundNumber: record.roundNumber,
       turnNumber: record.turnNumber,

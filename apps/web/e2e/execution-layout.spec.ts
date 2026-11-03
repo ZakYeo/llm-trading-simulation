@@ -15,8 +15,11 @@ test('separates turn execution from settlement across sections', async ({
     page.getByRole('heading', { name: 'Advance round', exact: true }),
   ).toBeVisible();
   await expect(
+    page.getByText('Deposits earn their negotiated rates at settlement.'),
+  ).toBeVisible();
+  await expect(
     page.getByLabel('Treasury interest per round (bps)'),
-  ).toHaveValue('250');
+  ).toHaveCount(0);
   await page.getByRole('button', { name: '4 turns', exact: true }).click();
   await page.getByRole('link', { name: 'History', exact: true }).click();
   await expect(

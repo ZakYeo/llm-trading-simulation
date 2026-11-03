@@ -1,3 +1,4 @@
+import { toConversationEvents } from '../model/conversation-events';
 import { usePacedJournalEvents } from './use-paced-journal-events';
 import { useMemo, useState } from 'react';
 import type { GameReplayRecord } from '@llm-sim/shared-types';
@@ -39,11 +40,15 @@ export function useSimulationJournal({
   );
   const allGroups = useMemo(
     () =>
-      rounds === 'all'
+      (rounds === 'all'
         ? data.eventsByRound
         : data.eventsByRound.filter(
             (group) => group.roundNumber === selectedRound,
-          ),
+          )
+      ).map((group) => ({
+        ...group,
+        events: toConversationEvents(group.events),
+      })),
     [rounds, data.eventsByRound, selectedRound],
   );
   const ids = useMemo(

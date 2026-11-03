@@ -60,6 +60,8 @@ export interface GameAgentRecord {
 }
 
 export interface BankerCustodyPositionRecord {
+  lots?: CustodyDepositLot[];
+  expectedInterest?: string;
   bankerAgentId: string;
   ownerAgentId: string;
   principal: string;
@@ -118,6 +120,17 @@ export interface ReplayRoundRecord {
 }
 
 export interface ReplayEventRecord {
+  personalitySnapshot?: AgentPersonalityProfile;
+  bankerIncome?: string;
+  depositTerms?: {
+    requestAmount?: string;
+    requestId?: string;
+    offerAmount?: string;
+    rateBps?: number;
+    declineOfferId?: string;
+    expectedInterest?: string;
+  };
+
   id: string;
   type:
     | 'transfer'
@@ -125,6 +138,8 @@ export interface ReplayEventRecord {
     | 'withdrawal'
     | 'message'
     | 'action'
+    | 'thought'
+    | 'decision_failure'
     | 'custody_placement'
     | 'custody_redemption'
     | 'custody_accrual'
@@ -278,6 +293,12 @@ export interface OrchestratedRoundRecord {
 
 export type AgentSessionEventRecord =
   | {
+      type: 'thought_recorded';
+      gameSessionId: string;
+      occurredAt: string;
+      event: ReplayEventRecord;
+    }
+  | {
       type: 'action_progressed';
       gameSessionId: string;
       roundNumber: number;
@@ -328,4 +349,21 @@ export interface RoundSummaryRecord {
   generatedAt: string;
   eventCount: number;
   includedEventCount: number;
+}
+
+export interface DepositNegotiation {
+  id: string;
+  kind: 'request' | 'offer';
+  requestId?: string;
+  traderAgentId: string;
+  bankerAgentId: string;
+  roundNumber: number;
+  amount: string;
+  rateBps?: number;
+  status: 'pending' | 'superseded' | 'accepted' | 'declined';
+}
+export interface CustodyDepositLot {
+  principal: string;
+  rateBps: number;
+  offerId?: string;
 }

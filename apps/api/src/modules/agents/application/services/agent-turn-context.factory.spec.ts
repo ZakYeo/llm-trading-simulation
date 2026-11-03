@@ -217,7 +217,9 @@ describe('AgentTurnContextFactory', () => {
     });
     expect(context.marketContext.visibleOpportunities).toHaveLength(2);
     expect(context.marketContext.selfOpenPositions).toEqual([]);
-    expect(context.marketContext.primaryCounterpartyOpenPositions).toEqual([]);
+    expect(context.marketContext).not.toHaveProperty(
+      'primaryCounterpartyOpenPositions',
+    );
     expect(context.marketContext.recentSettlements).toEqual([]);
     expect(context.marketContext.exposureSummary).toMatchObject({
       selfOpenPositionCount: 0,
@@ -227,16 +229,6 @@ describe('AgentTurnContextFactory', () => {
       selfLiquidBalance: '100.0000',
       selfReservedBalance: '0.0000',
       selfCustodiedBalance: '0.0000',
-      primaryCounterpartyAgentId: 'agent-2',
-      primaryCounterpartyName: 'Trader Bot',
-      primaryCounterpartyRole: 'trader',
-      primaryCounterpartyOpenPositionCount: 0,
-      primaryCounterpartyOpenPrincipal: '0.0000',
-      primaryCounterpartyOpenWorstCaseDownside: '0.0000',
-      primaryCounterpartyOpenBestCaseUpside: '0.0000',
-      primaryCounterpartyLiquidBalance: '100.0000',
-      primaryCounterpartyReservedBalance: '0.0000',
-      primaryCounterpartyCustodiedBalance: '13.0000',
     });
   });
 
@@ -299,8 +291,6 @@ describe('AgentTurnContextFactory', () => {
       selfLiquidBalance: '100.0000',
       selfReservedBalance: '0.0000',
       selfCustodiedBalance: '13.0000',
-      primaryCounterpartyAgentId: 'agent-1',
-      primaryCounterpartyRole: 'banker',
     });
   });
 
@@ -420,28 +410,10 @@ describe('AgentTurnContextFactory', () => {
     const context = factory.build(session, 'agent-1', 1, [], []);
 
     expect(context.marketContext.selfOpenPositions).toEqual([]);
-    expect(context.marketContext.primaryCounterpartyOpenPositions).toEqual([
-      {
-        opportunityId: 'opp-risky',
-        opportunityTitle: 'Binary Event Volatility',
-        principal: '9.0000',
-        entryRound: 2,
-        settlementRound: 3,
-        entryFeeAmount: '0.0180',
-        entrySlippageBps: 24,
-        effectiveResolutionReturnBps: 1176,
-      },
-    ]);
-    expect(context.marketContext.exposureSummary).toMatchObject({
-      primaryCounterpartyAgentId: 'agent-2',
-      primaryCounterpartyOpenPositionCount: 1,
-      primaryCounterpartyOpenPrincipal: '9.0000',
-      primaryCounterpartyOpenWorstCaseDownside: '0.7200',
-      primaryCounterpartyOpenBestCaseUpside: '1.0800',
-      primaryCounterpartyLiquidBalance: '78.0000',
-      primaryCounterpartyReservedBalance: '9.0000',
-      primaryCounterpartyCustodiedBalance: '13.5000',
-    });
+    expect(context.marketContext).not.toHaveProperty(
+      'primaryCounterpartyOpenPositions',
+    );
+    expect(context.marketContext.exposureSummary).toMatchObject({});
     expect(context.marketContext.executionCostModel).toEqual({
       entryFeeBps: 20,
       slippageRuleSummary:
@@ -455,5 +427,64 @@ describe('AgentTurnContextFactory', () => {
     expect(() =>
       factory.build(createSession(), 'missing-agent', 1, [], []),
     ).toThrow('Agent must exist in the session to build context.');
+  });
+  it('aggregates all own custody deposits without exposing another banker’s liabilities', () => {
+    const base = createSession();
+    const session = base
+      .withAgents([
+        ...base.agents,
+        new GameAgent({
+          ...base.agents[0]!,
+          id: 'banker-2',
+          name: 'Second Banker',
+        }),
+      ])
+      .withBankerCustodyPositions([
+        new BankerCustodyPosition({
+          bankerAgentId: 'agent-1',
+          ownerAgentId: 'agent-2',
+          principal: Money.fromDecimal('10'),
+          accruedInterest: Money.zero(),
+          lots: [{ principal: '10', rateBps: 100 }],
+        }),
+        new BankerCustodyPosition({
+          bankerAgentId: 'banker-2',
+          ownerAgentId: 'agent-2',
+          principal: Money.fromDecimal('20'),
+          accruedInterest: Money.zero(),
+          lots: [{ principal: '20', rateBps: 200 }],
+        }),
+      ]);
+    const factory = new AgentTurnContextFactory();
+    const trader = factory.build(session, 'agent-2', 1, [], []);
+    expect(trader.treasuryContext.selfCustodyPositions).toHaveLength(2);
+    expect(trader.marketContext.exposureSummary.selfCustodiedBalance).toBe(
+      '30.0000',
+    );
+    const banker = factory.build(
+      session,
+      'agent-1',
+      1,
+      [],
+      [
+        {
+          id: 'secret',
+          gameSessionId: session.id,
+          roundNumber: 1,
+          turnNumber: 1,
+          agentId: 'agent-2',
+          recipientAgentId: null,
+          actionType: 'open_market_position',
+          amount: '20',
+          content: 'secret-opportunity',
+        },
+      ],
+    );
+    expect(banker.treasuryContext.totalCustodiedPrincipal).toBe('10.0000');
+    expect(banker.recentActions).toEqual([]);
+    expect(JSON.stringify(banker)).not.toContain('secret-opportunity');
+    expect(banker.marketContext).not.toHaveProperty(
+      'primaryCounterpartyOpenPositions',
+    );
   });
 });

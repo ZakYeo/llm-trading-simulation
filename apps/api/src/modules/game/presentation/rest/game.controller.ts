@@ -159,6 +159,7 @@ export class GameController {
       ownerAgentId: request.ownerAgentId,
       bankerAgentId: request.bankerAgentId,
       amount: request.amount,
+      offerId: request.offerId,
     });
 
     return GameSessionResponseMapper.toResponse(session);

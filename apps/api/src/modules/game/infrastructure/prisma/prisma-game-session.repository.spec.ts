@@ -134,6 +134,8 @@ describe('PrismaGameSessionRepository', () => {
           name: 'Treasury Table',
           status: 'SETUP',
           currentRound: 0,
+          revision: 1,
+          depositNegotiations: [],
           agents: {
             create: [
               {
@@ -260,8 +262,10 @@ describe('PrismaGameSessionRepository', () => {
     );
 
     expect(receivedArgs[0]).toEqual({
-      where: { id: 'game-1' },
+      where: { id: 'game-1', revision: 0 },
       data: {
+        revision: { increment: 1 },
+        depositNegotiations: [],
         name: 'Treasury Table',
         status: 'SETUP',
         currentRound: 0,
@@ -565,10 +569,12 @@ describe('PrismaGameSessionRepository', () => {
         ownerAgentId: 'agent-2',
         principal: '25.0000',
         accrued: '0.6250',
+        lots: [{ principal: '25.0000', rateBps: 250 }],
       },
       update: {
         principal: '25.0000',
         accrued: '0.6250',
+        lots: [{ principal: '25.0000', rateBps: 250 }],
       },
     });
   });

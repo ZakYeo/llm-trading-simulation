@@ -1,3 +1,4 @@
+import type { DepositNegotiation } from '@llm-sim/shared-types';
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import type { BankerCustodyPosition } from './banker-custody-position.js';
 import type { GameAgent } from './game-agent.js';
@@ -12,6 +13,8 @@ export type GameSessionStatus =
   | 'failed';
 
 export interface GameSessionProps {
+  revision?: number;
+  depositNegotiations?: DepositNegotiation[];
   id: string;
   name: string;
   status: GameSessionStatus;
@@ -23,6 +26,8 @@ export interface GameSessionProps {
 }
 
 export class GameSession {
+  revision: number;
+  readonly depositNegotiations: DepositNegotiation[];
   readonly id: string;
   readonly name: string;
   readonly status: GameSessionStatus;
@@ -93,6 +98,8 @@ export class GameSession {
       );
     }
 
+    this.revision = props.revision ?? 0;
+    this.depositNegotiations = props.depositNegotiations ?? [];
     this.id = props.id;
     this.name = props.name;
     this.status = props.status;
@@ -104,77 +111,35 @@ export class GameSession {
   }
 
   withAgents(agents: GameAgent[]): GameSession {
-    return new GameSession({
-      id: this.id,
-      name: this.name,
-      status: this.status,
-      currentRound: this.currentRound,
-      agents,
-      bankerCustodyPositions: this.bankerCustodyPositions,
-      marketOpportunities: this.marketOpportunities,
-      marketPositions: this.marketPositions,
-    });
+    return new GameSession({ ...this, agents });
   }
-
   withBankerCustodyPositions(
     bankerCustodyPositions: BankerCustodyPosition[],
   ): GameSession {
-    return new GameSession({
-      id: this.id,
-      name: this.name,
-      status: this.status,
-      currentRound: this.currentRound,
-      agents: this.agents,
-      bankerCustodyPositions,
-      marketOpportunities: this.marketOpportunities,
-      marketPositions: this.marketPositions,
-    });
+    return new GameSession({ ...this, bankerCustodyPositions });
   }
-
   withMarketOpportunities(
     marketOpportunities: MarketOpportunity[],
   ): GameSession {
-    return new GameSession({
-      id: this.id,
-      name: this.name,
-      status: this.status,
-      currentRound: this.currentRound,
-      agents: this.agents,
-      bankerCustodyPositions: this.bankerCustodyPositions,
-      marketOpportunities,
-      marketPositions: this.marketPositions,
-    });
+    return new GameSession({ ...this, marketOpportunities });
   }
-
   withMarketPositions(marketPositions: MarketPosition[]): GameSession {
-    return new GameSession({
-      id: this.id,
-      name: this.name,
-      status: this.status,
-      currentRound: this.currentRound,
-      agents: this.agents,
-      bankerCustodyPositions: this.bankerCustodyPositions,
-      marketOpportunities: this.marketOpportunities,
-      marketPositions,
-    });
+    return new GameSession({ ...this, marketPositions });
   }
-
+  withDepositNegotiations(
+    depositNegotiations: DepositNegotiation[],
+  ): GameSession {
+    return new GameSession({ ...this, depositNegotiations });
+  }
   advanceRound(): GameSession {
-    if (this.status !== 'setup' && this.status !== 'active') {
+    if (this.status !== 'setup' && this.status !== 'active')
       throw new DomainInvariantError(
         'Only setup or active game sessions can advance rounds.',
       );
-    }
-
     return new GameSession({
-      id: this.id,
-      name: this.name,
+      ...this,
       status: 'active',
       currentRound: this.currentRound + 1,
-      agents: this.agents,
-      bankerCustodyPositions: this.bankerCustodyPositions,
-      marketOpportunities: this.marketOpportunities,
-      marketPositions: this.marketPositions,
     });
   }
 }

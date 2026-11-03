@@ -15,14 +15,16 @@ test('@smoke connects to persisted custody and financial state', async ({
     'Playwright Seeded Session',
   );
   await placeFundsWithBanker(request, session, '10.0000');
-  await advanceRound(request, session.id, 250);
+  await advanceRound(request, session.id);
   await connectToSession(page, session.id);
   await expect(topbarMetric(page, 'Session')).toContainText(session.name);
   await expect(topbarMetric(page, 'Round')).toContainText('2');
   await page.getByRole('link', { name: 'Finances', exact: true }).click();
-  await expect(page.locator('.balance-card').first()).toContainText('110.25');
-  await expect(page.locator('.balance-card').nth(1)).toContainText('90.00');
-  await expect(page.locator('.treasury-shell')).toContainText('10.25');
+  await expect(
+    page.locator('.balance-card').filter({ hasText: 'Banker Bot' }),
+  ).toContainText('110.25');
+  await expect(page.locator('.treasury-shell')).toContainText('1.5%');
+  await expect(page.locator('.treasury-shell')).toContainText('10.15');
   await page.getByRole('link', { name: 'History', exact: true }).click();
   await expect(page.locator('.replay-panel')).toContainText(
     /custody placement/i,
@@ -72,9 +74,9 @@ test('@smoke runs a turn and preserves results across views', async ({
   );
   await page.getByRole('link', { name: 'Finances', exact: true }).click();
   await expect(page.locator('.market-shell')).toContainText('1 position');
-  await expect(page.locator('.balance-card').nth(1)).not.toContainText(
-    'Available100.00',
-  );
+  await expect(
+    page.locator('.balance-card').filter({ hasText: 'Trader Bot' }),
+  ).not.toContainText('Available100.00');
   await page.getByRole('link', { name: 'History', exact: true }).click();
   await expect(page.locator('.replay-panel')).toContainText(
     /market position opened/i,
@@ -134,9 +136,11 @@ test('@smoke advances a round and renders persisted interest', async ({
     .click();
   await expect(topbarMetric(page, 'Round')).toContainText('2');
   await page.getByRole('link', { name: 'Finances', exact: true }).click();
-  await expect(page.locator('.treasury-shell')).toContainText('10.25');
-  await expect(page.locator('.treasury-shell')).toContainText('0.25');
-  await expect(page.locator('.balance-card').first()).toContainText('110.25');
+  await expect(page.locator('.treasury-shell')).toContainText('10.15');
+  await expect(page.locator('.treasury-shell')).toContainText('0.15');
+  await expect(
+    page.locator('.balance-card').filter({ hasText: 'Banker Bot' }),
+  ).toContainText('110.25');
 });
 
 test('@smoke preserves state when orchestration fails', async ({
@@ -166,8 +170,12 @@ test('@smoke preserves state when orchestration fails', async ({
   );
   await expect(topbarMetric(page, 'Round')).toContainText('1');
   await page.getByRole('link', { name: 'Finances', exact: true }).click();
-  await expect(page.locator('.balance-card').first()).toContainText('100.00');
-  await expect(page.locator('.balance-card').nth(1)).toContainText('100.00');
+  await expect(
+    page.locator('.balance-card').filter({ hasText: 'Banker Bot' }),
+  ).toContainText('100.00');
+  await expect(
+    page.locator('.balance-card').filter({ hasText: 'Trader Bot' }),
+  ).toContainText('100.00');
   await expect(page.locator('.market-shell')).toContainText('0 positions');
 });
 

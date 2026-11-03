@@ -77,11 +77,20 @@ describe('PlaceFundsWithBankerUseCase', () => {
       repository,
       new LedgerService(),
     );
+    await useCase.negotiate('game-1', 'request', 'trader-1', 'banker-1', {
+      requestAmount: '25',
+    });
+    await useCase.negotiate('game-1', 'offer', 'banker-1', 'trader-1', {
+      requestId: 'request',
+      offerAmount: '25',
+      rateBps: 150,
+    });
     const session = await useCase.execute({
       gameSessionId: 'game-1',
       ownerAgentId: 'trader-1',
       bankerAgentId: 'banker-1',
       amount: '25.0000',
+      offerId: 'offer',
     });
 
     expect(session.agents[0]?.balance.available.toDecimal()).toBe('125.0000');
@@ -93,7 +102,7 @@ describe('PlaceFundsWithBankerUseCase', () => {
     expect(session.bankerCustodyPositions[0]?.accruedInterest.toDecimal()).toBe(
       '0.0000',
     );
-    expect(repository.saved).toHaveLength(1);
+    expect(repository.saved).toHaveLength(3);
   });
 
   it('fails when the target agent is not a banker', async () => {

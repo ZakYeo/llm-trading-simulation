@@ -10,6 +10,18 @@ export class MockAgentGateway implements AgentGatewayPort {
     context: AgentTurnContext,
     callbacks?: AgentMessageStreamCallbacks,
   ): Promise<AgentAction> {
+    const action = await this.decideScriptedAction(context, callbacks);
+    return context.self.role === 'trader'
+      ? {
+          ...action,
+          decisionExplanation: `Scripted mock decision: ${action.type}. Personality values are displayed for inspection but do not drive this deterministic script.`,
+        }
+      : action;
+  }
+  private async decideScriptedAction(
+    context: AgentTurnContext,
+    callbacks?: AgentMessageStreamCallbacks,
+  ): Promise<AgentAction> {
     const scenario = process.env.AGENT_MOCK_SCENARIO;
     const banker = context.peers.find((peer) => peer.role === 'banker');
     const trader = context.peers.find((peer) => peer.role === 'trader');
@@ -37,22 +49,63 @@ export class MockAgentGateway implements AgentGatewayPort {
           candidate.relatedProposalActionId === action.actionId,
       );
     });
-    const receivedPrivateFundingPrompt = context.recentMessages.some(
-      (message) =>
-        message.visibility === 'private' &&
-        message.senderAgentId === banker?.agentId &&
-        message.recipientAgentId === context.self.agentId,
+    const negotiations = context.depositNegotiations ?? [];
+    const request = negotiations.find(
+      (o) =>
+        o.kind === 'request' &&
+        o.bankerAgentId === context.self.agentId &&
+        o.roundNumber === context.round &&
+        o.status === 'pending' &&
+        !negotiations.some((q) => q.requestId === o.id),
     );
-
-    if (context.self.role === 'banker' && trader && context.turnNumber === 1) {
-      const action = {
+    if (context.self.role === 'banker' && request)
+      return {
         type: 'send_private_message',
-        recipientAgentId: trader.agentId,
-        content: 'Share your strongest signal and I can review terms.',
-      } satisfies AgentAction;
-
-      streamMessageAction(action, callbacks);
-      return action;
+        recipientAgentId: request.traderAgentId,
+        content: `I can offer 1.5% per round on ${request.amount} SIM, with flexible withdrawal.`,
+        depositTerms: {
+          requestId: request.id,
+          offerAmount: request.amount,
+          rateBps: 150,
+        },
+      };
+    if (
+      context.self.role === 'trader' &&
+      banker &&
+      !ownCustodyPosition &&
+      (scenario !== 'market_opportunity' ||
+        context.marketContext.selfOpenPositions.length > 0)
+    ) {
+      const offer = negotiations.find(
+        (o) =>
+          o.kind === 'offer' &&
+          o.traderAgentId === context.self.agentId &&
+          o.roundNumber === context.round &&
+          o.status === 'pending',
+      );
+      if (offer)
+        return {
+          type: 'place_funds_with_banker',
+          recipientAgentId: offer.bankerAgentId,
+          amount: offer.amount,
+          offerId: offer.id,
+        };
+      if (
+        !negotiations.some(
+          (o) =>
+            o.kind === 'request' &&
+            o.traderAgentId === context.self.agentId &&
+            o.roundNumber === context.round &&
+            o.status === 'pending',
+        )
+      )
+        return {
+          type: 'send_private_message',
+          recipientAgentId: banker.agentId,
+          content:
+            'I am considering depositing 10 SIM. What interest would I earn per round?',
+          depositTerms: { requestAmount: '10' },
+        };
     }
 
     if (
@@ -81,20 +134,6 @@ export class MockAgentGateway implements AgentGatewayPort {
         recipientAgentId: trader.agentId,
         amount: '12.5000',
         rationale: 'Settle the analysis fee before I disclose the full signal.',
-      };
-    }
-
-    if (
-      context.self.role === 'trader' &&
-      banker &&
-      context.turnNumber === 2 &&
-      receivedPrivateFundingPrompt &&
-      !ownCustodyPosition
-    ) {
-      return {
-        type: 'place_funds_with_banker',
-        recipientAgentId: banker.agentId,
-        amount: '10.0000',
       };
     }
 

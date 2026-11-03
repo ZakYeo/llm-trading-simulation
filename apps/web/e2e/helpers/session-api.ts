@@ -54,32 +54,23 @@ export async function placeFundsWithBanker(
     throw new Error('Expected banker and trader in test session.');
   }
 
-  const response = await request.patch(
-    `${apiBaseUrl}/game/sessions/${session.id}/custody/place`,
-    {
-      data: {
-        ownerAgentId: trader.id,
-        bankerAgentId: banker.id,
-        amount,
-      },
-    },
+  if (Number(amount) !== 10)
+    throw new Error('The mock negotiation scenario deposits 10 SIM.');
+  const response = await request.post(
+    `${apiBaseUrl}/agents/sessions/${session.id}/rounds/orchestrate`,
+    { data: { turnCount: 3 } },
   );
-  const body = await response.text();
-
-  await expectOk(response, body);
+  await expectOk(response, await response.text());
 }
 
 export async function advanceRound(
   request: APIRequestContext,
   sessionId: string,
-  interestRateBps = 250,
 ) {
   const response = await request.patch(
     `${apiBaseUrl}/game/sessions/${sessionId}/rounds/advance`,
     {
-      data: {
-        interestRateBps,
-      },
+      data: {},
     },
   );
   const body = await response.text();

@@ -1,3 +1,4 @@
+import { StaleSessionError } from '../../../shared/domain/errors/stale-session.error.js';
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import type { LedgerService } from '../../domain/services/ledger.service.js';
@@ -5,6 +6,7 @@ import type { GameSessionRepositoryPort } from '../ports/game-session-repository
 
 export interface RedeemFundsFromBankerInput {
   gameSessionId: string;
+  expectedRevision?: number;
   ownerAgentId: string;
   bankerAgentId: string;
   amount: string;
@@ -22,6 +24,12 @@ export class RedeemFundsFromBankerUseCase {
     if (!session) {
       throw new DomainInvariantError('Game session not found.');
     }
+
+    if (
+      input.expectedRevision !== undefined &&
+      session.revision !== input.expectedRevision
+    )
+      throw new StaleSessionError();
 
     const ownerAgent = session.agents.find(
       (agent) => agent.id === input.ownerAgentId,

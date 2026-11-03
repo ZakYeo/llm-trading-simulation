@@ -89,18 +89,7 @@ function createContext(
         },
       ],
       selfOpenPositions: [],
-      primaryCounterpartyOpenPositions: [
-        {
-          opportunityId: 'opp-risky',
-          opportunityTitle: 'Binary Event Volatility',
-          principal: '9.0000',
-          entryRound: 0,
-          settlementRound: 1,
-          entryFeeAmount: '0.0180',
-          entrySlippageBps: 24,
-          effectiveResolutionReturnBps: 1176,
-        },
-      ],
+
       recentSettlements: [],
       exposureSummary: {
         selfOpenPositionCount: 0,
@@ -110,16 +99,6 @@ function createContext(
         selfLiquidBalance: '100.0000',
         selfReservedBalance: '0.0000',
         selfCustodiedBalance: '0.0000',
-        primaryCounterpartyAgentId: 'trader-1',
-        primaryCounterpartyName: 'Trader Bot',
-        primaryCounterpartyRole: 'trader',
-        primaryCounterpartyOpenPositionCount: 1,
-        primaryCounterpartyOpenPrincipal: '9.0000',
-        primaryCounterpartyOpenWorstCaseDownside: '0.7200',
-        primaryCounterpartyOpenBestCaseUpside: '1.0800',
-        primaryCounterpartyLiquidBalance: '78.0000',
-        primaryCounterpartyReservedBalance: '9.0000',
-        primaryCounterpartyCustodiedBalance: '13.0000',
       },
       executionCostModel: {
         entryFeeBps: 20,
@@ -189,18 +168,12 @@ describe('OpenAiAgentSystemContextBuilder', () => {
       'banker obligations visible to you: [owner=Trader Bot ownerId=trader-1 principal=12.5000 accrued=0.5000 total=13.0000]',
     );
     expect(prompt).toContain(
-      'Market context: visible market opportunities: [id=opp-risky title=Binary Event Volatility',
+      'visible market opportunities: [id=opp-risky title=Binary Event Volatility',
     );
     expect(prompt).toContain('signalQuality=low holdingPeriodRounds=1');
-    expect(prompt).toContain(
-      'primary counterparty open market positions: [id=opp-risky title=Binary Event Volatility principal=9.0000',
-    );
-    expect(prompt).toContain(
-      'Exposure summary: self open position count = 0 self open principal = 0.0000',
-    );
-    expect(prompt).toContain(
-      'Only positions listed as open are currently open.',
-    );
+    expect(prompt).not.toContain('primary counterparty open market positions:');
+    expect(prompt).toContain('self open market positions: none.');
+    expect(prompt).toContain('Other agents’ financial positions are private');
     expect(prompt).toContain(
       "Role economics: as the banker, you improve your outcome by attracting and retaining trader trader-1's custodial funds",
     );
@@ -270,7 +243,6 @@ describe('OpenAiAgentSystemContextBuilder', () => {
             },
           ],
           selfOpenPositions: [],
-          primaryCounterpartyOpenPositions: [],
           recentSettlements: [],
           exposureSummary: {
             selfOpenPositionCount: 0,
@@ -280,16 +252,6 @@ describe('OpenAiAgentSystemContextBuilder', () => {
             selfLiquidBalance: '90.0000',
             selfReservedBalance: '0.0000',
             selfCustodiedBalance: '0.0000',
-            primaryCounterpartyAgentId: 'banker-1',
-            primaryCounterpartyName: 'Banker Bot',
-            primaryCounterpartyRole: 'banker',
-            primaryCounterpartyOpenPositionCount: 0,
-            primaryCounterpartyOpenPrincipal: '0.0000',
-            primaryCounterpartyOpenWorstCaseDownside: '0.0000',
-            primaryCounterpartyOpenBestCaseUpside: '0.0000',
-            primaryCounterpartyLiquidBalance: '100.0000',
-            primaryCounterpartyReservedBalance: '0.0000',
-            primaryCounterpartyCustodiedBalance: '13.0000',
           },
           executionCostModel: {
             entryFeeBps: 20,

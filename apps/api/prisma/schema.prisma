@@ -56,6 +56,8 @@ enum MarketOpportunityCategory {
 }
 
 model GameSession {
+  revision Int @default(0)
+  depositNegotiations Json @default("[]")
   id           String       @id @default(uuid())
   name         String
   status       GameStatus    @default(SETUP)
@@ -156,6 +158,10 @@ model AgentMessage {
 }
 
 model AgentTurnAction {
+  decisionExplanation String?
+  decisionFailure String?
+  personalitySnapshot Json?
+  depositTerms Json?
   id               String             @id @default(uuid())
   gameSessionId    String
   roundNumber      Int
@@ -204,6 +210,7 @@ model Withdrawal {
 }
 
 model BankerCustodyPosition {
+  lots Json @default("[]")
   id            String   @id @default(uuid())
   gameSessionId String
   bankerAgentId String
@@ -246,6 +253,7 @@ model CustodyRedemption {
 }
 
 model CustodyAccrual {
+  bankerIncome Decimal @default(0) @db.Decimal(18, 4)
   id            String   @id @default(uuid())
   gameSessionId String
   roundNumber   Int

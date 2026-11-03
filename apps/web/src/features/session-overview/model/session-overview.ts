@@ -22,6 +22,13 @@ export interface TreasuryPositionViewData {
 }
 
 export interface TreasuryViewData {
+  depositTerms?: Array<{
+    key: string;
+    owner: string;
+    banker: string;
+    principal: string;
+    rate: string;
+  }>;
   totalCustodiedBalanceLabel: string;
   totalCustodiedPrincipalLabel: string;
   totalCustodiedInterestLabel: string;
@@ -168,6 +175,19 @@ export function createTreasuryViewData(
   );
 
   return {
+    depositTerms: session.bankerCustodyPositions.flatMap((position, index) =>
+      (position.lots ?? []).map((lot, lotIndex) => ({
+        key: `${index}-${lotIndex}`,
+        owner:
+          session.agents.find((a) => a.id === position.ownerAgentId)?.name ??
+          'Trader',
+        banker:
+          session.agents.find((a) => a.id === position.bankerAgentId)?.name ??
+          'Banker',
+        principal: formatCurrency(lot.principal),
+        rate: `${lot.rateBps / 100}%`,
+      })),
+    ),
     totalCustodiedBalanceLabel: formatCurrency(
       totalCustodiedBalance.toFixed(4),
     ),

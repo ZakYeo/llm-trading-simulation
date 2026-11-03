@@ -65,9 +65,21 @@ docker compose up -d --force-recreate api
 
 - Communication turns stay in the current round.
 - **Advance round settlement** applies custody interest and settles eligible market positions.
-- The interest input uses **basis points**, defaulting to 250 bps per advancement.
+- Each custody deposit earns its agreed rate on remaining principal at advancement. Rates cannot be overridden by the operator.
 - Positions remain open until their settlement round is reached.
 - Entry fees and adverse slippage are recorded when a market position opens; replay shows recorded settlement results.
+
+## Deposit negotiations and private decisions
+
+Traders must initiate a private deposit request before a banker can quote an offer. A quote states the amount, rate per round, expected SIM earnings, and flexible withdrawal terms. Traders can compare bankers, request revised quotes, decline, or accept an exact offer. Offers expire when the round advances and can be accepted only once.
+
+Bankers can offer **0–250 bps (0–2.5%) per round**. The simulation generates 250 bps on deposited principal; the agreed portion accrues to the trader and the banker keeps the difference. Each deposit retains its own rate. Interest does not compound, and withdrawals consume accrued interest before the oldest principal. Existing saved deposits retain 250 bps.
+
+Only bankers receive the ceiling and spread rules in their agent context. Traders discover offered rates through discussion. Agents cannot inspect another agent's private positions or external balances; bankers see the custody obligations they hold. The operator dashboard retains full visibility.
+
+Before every trader action, an operator-only **Thought** shows a brief decision explanation with the trader's personality values. These are display explanations, not private internal reasoning, and are never sent to peer agents. Mock explanations are explicitly scripted. Failed decisions appear in replay without executing the invalid action.
+
+Click **LLM Trading Simulator** in the header to return to session setup without deleting the current session.
 
 ## Round summaries
 

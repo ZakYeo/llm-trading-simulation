@@ -1,6 +1,12 @@
+import type { DepositMessageTerms } from '../../../game/domain/entities/deposit-negotiation.js';
+import type { AgentPersonalityProfile } from '@llm-sim/shared-types';
 import type { AgentActionType } from '@llm-sim/shared-types';
 
 export interface AgentActionRecord {
+  decisionExplanation?: string;
+  decisionFailure?: string;
+  personalitySnapshot?: AgentPersonalityProfile;
+  depositTerms?: DepositMessageTerms;
   id?: string;
   gameSessionId: string;
   roundNumber: number;

@@ -1,3 +1,4 @@
+import type { AgentSessionEventRecord } from '@llm-sim/shared-types';
 import { describe, expect, it } from 'vitest';
 
 import type { AgentAction, AgentTurnContext } from '@llm-sim/mcp-contracts';
@@ -27,9 +28,9 @@ import type {
 import { RunAgentCommunicationTurnUseCase } from './run-agent-communication-turn.use-case.js';
 
 class RecordingAgentSessionEventStreamService {
-  published: unknown[] = [];
+  published: AgentSessionEventRecord[] = [];
 
-  publish(event: unknown): void {
+  publish(event: AgentSessionEventRecord): void {
     this.published.push(event);
   }
 }
@@ -164,7 +165,10 @@ class ScriptedAgentGateway implements AgentGatewayPort {
     const action = this.actions[this.index];
 
     if (!action) {
-      return { type: 'finalize_turn' };
+      return {
+        type: 'finalize_turn',
+        decisionExplanation: 'Waiting for more evidence.',
+      };
     }
 
     this.index += 1;
@@ -190,7 +194,11 @@ class ScriptedAgentGateway implements AgentGatewayPort {
       });
     }
 
-    return action;
+    return {
+      ...action,
+      decisionExplanation:
+        'Test decision: compare the available options before acting.',
+    };
   }
 }
 
@@ -201,6 +209,7 @@ class RecordingAgentGateway implements AgentGatewayPort {
     this.contexts.push(context);
     return {
       type: 'finalize_turn',
+      decisionExplanation: 'Waiting for stronger evidence.',
     };
   }
 }
@@ -286,13 +295,22 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       amount: '15.0000',
       turnNumber: 2,
     });
+    expect(
+      eventStreamService.published.some(
+        (event) => event.type === 'thought_recorded',
+      ),
+    ).toBe(true);
     expect(result.messages[0]).toMatchObject({
       senderAgentId: 'agent-1',
       recipientAgentId: 'agent-2',
       visibility: 'private',
       turnNumber: 2,
     });
-    expect(eventStreamService.published).toEqual([
+    expect(
+      eventStreamService.published.filter(
+        (event) => event.type !== 'thought_recorded',
+      ),
+    ).toEqual([
       {
         type: 'message_stream_started',
         streamId: 'stream-1',
@@ -398,6 +416,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
         },
         {
           type: 'finalize_turn',
+          decisionExplanation: 'Waiting for stronger evidence.',
         },
       ]),
       new RecordingAgentSessionEventStreamService() as never,
@@ -440,6 +459,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
         },
         {
           type: 'finalize_turn',
+          decisionExplanation: 'Waiting for stronger evidence.',
         },
       ]),
       new RecordingAgentSessionEventStreamService() as never,
@@ -681,6 +701,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       new ScriptedAgentGateway([
         {
           type: 'finalize_turn',
+          decisionExplanation: 'Waiting for stronger evidence.',
         },
         {
           type: 'redeem_funds_from_banker',
@@ -701,6 +722,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
     expect(placeFundsWithBankerUseCase.calls).toHaveLength(0);
     expect(redeemFundsFromBankerUseCase.calls).toEqual([
       {
+        expectedRevision: 0,
         gameSessionId: 'game-1',
         ownerAgentId: 'agent-2',
         bankerAgentId: 'agent-1',
@@ -735,6 +757,7 @@ describe('RunAgentCommunicationTurnUseCase', () => {
       new ScriptedAgentGateway([
         {
           type: 'finalize_turn',
+          decisionExplanation: 'Waiting for stronger evidence.',
         },
         {
           type: 'request_payment',

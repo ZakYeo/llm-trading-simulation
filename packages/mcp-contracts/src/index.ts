@@ -59,7 +59,30 @@ export const recentAgentActionSchema = z.object({
   turnNumber: z.number().int().positive(),
 });
 
+export const depositMessageTermsSchema = z.object({
+  requestAmount: z.string().min(1).optional(),
+  requestId: z.string().min(1).optional(),
+  offerAmount: z.string().min(1).optional(),
+  rateBps: z.number().int().min(0).max(250).optional(),
+  declineOfferId: z.string().min(1).optional(),
+});
 export const agentTurnContextSchema = z.object({
+  depositNegotiations: z
+    .array(
+      z.object({
+        id: z.string(),
+        kind: z.enum(['request', 'offer']),
+        requestId: z.string().optional(),
+        traderAgentId: z.string(),
+        bankerAgentId: z.string(),
+        roundNumber: z.number(),
+        amount: z.string(),
+        rateBps: z.number().optional(),
+        status: z.enum(['pending', 'superseded', 'accepted', 'declined']),
+      }),
+    )
+    .optional(),
+  depositPolicy: z.string().optional(),
   gameId: z.string().min(1),
   sessionName: z.string().min(1),
   round: z.number().int().nonnegative(),
@@ -102,6 +125,19 @@ export const agentTurnContextSchema = z.object({
     guidance: z.string().min(1),
   }),
   treasuryContext: z.object({
+    selfCustodyPositions: z
+      .array(
+        z.object({
+          bankerAgentId: z.string(),
+          principal: z.string(),
+          accruedInterest: z.string(),
+          totalBalance: z.string(),
+          lots: z.array(
+            z.object({ principal: z.string(), rateBps: z.number() }),
+          ),
+        }),
+      )
+      .optional(),
     bankerAgentId: z.string().min(1).nullable(),
     bankerName: z.string().min(1).nullable(),
     totalCustodiedPrincipal: z.string(),
@@ -155,18 +191,6 @@ export const agentTurnContextSchema = z.object({
         effectiveResolutionReturnBps: z.number().int(),
       }),
     ),
-    primaryCounterpartyOpenPositions: z.array(
-      z.object({
-        opportunityId: z.string().min(1),
-        opportunityTitle: z.string().min(1),
-        principal: z.string(),
-        entryRound: z.number().int().nonnegative(),
-        settlementRound: z.number().int().nonnegative(),
-        entryFeeAmount: z.string(),
-        entrySlippageBps: z.number().int().nonnegative(),
-        effectiveResolutionReturnBps: z.number().int(),
-      }),
-    ),
     recentSettlements: z.array(
       z.object({
         opportunityId: z.string().min(1),
@@ -186,18 +210,6 @@ export const agentTurnContextSchema = z.object({
       selfLiquidBalance: z.string(),
       selfReservedBalance: z.string(),
       selfCustodiedBalance: z.string(),
-      primaryCounterpartyAgentId: z.string().min(1).nullable(),
-      primaryCounterpartyName: z.string().min(1).nullable(),
-      primaryCounterpartyRole: z
-        .enum(['banker', 'analyst', 'lawyer', 'influencer', 'trader'])
-        .nullable(),
-      primaryCounterpartyOpenPositionCount: z.number().int().nonnegative(),
-      primaryCounterpartyOpenPrincipal: z.string(),
-      primaryCounterpartyOpenWorstCaseDownside: z.string(),
-      primaryCounterpartyOpenBestCaseUpside: z.string(),
-      primaryCounterpartyLiquidBalance: z.string(),
-      primaryCounterpartyReservedBalance: z.string(),
-      primaryCounterpartyCustodiedBalance: z.string(),
     }),
     executionCostModel: z.object({
       entryFeeBps: z.number().int().nonnegative(),
@@ -232,12 +244,15 @@ export const agentActionSchema = z.discriminatedUnion('type', [
     type: z.literal('send_public_message'),
     content: z.string().min(1),
     reasoning: z.string().min(1).optional(),
+    decisionExplanation: z.string().trim().min(1).max(800).optional(),
   }),
   z.object({
     type: z.literal('send_private_message'),
+    depositTerms: depositMessageTermsSchema.optional(),
     recipientAgentId: z.string().min(1),
     content: z.string().min(1),
     reasoning: z.string().min(1).optional(),
+    decisionExplanation: z.string().trim().min(1).max(800).optional(),
   }),
   z.object({
     type: z.literal('request_payment'),
@@ -245,6 +260,7 @@ export const agentActionSchema = z.discriminatedUnion('type', [
     amount: z.string().min(1),
     rationale: z.string().min(1),
     reasoning: z.string().min(1).optional(),
+    decisionExplanation: z.string().trim().min(1).max(800).optional(),
   }),
   z.object({
     type: z.literal('counter_payment_request'),
@@ -253,39 +269,47 @@ export const agentActionSchema = z.discriminatedUnion('type', [
     amount: z.string().min(1),
     rationale: z.string().min(1),
     reasoning: z.string().min(1).optional(),
+    decisionExplanation: z.string().trim().min(1).max(800).optional(),
   }),
   z.object({
     type: z.literal('accept_payment_request'),
     proposalActionId: z.string().min(1),
     reasoning: z.string().min(1).optional(),
+    decisionExplanation: z.string().trim().min(1).max(800).optional(),
   }),
   z.object({
     type: z.literal('reject_payment_request'),
     proposalActionId: z.string().min(1),
     rationale: z.string().min(1),
     reasoning: z.string().min(1).optional(),
+    decisionExplanation: z.string().trim().min(1).max(800).optional(),
   }),
   z.object({
     type: z.literal('place_funds_with_banker'),
+    offerId: z.string().min(1).optional(),
     recipientAgentId: z.string().min(1),
     amount: z.string().min(1),
     reasoning: z.string().min(1).optional(),
+    decisionExplanation: z.string().trim().min(1).max(800).optional(),
   }),
   z.object({
     type: z.literal('redeem_funds_from_banker'),
     recipientAgentId: z.string().min(1),
     amount: z.string().min(1),
     reasoning: z.string().min(1).optional(),
+    decisionExplanation: z.string().trim().min(1).max(800).optional(),
   }),
   z.object({
     type: z.literal('open_market_position'),
     opportunityId: z.string().min(1),
     amount: z.string().min(1),
     reasoning: z.string().min(1).optional(),
+    decisionExplanation: z.string().trim().min(1).max(800).optional(),
   }),
   z.object({
     type: z.literal('finalize_turn'),
     reasoning: z.string().min(1).optional(),
+    decisionExplanation: z.string().trim().min(1).max(800).optional(),
   }),
 ]);
 

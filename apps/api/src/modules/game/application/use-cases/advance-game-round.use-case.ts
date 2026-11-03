@@ -24,21 +24,12 @@ export class AdvanceGameRoundUseCase {
       throw new DomainInvariantError('Game session not found.');
     }
 
-    if (this.defaultInterestRateBps < 0) {
+    if (input.interestRateBps !== undefined)
       throw new DomainInvariantError(
-        'Default interest rate cannot be negative.',
+        'Custody rates are fixed by accepted offers; rate overrides are not allowed.',
       );
-    }
-
-    const interestRateBps =
-      input.interestRateBps ?? this.defaultInterestRateBps;
-
-    if (interestRateBps < 0) {
-      throw new DomainInvariantError('Interest rate cannot be negative.');
-    }
-
     const accruedPositions = session.bankerCustodyPositions.map((position) =>
-      position.accrue(interestRateBps),
+      position.accrue(),
     );
     const accrualHistory = session.bankerCustodyPositions.flatMap(
       (position, index) => {
@@ -52,7 +43,10 @@ export class AdvanceGameRoundUseCase {
           position.accruedInterest,
         );
 
-        return interest.isZero()
+        const bankerIncome = position
+          .grossYieldForNextRound()
+          .subtract(interest);
+        return interest.isZero() && bankerIncome.isZero()
           ? []
           : [
               {
@@ -61,6 +55,7 @@ export class AdvanceGameRoundUseCase {
                 bankerAgentId: position.bankerAgentId,
                 ownerAgentId: position.ownerAgentId,
                 amount: interest.toDecimal(),
+                bankerIncome: bankerIncome.toDecimal(),
               },
             ];
       },
@@ -68,25 +63,11 @@ export class AdvanceGameRoundUseCase {
 
     const interestByBanker = new Map<string, Money>();
 
-    session.bankerCustodyPositions.forEach((position, index) => {
-      const accruedPosition = accruedPositions[index];
-
-      if (!accruedPosition) {
-        return;
-      }
-
-      const interest = accruedPosition.accruedInterest.subtract(
-        position.accruedInterest,
-      );
-
-      if (interest.isZero()) {
-        return;
-      }
-
+    session.bankerCustodyPositions.forEach((position) => {
       interestByBanker.set(
         position.bankerAgentId,
         (interestByBanker.get(position.bankerAgentId) ?? Money.zero()).add(
-          interest,
+          position.grossYieldForNextRound(),
         ),
       );
     });

@@ -83,7 +83,6 @@ function createTraderContext(): AgentTurnContext {
         },
       ],
       selfOpenPositions: [],
-      primaryCounterpartyOpenPositions: [],
       recentSettlements: [],
       exposureSummary: {
         selfOpenPositionCount: 0,
@@ -93,16 +92,6 @@ function createTraderContext(): AgentTurnContext {
         selfLiquidBalance: '100.0000',
         selfReservedBalance: '0.0000',
         selfCustodiedBalance: '0.0000',
-        primaryCounterpartyAgentId: 'banker-1',
-        primaryCounterpartyName: 'Banker Bot',
-        primaryCounterpartyRole: 'banker',
-        primaryCounterpartyOpenPositionCount: 0,
-        primaryCounterpartyOpenPrincipal: '0.0000',
-        primaryCounterpartyOpenWorstCaseDownside: '0.0000',
-        primaryCounterpartyOpenBestCaseUpside: '0.0000',
-        primaryCounterpartyLiquidBalance: '100.0000',
-        primaryCounterpartyReservedBalance: '0.0000',
-        primaryCounterpartyCustodiedBalance: '0.0000',
       },
       executionCostModel: {
         entryFeeBps: 20,
@@ -146,7 +135,7 @@ describe('MockAgentGateway', () => {
 
     const action = await gateway.decideNextAction(createTraderContext());
 
-    expect(action).toEqual({
+    expect(action).toMatchObject({
       type: 'open_market_position',
       opportunityId: 'opp-risky',
       amount: '5.0000',

@@ -104,12 +104,6 @@ export function useOperatorDashboardViewModel() {
     },
   });
 
-  const parsedInterestRateBps = Number.parseInt(interestRateBps, 10);
-  const roundInterestRateBps =
-    interestRateBps.trim().length === 0 || Number.isNaN(parsedInterestRateBps)
-      ? undefined
-      : parsedInterestRateBps;
-
   const orchestrateMutation = useMutation({
     mutationFn: () => orchestrateAgentRound(selectedSessionId, turnCount),
     onSuccess: (result) => {
@@ -134,10 +128,10 @@ export function useOperatorDashboardViewModel() {
   });
 
   const advanceRoundMutation = useMutation({
-    mutationFn: () => advanceGameRound(selectedSessionId, roundInterestRateBps),
+    mutationFn: () => advanceGameRound(selectedSessionId),
     onSuccess: (session) => {
       setLatestRunSummary(
-        `Advanced to round ${session.currentRound} with ${roundInterestRateBps ?? 'default'} bps custody interest`,
+        `Advanced to round ${session.currentRound} using agreed deposit rates`,
       );
       queryClient.setQueryData(['game-session', session.id], session);
       void Promise.all([

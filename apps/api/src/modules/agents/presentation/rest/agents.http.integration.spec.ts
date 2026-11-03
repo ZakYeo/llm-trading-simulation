@@ -137,7 +137,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
     ).toBe(true);
   });
 
-  it('streams message typing events and progress over SSE for a session', async () => {
+  it('emits the trader Thought before non-streamed message progress over SSE', async () => {
     const createdSession = await createAgentSession(baseUrl);
     const abortController = new AbortController();
 
@@ -158,7 +158,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
     expect(sseResponse.body).toBeTruthy();
 
     const reader = sseResponse.body!.getReader();
-    const eventPromises = readSseEvents(reader, 4);
+    const eventPromises = readSseEvents(reader, 2);
 
     const turnResponse = await fetch(
       `${baseUrl}/api/agents/sessions/${createdSession.id}/turns/communicate`,
@@ -202,56 +202,21 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
       }>;
     };
 
-    expect([...new Set(streamedEvents.map((event) => event.event))]).toEqual([
-      'message_stream_started',
-      'message_stream_delta',
-      'message_stream_completed',
+    expect(streamedEvents.map((event) => event.event)).toEqual([
+      'thought_recorded',
       'action_progressed',
     ]);
-    expect(JSON.parse(streamedEvents[0].data)).toEqual(
-      expect.objectContaining({
-        type: 'message_stream_started',
-        gameSessionId: createdSession.id,
-        roundNumber: completedTurn.roundNumber,
-        turnNumber: 1,
-      }),
-    );
-    expect(JSON.parse(streamedEvents[1].data)).toEqual(
-      expect.objectContaining({
-        type: 'message_stream_delta',
-        gameSessionId: createdSession.id,
-        delta: expect.any(String),
-        content: expect.any(String),
-      }),
-    );
-    expect(
-      JSON.parse(
-        streamedEvents.find(
-          (event) => event.event === 'message_stream_completed',
-        )!.data,
-      ),
-    ).toEqual(
-      expect.objectContaining({
-        type: 'message_stream_completed',
-        gameSessionId: createdSession.id,
-        content: expect.any(String),
-      }),
-    );
-    expect(
-      JSON.parse(
-        streamedEvents.find((event) => event.event === 'action_progressed')!
-          .data,
-      ),
-    ).toEqual(
-      expect.objectContaining({
-        type: 'action_progressed',
-        gameSessionId: createdSession.id,
-        roundNumber: completedTurn.roundNumber,
-        turnNumber: 1,
-        streamId: expect.any(String),
-        messageId: expect.any(String),
-      }),
-    );
+    expect(JSON.parse(streamedEvents[0].data)).toMatchObject({
+      type: 'thought_recorded',
+      event: { type: 'thought', content: expect.any(String) },
+    });
+    expect(JSON.parse(streamedEvents[1].data)).toMatchObject({
+      type: 'action_progressed',
+      gameSessionId: createdSession.id,
+      roundNumber: completedTurn.roundNumber,
+      turnNumber: 1,
+      messageId: expect.any(String),
+    });
     expect(
       replay.events.some(
         (event) =>
@@ -521,7 +486,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Agents HTTP integration', () => {
     await fetch(`${baseUrl}/api/game/sessions/${session.id}/rounds/advance`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ interestRateBps: 250 }),
+      body: JSON.stringify({}),
     });
     expect(
       await (

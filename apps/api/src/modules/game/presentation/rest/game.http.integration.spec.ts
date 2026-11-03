@@ -1,3 +1,4 @@
+import { PlaceFundsWithBankerUseCase } from '../../application/use-cases/place-funds-with-banker.use-case.js';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../../../app.factory.js';
@@ -7,6 +8,7 @@ const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 
 describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
   let prismaService: PrismaService;
+  let custody: PlaceFundsWithBankerUseCase;
   let baseUrl: string;
   let closeApp: (() => Promise<void>) | undefined;
 
@@ -17,6 +19,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
     await app.listen(0, '127.0.0.1');
 
     prismaService = app.get(PrismaService);
+    custody = app.get(PlaceFundsWithBankerUseCase);
     baseUrl = await app.getUrl();
     closeApp = async () => {
       await app.close();
@@ -295,6 +298,20 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
     expect(banker).toBeDefined();
     expect(trader).toBeDefined();
 
+    await custody.negotiate(
+      createdSession.id,
+      'request-1',
+      trader!.id,
+      banker!.id,
+      { requestAmount: '40.0000' },
+    );
+    await custody.negotiate(
+      createdSession.id,
+      'offer-1',
+      banker!.id,
+      trader!.id,
+      { requestId: 'request-1', offerAmount: '40.0000', rateBps: 250 },
+    );
     const custodyPlacementResponse = await fetch(
       `${baseUrl}/api/game/sessions/${createdSession.id}/custody/place`,
       {
@@ -303,6 +320,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
+          offerId: 'offer-1',
           ownerAgentId: trader!.id,
           bankerAgentId: banker!.id,
           amount: '40.0000',
@@ -319,9 +337,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
         headers: {
           'content-type': 'application/json',
         },
-        body: JSON.stringify({
-          interestRateBps: 250,
-        }),
+        body: JSON.stringify({}),
       },
     );
 
@@ -363,6 +379,8 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
         principal: '36.0000',
         accruedInterest: '0.0000',
         totalBalance: '36.0000',
+        expectedInterest: '0.9000',
+        lots: [{ principal: '36.0000', rateBps: 250, offerId: 'offer-1' }],
       },
     ]);
   });
@@ -411,6 +429,20 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
     expect(banker).toBeDefined();
     expect(trader).toBeDefined();
 
+    await custody.negotiate(
+      createdSession.id,
+      'request-1',
+      trader!.id,
+      banker!.id,
+      { requestAmount: '40.0000' },
+    );
+    await custody.negotiate(
+      createdSession.id,
+      'offer-1',
+      banker!.id,
+      trader!.id,
+      { requestId: 'request-1', offerAmount: '40.0000', rateBps: 250 },
+    );
     const custodyPlacementResponse = await fetch(
       `${baseUrl}/api/game/sessions/${createdSession.id}/custody/place`,
       {
@@ -419,6 +451,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
+          offerId: 'offer-1',
           ownerAgentId: trader!.id,
           bankerAgentId: banker!.id,
           amount: '40.0000',
@@ -466,6 +499,8 @@ describe.runIf(Boolean(testDatabaseUrl))('Game HTTP integration', () => {
         principal: '40.0000',
         accruedInterest: '1.0000',
         totalBalance: '41.0000',
+        expectedInterest: '1.0000',
+        lots: [{ principal: '40.0000', rateBps: 250, offerId: 'offer-1' }],
       },
     ]);
   });

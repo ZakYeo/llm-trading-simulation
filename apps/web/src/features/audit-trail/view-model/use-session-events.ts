@@ -11,6 +11,10 @@ export type { StreamedAuditMessageRecord } from '../model/audit-trail';
 
 interface UseSessionEventsInput {
   queryClient: {
+    setQueryData?: <T>(
+      key: readonly string[],
+      updater: (current: T | undefined) => T | undefined,
+    ) => unknown;
     invalidateQueries: (input: {
       queryKey: readonly [string, string?];
     }) => Promise<unknown>;
@@ -178,7 +182,7 @@ export function createSessionEventHandlers({
       );
     }
 
-    if (!isSendMessageAction(payload.actionType)) {
+    if (!isSendMessageAction(payload.actionType) || !payload.streamId) {
       refreshLiveState();
     }
   }
@@ -292,6 +296,25 @@ export function useSessionEvents({
       setStreamedMessages,
     });
 
+    eventSource.addEventListener('thought_recorded', ((
+      event: MessageEvent<string>,
+    ) => {
+      const payload = JSON.parse(event.data) as AgentSessionEventRecord;
+      if (payload.type !== 'thought_recorded') return;
+      queryClient.setQueryData?.<GameReplayRecord>(
+        ['game-replay', selectedSessionId],
+        (current) =>
+          current
+            ? {
+                ...current,
+                events: [
+                  ...current.events.filter((e) => e.id !== payload.event.id),
+                  payload.event,
+                ],
+              }
+            : current,
+      );
+    }) as EventListener);
     eventSource.addEventListener(
       'message_stream_started',
       handlers.handleMessageStreamStarted as EventListener,

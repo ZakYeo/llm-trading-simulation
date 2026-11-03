@@ -1,3 +1,5 @@
+import { StaleSessionError } from '../../../shared/domain/errors/stale-session.error.js';
+import { decideAgentAction } from '../services/decide-agent-action.js';
 import type { AgentAction } from '@llm-sim/mcp-contracts';
 
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
@@ -207,10 +209,20 @@ export class RunAgentCommunicationTurnUseCase {
             });
           },
         };
-        const action = await this.agentGateway.decideNextAction(
+        const action = await decideAgentAction(
+          this.agentGateway,
           context,
           callbacks,
         );
+        const latestSession = await this.gameSessionRepository.findById(
+          currentSession.id,
+        );
+        if (
+          !latestSession ||
+          latestSession.revision !== currentSession.revision ||
+          latestSession.currentRound !== currentSession.currentRound
+        )
+          throw new StaleSessionError();
         const { recipientAgentId, relatedProposalActionId } =
           this.agentActionValidator.validate(
             currentSession,
@@ -219,6 +231,25 @@ export class RunAgentCommunicationTurnUseCase {
             recentActions,
           );
         const execution = await this.agentActionExecutor.execute({
+          onDecisionSaved: (record) => {
+            if (agent.role !== 'trader' || !record.decisionExplanation) return;
+            this.agentSessionEventStreamService.publish({
+              type: 'thought_recorded',
+              gameSessionId: currentSession.id,
+              occurredAt: record.createdAt ?? new Date().toISOString(),
+              event: {
+                id: `thought-${record.id}`,
+                type: 'thought',
+                agentId: agent.id,
+                agentName: agent.name,
+                roundNumber: currentSession.currentRound,
+                turnNumber,
+                createdAt: record.createdAt ?? new Date().toISOString(),
+                content: record.decisionExplanation,
+                personalitySnapshot: record.personalitySnapshot,
+              },
+            });
+          },
           session: currentSession,
           agentId: agent.id,
           turnNumber,
@@ -258,6 +289,32 @@ export class RunAgentCommunicationTurnUseCase {
           action,
         });
       } catch (error) {
+        const failureText = `${agent.name} could not complete this decision. ${error instanceof DomainInvariantError ? error.message : 'The decision or its execution was invalid; no successful action is recorded for this attempt.'}`;
+        const failure = await this.agentActionRepository.save({
+          gameSessionId: currentSession.id,
+          roundNumber: currentSession.currentRound,
+          turnNumber,
+          agentId: agent.id,
+          recipientAgentId: null,
+          actionType: 'finalize_turn',
+          decisionFailure: failureText,
+        });
+        this.agentSessionEventStreamService.publish({
+          type: 'thought_recorded',
+          gameSessionId: currentSession.id,
+          occurredAt: failure.createdAt ?? new Date().toISOString(),
+          event: {
+            id: `failure-${failure.id}`,
+            type: 'decision_failure',
+            agentId: agent.id,
+            agentName: agent.name,
+            roundNumber: currentSession.currentRound,
+            turnNumber,
+            createdAt: failure.createdAt ?? new Date().toISOString(),
+            content: failureText,
+          },
+        });
+
         console.error('run_agent_communication_turn_failed', {
           gameSessionId: currentSession.id,
           roundNumber: currentSession.currentRound,

@@ -29,7 +29,14 @@ export function OperatorDashboardView() {
         Skip to content
       </a>
       <header className="app-header">
-        <a className="wordmark" href={vm.navigation.href('Conversation')}>
+        <a
+          className="wordmark"
+          href="#"
+          onClick={(event) => {
+            event.preventDefault();
+            vm.sessionSetup.onShowStartupForm();
+          }}
+        >
           <span className="brand-mark" aria-hidden="true">
             ↗
           </span>

@@ -82,6 +82,7 @@ describe('GameSessionPrismaMapper', () => {
     });
 
     expect(GameSessionPrismaMapper.toCreateInput(session)).toEqual({
+      depositNegotiations: [],
       id: 'game-1',
       name: 'Treasury Table',
       status: 'SETUP',
@@ -120,6 +121,7 @@ describe('GameSessionPrismaMapper', () => {
             ownerAgentId: 'agent-1',
             principal: '10.0000',
             accrued: '1.5000',
+            lots: [{ principal: '10.0000', rateBps: 250 }],
           },
         ],
       },
@@ -195,6 +197,7 @@ describe('GameSessionPrismaMapper', () => {
           ownerAgentId: 'agent-1',
           principal: '7.0000',
           accrued: '0.5000',
+          lots: [{ principal: '7.0000', rateBps: 250 }],
         },
       ],
       marketOpportunities: [

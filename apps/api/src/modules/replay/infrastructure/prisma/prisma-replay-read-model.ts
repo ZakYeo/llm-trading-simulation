@@ -1,3 +1,5 @@
+import type { AgentPersonalityProfile } from '@llm-sim/shared-types';
+import { Money } from '../../../shared/domain/value-objects/money.js';
 import type { Prisma } from '../../../shared/infrastructure/prisma/prisma-client.js';
 import { type PrismaClient } from '../../../shared/infrastructure/prisma/prisma-client.js';
 import type {
@@ -202,6 +204,7 @@ function mapCustodyAccrualEvents(
   return session.custodyAccruals.map((accrual) => ({
     id: accrual.id,
     type: 'custody_accrual',
+    bankerIncome: toAmountString(accrual.bankerIncome),
     createdAt: accrual.createdAt.toISOString(),
     roundNumber: accrual.roundNumber,
     amount: toAmountString(accrual.amount),
@@ -380,20 +383,25 @@ function toReplayActionType(
 }
 
 function mapActionEvents(session: ReplaySessionRecord): ReplayEventRecord[] {
-  return session.agentTurnActions.map((action) => ({
-    id: action.id,
-    type: 'action',
-    createdAt: action.createdAt.toISOString(),
-    roundNumber: action.roundNumber,
-    turnNumber: action.turnNumber,
-    agentId: action.agentId,
-    agentName: action.agent.name,
-    recipientAgentId: action.recipientAgentId,
-    relatedProposalActionId: action.relatedProposalActionId ?? undefined,
-    amount: action.amount ? toAmountString(action.amount) : undefined,
-    content: action.content ?? undefined,
-    actionType: toReplayActionType(action.actionType),
-  }));
+  return session.agentTurnActions
+    .filter((action) => !action.decisionFailure)
+    .map((action) => ({
+      id: action.id,
+      type: 'action',
+      createdAt: action.createdAt.toISOString(),
+      roundNumber: action.roundNumber,
+      turnNumber: action.turnNumber,
+      agentId: action.agentId,
+      agentName: action.agent.name,
+      recipientAgentId: action.recipientAgentId,
+      relatedProposalActionId: action.relatedProposalActionId ?? undefined,
+      amount: action.amount ? toAmountString(action.amount) : undefined,
+      content: action.content ?? undefined,
+      actionType: toReplayActionType(action.actionType),
+      depositTerms: action.depositTerms
+        ? quoteTerms(action.depositTerms)
+        : undefined,
+    }));
 }
 
 function mapReplayEvents(session: ReplaySessionRecord): ReplayEventRecord[] {
@@ -410,6 +418,32 @@ function mapReplayEvents(session: ReplaySessionRecord): ReplayEventRecord[] {
     ...mapMarketOpportunityResolvedEvents(session),
     ...mapMessageEvents(session),
     ...mapActionEvents(session),
+    ...session.agentTurnActions
+      .filter((a) => a.decisionFailure)
+      .map((a) => ({
+        id: `failure-${a.id}`,
+        type: 'decision_failure' as const,
+        createdAt: a.createdAt.toISOString(),
+        roundNumber: a.roundNumber,
+        turnNumber: a.turnNumber,
+        agentId: a.agentId,
+        agentName: a.agent.name,
+        content: a.decisionFailure!,
+      })),
+    ...session.agentTurnActions
+      .filter((a) => a.decisionExplanation)
+      .map((a) => ({
+        id: `thought-${a.id}`,
+        type: 'thought' as const,
+        createdAt: a.createdAt.toISOString(),
+        roundNumber: a.roundNumber,
+        turnNumber: a.turnNumber,
+        agentId: a.agentId,
+        agentName: a.agent.name,
+        content: a.decisionExplanation!,
+        personalitySnapshot:
+          a.personalitySnapshot as unknown as AgentPersonalityProfile,
+      })),
   ].sort((left, right) => {
     const createdAtCompare = left.createdAt.localeCompare(right.createdAt);
 
@@ -417,6 +451,8 @@ function mapReplayEvents(session: ReplaySessionRecord): ReplayEventRecord[] {
       return createdAtCompare;
     }
 
+    if (left.type === 'thought' && right.type !== 'thought') return -1;
+    if (right.type === 'thought' && left.type !== 'thought') return 1;
     return left.id.localeCompare(right.id);
   });
 }
@@ -468,4 +504,18 @@ export class PrismaReplayReadModel implements ReplayReadModelPort {
       events: mapReplayEvents(session),
     };
   }
+}
+
+function quoteTerms(value: unknown): ReplayEventRecord['depositTerms'] {
+  const terms = value as NonNullable<ReplayEventRecord['depositTerms']>;
+  return {
+    ...terms,
+    ...(terms.offerAmount !== undefined && terms.rateBps !== undefined
+      ? {
+          expectedInterest: Money.fromDecimal(terms.offerAmount)
+            .multiplyBps(terms.rateBps)
+            .toDecimal(),
+        }
+      : {}),
+  };
 }

@@ -394,6 +394,8 @@ export function createAuditTrailViewData(input: {
       return createdAtCompare;
     }
 
+    if (left.type === 'thought' && right.type !== 'thought') return -1;
+    if (right.type === 'thought' && left.type !== 'thought') return 1;
     return left.id.localeCompare(right.id);
   });
   const matchingEvents = mergedEvents.filter((event) =>

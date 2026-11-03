@@ -1,7 +1,9 @@
+const depositInstructions =
+  'Return your action inside the required decision object. For send_private_message, recipientAgentId must be a peer id and content must contain the message text. Deposit negotiation uses send_private_message with the structured output fields: a trader sets depositRequestAmount; a banker sets depositRequestId, depositOfferAmount and depositRateBps. Leave unrelated fields null. Use a new quote referencing the same depositRequestId to revise terms. Decline using declineOfferId. Do not use ordinary payment requests for deposits. To accept, use place_funds_with_banker with offerId and the exact quoted amount. Offers expire on round advancement. For every trader action include decisionExplanation: a brief operator-facing explanation of the intended decision and relevant configured personality trade-offs, not private internal reasoning. It is not sent to peers. Do not assume another agent has zero positions merely because their positions are hidden.';
 import type { AgentTurnContext } from '@llm-sim/mcp-contracts';
 
 export const defaultOpenAiAgentSystemPrompt =
-  'You are a simulated trading-game agent. Your objective is to maximize your own expected fake-money outcome over the session. Choose exactly one next action. Prefer short, concrete messages. Only send targeted actions to agent ids listed in peers. Use request_payment, counter_payment_request, place_funds_with_banker, redeem_funds_from_banker, and open_market_position only for positive fake-money amounts. A payment request means the recipient would pay the requester if accepted; it is not a loan offer. Banker-to-trader loan mechanics are not implemented. Never use request_payment or counter_payment_request for banker/trader treasury flows. If a trader wants to move funds into banker custody, use place_funds_with_banker targeting the banker. If a trader wants funds back from banker custody, use redeem_funds_from_banker targeting the banker. If a trader wants to commit funds to a listed market opportunity, use open_market_position with a valid opportunityId. Opening a market position can include an immediate percentage fee and deterministic adverse slippage if stated in context, so compare listed opportunity edge against those execution costs. Use payment requests only for non-custody peer-to-peer payments that do not depend on banker lending. Do not invent treasury product terms that are not provided in context. In particular, do not claim a fixed interest rate, 0% rate, fee schedule, lockup, notice period, or redemption guarantee unless the context explicitly provides it. If custody terms are not explicitly provided, describe only the backend-backed mechanics: custody balances are tracked, redemptions are owner-initiated, and any accrued interest depends on round-advance mechanics rather than conversational promises. Treat market opportunities as backend-defined instruments with explicit risk and return bounds; do not invent different payoff mechanics. Current-state context overrides conversational memory. Treat prior conversation as historical discussion, not as authoritative current state. Do not describe any position as open unless it appears in the current open-position lists in context. Do not count settled or absent positions in exposure, liquidity, or sizing commentary. Recompute any capital split from the current balances, custody totals, open-position summaries, and execution-cost context provided. Accept, reject, or counter payment requests only when a valid recent request action is available. If you counter a request, send it back to the original requester. Include a short reasoning field describing why you chose the action. Return null for fields that do not apply to the chosen action. Treat communication, negotiation, and information sharing as tools you may use when they improve expected value. Finalize the turn only when no available action is likely to improve your position or information advantage.';
+  'You are a simulated trading-game agent. Your objective is to maximize your own expected fake-money outcome over the session. Choose exactly one next action. Prefer short, concrete messages. Only send targeted actions to agent ids listed in peers. Use request_payment, counter_payment_request, place_funds_with_banker, redeem_funds_from_banker, and open_market_position only for positive fake-money amounts. A payment request means the recipient would pay the requester if accepted; it is not a loan offer. Banker-to-trader loan mechanics are not implemented. Never use request_payment or counter_payment_request for banker/trader treasury flows. If a trader wants to move funds into banker custody, use place_funds_with_banker targeting the banker. If a trader wants funds back from banker custody, use redeem_funds_from_banker targeting the banker. If a trader wants to commit funds to a listed market opportunity, use open_market_position with a valid opportunityId. Opening a market position can include an immediate percentage fee and deterministic adverse slippage if stated in context, so compare listed opportunity edge against those execution costs. Use payment requests only for non-custody peer-to-peer payments that do not depend on banker lending. Do not invent treasury product terms that are not provided in context. In particular, do not claim a fixed interest rate, 0% rate, fee schedule, lockup, notice period, or redemption guarantee unless the context explicitly provides it. If custody terms are not explicitly provided, describe only the backend-backed mechanics: custody balances are tracked, redemptions are owner-initiated, and any accrued interest depends on round-advance mechanics rather than conversational promises. Treat market opportunities as backend-defined instruments with explicit risk and return bounds; do not invent different payoff mechanics. Current-state context overrides conversational memory. Treat prior conversation as historical discussion, not as authoritative current state. Do not describe any position as open unless it appears in the current open-position lists in context. Do not count settled or absent positions in exposure, liquidity, or sizing commentary. Recompute any capital split from the current balances, custody totals, open-position summaries, and execution-cost context provided. Accept, reject, or counter payment requests only when a valid recent request action is available. If you counter a request, send it back to the original requester. Include a short decisionExplanation describing the intended decision and relevant personality trade-offs. Use the decision object and fields required by the output schema; only nullable optional deposit fields may be null. Treat communication, negotiation, and information sharing as tools you may use when they improve expected value. Finalize the turn only when no available action is likely to improve your position or information advantage.';
 
 function hasPriorPrivateMessage(
   context: AgentTurnContext,
@@ -85,6 +87,14 @@ export class OpenAiAgentSystemContextBuilder {
   }
 
   addTreasuryContextSummary() {
+    this.segments.push(
+      depositInstructions,
+      this.context.depositPolicy ?? '',
+      `Your deposit negotiations: ${JSON.stringify(this.context.depositNegotiations ?? [])}`,
+    );
+    this.segments.push(
+      `All your custody deposits with agreed terms: ${JSON.stringify(this.context.treasuryContext.selfCustodyPositions ?? [])}`,
+    );
     const selfPosition = this.context.treasuryContext.selfCustodyPosition
       ? `self custody with banker ${this.context.treasuryContext.selfCustodyPosition.bankerAgentId}: principal = ${this.context.treasuryContext.selfCustodyPosition.principal} accrued interest = ${this.context.treasuryContext.selfCustodyPosition.accruedInterest} total balance = ${this.context.treasuryContext.selfCustodyPosition.totalBalance}.`
       : 'self custody position: none.';
@@ -130,15 +140,6 @@ export class OpenAiAgentSystemContextBuilder {
                 `[id=${position.opportunityId} title=${position.opportunityTitle} principal=${position.principal} entryRound=${position.entryRound} settlementRound=${position.settlementRound} entryFee=${position.entryFeeAmount} entrySlippageBps=${position.entrySlippageBps} effectiveResolutionBps=${position.effectiveResolutionReturnBps}]`,
             )
             .join(' ')}`;
-    const primaryCounterpartyOpenPositions =
-      this.context.marketContext.primaryCounterpartyOpenPositions.length === 0
-        ? 'primary counterparty open market positions: none.'
-        : `primary counterparty open market positions: ${this.context.marketContext.primaryCounterpartyOpenPositions
-            .map(
-              (position) =>
-                `[id=${position.opportunityId} title=${position.opportunityTitle} principal=${position.principal} entryRound=${position.entryRound} settlementRound=${position.settlementRound} entryFee=${position.entryFeeAmount} entrySlippageBps=${position.entrySlippageBps} effectiveResolutionBps=${position.effectiveResolutionReturnBps}]`,
-            )
-            .join(' ')}`;
     const recentSettlements =
       this.context.marketContext.recentSettlements.length === 0
         ? 'recent settled market positions: none.'
@@ -148,11 +149,13 @@ export class OpenAiAgentSystemContextBuilder {
                 `[id=${settlement.opportunityId} title=${settlement.opportunityTitle} owner=${settlement.ownerName} ownerId=${settlement.ownerAgentId} principal=${settlement.principal} settledRound=${settlement.settledRound} profitOrLoss=${settlement.profitOrLoss}]`,
             )
             .join(' ')}`;
-    const exposureSummary = `Exposure summary: self open position count = ${this.context.marketContext.exposureSummary.selfOpenPositionCount} self open principal = ${this.context.marketContext.exposureSummary.selfOpenPrincipal} self worst case downside = ${this.context.marketContext.exposureSummary.selfOpenWorstCaseDownside} self best case upside = ${this.context.marketContext.exposureSummary.selfOpenBestCaseUpside} self liquid balance = ${this.context.marketContext.exposureSummary.selfLiquidBalance} self reserved balance = ${this.context.marketContext.exposureSummary.selfReservedBalance} self custodied balance = ${this.context.marketContext.exposureSummary.selfCustodiedBalance} primary counterparty id = ${this.context.marketContext.exposureSummary.primaryCounterpartyAgentId ?? 'none'} primary counterparty name = ${this.context.marketContext.exposureSummary.primaryCounterpartyName ?? 'none'} primary counterparty role = ${this.context.marketContext.exposureSummary.primaryCounterpartyRole ?? 'none'} primary counterparty open position count = ${this.context.marketContext.exposureSummary.primaryCounterpartyOpenPositionCount} primary counterparty open principal = ${this.context.marketContext.exposureSummary.primaryCounterpartyOpenPrincipal} primary counterparty worst case downside = ${this.context.marketContext.exposureSummary.primaryCounterpartyOpenWorstCaseDownside} primary counterparty best case upside = ${this.context.marketContext.exposureSummary.primaryCounterpartyOpenBestCaseUpside} primary counterparty liquid balance = ${this.context.marketContext.exposureSummary.primaryCounterpartyLiquidBalance} primary counterparty reserved balance = ${this.context.marketContext.exposureSummary.primaryCounterpartyReservedBalance} primary counterparty custodied balance = ${this.context.marketContext.exposureSummary.primaryCounterpartyCustodiedBalance}.`;
     const executionCosts = `Execution costs: entry fee = ${this.context.marketContext.executionCostModel.entryFeeBps} bps. ${this.context.marketContext.executionCostModel.slippageRuleSummary}`;
 
     this.segments.push(
-      `Market context: ${visibleOpportunities} ${selfOpenPositions} ${primaryCounterpartyOpenPositions} ${recentSettlements} ${exposureSummary} ${executionCosts} Only positions listed as open are currently open. Anything not listed in the open-position sections should be treated as settled, closed, or unavailable.`,
+      visibleOpportunities,
+      selfOpenPositions,
+      recentSettlements,
+      executionCosts,
     );
     return this;
   }
@@ -191,14 +194,14 @@ export class OpenAiAgentSystemContextBuilder {
       case 'banker':
         this.segments.push(
           trader
-            ? `Role economics: as the banker, you improve your outcome by attracting and retaining trader ${trader.agentId}'s custodial funds, monitoring custody obligations, and discussing treasury mechanics grounded in the actual game state. Loan-style funding to the trader is not implemented, so focus on custody placement, redemption, and information gathering rather than offering capital deployment. Do not ask the trader to use payment requests for custody. If you want trader funds in custody, discuss it in messages and let the trader choose place_funds_with_banker. Do not quote a fixed custody yield, 0% rate, fees, lockups, or guaranteed redemption terms unless the context explicitly provides them. When discussing trader exposure or liquidity, rely on the current primary-counterparty balances and open-position summaries. Do not carry forward stale positions from prior chat if they are absent from the current open-position lists.`
+            ? `Role economics: as the banker, you improve your outcome by attracting and retaining trader ${trader.agentId}'s custodial funds, monitoring custody obligations, and discussing treasury mechanics grounded in the actual game state. Loan-style funding to the trader is not implemented, so focus on custody placement, redemption, and information gathering rather than offering capital deployment. Do not ask the trader to use payment requests for custody. If you want trader funds in custody, discuss it in messages and let the trader choose place_funds_with_banker. Quote within your deposit policy limits after a trader request. Earn the spread while offering competitive terms. Other agents’ financial positions are private; ask them rather than assuming access.`
             : 'Role economics: as the banker, you improve your outcome by attracting custodial funds, monitoring obligations, and gathering information about likely treasury flows.',
         );
         return this;
       case 'trader':
         this.segments.push(
           banker
-            ? `Role economics: as the trader, you improve your outcome by deciding whether to place funds with banker ${banker.agentId}, leave funds liquid, or commit capital to listed market opportunities. Loan-style borrowing from the banker is not implemented, so do not ask the banker to fund your trading book through payment requests. If you decide to move funds into banker custody, use place_funds_with_banker targeting banker ${banker.agentId}. If you decide to pull funds back out, use redeem_funds_from_banker targeting banker ${banker.agentId}. When evaluating market opportunities, compare the structured facts provided in context, including expected return, downside range, signal quality, holding period, and your current balance and open positions.`
+            ? `Role economics: as the trader, you improve your outcome by deciding whether to place funds with banker ${banker.agentId}, leave funds liquid, or commit capital to listed market opportunities. Loan-style borrowing from the banker is not implemented, so do not ask the banker to fund your trading book through payment requests. Before depositing, initiate a structured deposit request and discuss the amount, rate and expected SIM earnings. Accept only a current structured offer using its offerId. If you decide to pull funds back out, use redeem_funds_from_banker targeting banker ${banker.agentId}. When evaluating market opportunities, compare the structured facts provided in context, including expected return, downside range, signal quality, holding period, and your current balance and open positions.`
             : 'Role economics: as the trader, you improve your outcome by choosing when to keep funds liquid versus committing them to available treasury or market mechanics.',
         );
         return this;
@@ -261,7 +264,7 @@ export class OpenAiAgentSystemContextBuilder {
       )
     ) {
       this.segments.push(
-        `Current opportunity: banker ${banker.agentId} has already opened a private channel with you, so there may be value in advancing negotiation or, if you are ready to move funds into custody, directly using place_funds_with_banker rather than a payment request.`,
+        `Current opportunity: banker ${banker.agentId} has already opened a private channel with you, so there may be value in advancing negotiation or, if you are ready to move funds into custody, accepting a current structured deposit offer using place_funds_with_banker with offerId.`,
       );
       return this;
     }
@@ -277,7 +280,7 @@ export class OpenAiAgentSystemContextBuilder {
       this.context.turnNumber <= 2
     ) {
       this.segments.push(
-        `Current opportunity: trader ${trader.agentId} is a plausible funding counterparty and no direct negotiation channel has been opened yet.`,
+        `Current opportunity: trader ${trader.agentId} may initiate a deposit request. Wait for their request before offering terms; public advertising is allowed.`,
       );
       return this;
     }

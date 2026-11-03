@@ -95,7 +95,6 @@ describe('AdvanceGameRoundUseCase', () => {
     const useCase = new AdvanceGameRoundUseCase(repository);
     const session = await useCase.execute({
       gameSessionId: 'game-1',
-      interestRateBps: 250,
     });
 
     expect(session.status).toBe('active');
@@ -193,7 +192,6 @@ describe('AdvanceGameRoundUseCase', () => {
     const useCase = new AdvanceGameRoundUseCase(repository);
     const session = await useCase.execute({
       gameSessionId: 'game-1',
-      interestRateBps: 0,
     });
 
     expect(session.currentRound).toBe(1);
@@ -284,7 +282,6 @@ describe('AdvanceGameRoundUseCase', () => {
     const useCase = new AdvanceGameRoundUseCase(repository);
     await useCase.execute({
       gameSessionId: 'game-1',
-      interestRateBps: 0,
     });
 
     expect(repository.history).toContainEqual({
@@ -309,7 +306,7 @@ describe('AdvanceGameRoundUseCase', () => {
     });
   });
 
-  it('uses the configured default interest rate when the request omits one', async () => {
+  it('keeps legacy agreed rates even when a different constructor default is supplied', async () => {
     const repository = new InMemoryGameSessionRepository(
       new GameSession({
         id: 'game-1',
@@ -349,9 +346,9 @@ describe('AdvanceGameRoundUseCase', () => {
     });
 
     expect(session.currentRound).toBe(1);
-    expect(session.agents[0]?.balance.available.toDecimal()).toBe('80.9000');
+    expect(session.agents[0]?.balance.available.toDecimal()).toBe('80.7500');
     expect(session.bankerCustodyPositions[0]?.accruedInterest.toDecimal()).toBe(
-      '0.9000',
+      '0.7500',
     );
   });
 
@@ -362,7 +359,6 @@ describe('AdvanceGameRoundUseCase', () => {
     await expect(
       useCase.execute({
         gameSessionId: 'missing',
-        interestRateBps: 250,
       }),
     ).rejects.toThrow(DomainInvariantError);
   });
@@ -390,12 +386,11 @@ describe('AdvanceGameRoundUseCase', () => {
     await expect(
       useCase.execute({
         gameSessionId: 'game-1',
-        interestRateBps: 250,
       }),
     ).rejects.toThrow(DomainInvariantError);
   });
 
-  it('fails when the configured default interest rate is negative', async () => {
+  it('rejects explicit operator rate overrides', async () => {
     const repository = new InMemoryGameSessionRepository(
       new GameSession({
         id: 'game-1',
@@ -418,7 +413,10 @@ describe('AdvanceGameRoundUseCase', () => {
     await expect(
       useCase.execute({
         gameSessionId: 'game-1',
+        interestRateBps: 100,
       }),
-    ).rejects.toThrow('Default interest rate cannot be negative.');
+    ).rejects.toThrow(
+      'Custody rates are fixed by accepted offers; rate overrides are not allowed.',
+    );
   });
 });

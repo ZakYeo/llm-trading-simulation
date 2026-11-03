@@ -1,3 +1,4 @@
+import { PlaceFundsWithBankerUseCase } from '../../../game/application/use-cases/place-funds-with-banker.use-case.js';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../../../app.factory.js';
@@ -7,6 +8,7 @@ const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 
 describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
   let prismaService: PrismaService;
+  let custody: PlaceFundsWithBankerUseCase;
   let baseUrl: string;
   let closeApp: (() => Promise<void>) | undefined;
 
@@ -18,6 +20,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
     await app.listen(0, '127.0.0.1');
 
     prismaService = app.get(PrismaService);
+    custody = app.get(PlaceFundsWithBankerUseCase);
     baseUrl = await app.getUrl();
     closeApp = async () => {
       await app.close();
@@ -115,9 +118,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
         headers: {
           'content-type': 'application/json',
         },
-        body: JSON.stringify({
-          interestRateBps: 250,
-        }),
+        body: JSON.stringify({}),
       },
     );
     expect(advanceRoundResponse.status).toBe(200);
@@ -155,9 +156,9 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
 
     expect(replayResponse.status).toBe(200);
     expect(replay.gameSession.id).toBe(createdSession.id);
-    expect(replay.gameSession.currentRound).toBe(1);
+    expect(replay.gameSession.currentRound).toBe(2);
     expect(replay.gameSession.status).toBe('active');
-    expect(replay.rounds.map((round) => round.roundNumber)).toEqual([1]);
+    expect(replay.rounds.map((round) => round.roundNumber)).toEqual([1, 2]);
     const ledgerEvents = replay.events.filter((event) =>
       ['transfer', 'deposit', 'withdrawal'].includes(event.type),
     );
@@ -194,12 +195,12 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
       ),
     ).toBe(true);
     expect(
-      replay.events.some(
-        (event) =>
-          event.type === 'market_opportunity_resolved' &&
-          event.participantCount === 0 &&
-          event.totalPrincipal === '0',
-      ),
+      replay.events
+        .filter((event) => event.type === 'market_opportunity_resolved')
+        .every(
+          (event) =>
+            event.participantCount === 0 && event.totalPrincipal === '0',
+        ),
     ).toBe(true);
     expect(
       replay.events.some(
@@ -260,6 +261,20 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
     expect(banker).toBeDefined();
     expect(trader).toBeDefined();
 
+    await custody.negotiate(
+      createdSession.id,
+      'request-1',
+      trader!.id,
+      banker!.id,
+      { requestAmount: '20.0000' },
+    );
+    await custody.negotiate(
+      createdSession.id,
+      'offer-1',
+      banker!.id,
+      trader!.id,
+      { requestId: 'request-1', offerAmount: '20.0000', rateBps: 250 },
+    );
     const placeResponse = await fetch(
       `${baseUrl}/api/game/sessions/${createdSession.id}/custody/place`,
       {
@@ -268,6 +283,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
+          offerId: 'offer-1',
           ownerAgentId: trader!.id,
           bankerAgentId: banker!.id,
           amount: '20.0000',
@@ -283,9 +299,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
         headers: {
           'content-type': 'application/json',
         },
-        body: JSON.stringify({
-          interestRateBps: 250,
-        }),
+        body: JSON.stringify({}),
       },
     );
     expect(advanceResponse.status).toBe(200);
@@ -394,9 +408,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
         headers: {
           'content-type': 'application/json',
         },
-        body: JSON.stringify({
-          interestRateBps: 250,
-        }),
+        body: JSON.stringify({}),
       },
     );
     expect(advanceRoundResponse.status).toBe(200);
@@ -416,12 +428,12 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
     };
 
     expect(replayResponse.status).toBe(200);
-    expect(replay.gameSession.currentRound).toBe(1);
+    expect(replay.gameSession.currentRound).toBe(2);
     expect(
       replay.events.some(
         (event) =>
           event.type === 'message' &&
-          event.roundNumber === 0 &&
+          event.roundNumber === 1 &&
           event.turnNumber === 1 &&
           typeof event.content === 'string' &&
           event.content.length > 0,
@@ -431,7 +443,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Replay HTTP integration', () => {
       replay.events.some(
         (event) =>
           event.type === 'message' &&
-          event.roundNumber === 0 &&
+          event.roundNumber === 1 &&
           event.turnNumber === 2 &&
           event.content ===
             'Volatility is compressing and timing risk is falling.',

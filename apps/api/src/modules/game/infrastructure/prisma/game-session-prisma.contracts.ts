@@ -1,3 +1,4 @@
+import type { CustodyDepositLot } from '@llm-sim/shared-types';
 import type {
   GameSessionPrismaMapper,
   PersistedGameSessionRecord,
@@ -47,11 +48,15 @@ type MarketOpportunityResolutionParticipantCreateData = {
 
 export interface PrismaGameSessionDelegate {
   create(args: {
-    data: ReturnType<typeof GameSessionPrismaMapper.toCreateInput>;
+    data: ReturnType<typeof GameSessionPrismaMapper.toCreateInput> & {
+      revision?: number;
+    };
   }): Promise<unknown>;
   update(args: {
-    where: { id: string };
-    data: ReturnType<typeof GameSessionPrismaMapper.toUpdateInput>;
+    where: { id: string; revision?: number };
+    data: ReturnType<typeof GameSessionPrismaMapper.toUpdateInput> & {
+      revision?: { increment: number };
+    };
   }): Promise<unknown>;
   findUnique(args: {
     where: { id: string };
@@ -154,6 +159,7 @@ export interface PrismaBankerCustodyPositionDelegate {
     update: {
       principal: string;
       accrued: string;
+      lots: CustodyDepositLot[];
     };
   }): Promise<unknown>;
 }
@@ -273,6 +279,9 @@ export interface PrismaMarketOpportunityResolutionParticipantDelegate {
 }
 
 export interface PrismaClientLike {
+  agentMessage?: {
+    create(args: { data: Record<string, unknown> }): Promise<unknown>;
+  };
   gameSession: PrismaGameSessionDelegate;
   agent: PrismaAgentDelegate;
   gameRound: PrismaGameRoundDelegate;

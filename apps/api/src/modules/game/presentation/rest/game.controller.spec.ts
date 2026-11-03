@@ -160,6 +160,8 @@ describe('GameController', () => {
           principal: '10.0000',
           accruedInterest: '1.0000',
           totalBalance: '11.0000',
+          lots: [{ principal: '10.0000', rateBps: 250 }],
+          expectedInterest: '0.2500',
         },
       ],
       marketOpportunities: [],
@@ -310,6 +312,7 @@ describe('GameController', () => {
       amount: '15.0000',
     });
     await controller.placeFundsWithBanker('game-1', {
+      offerId: 'offer-1',
       ownerAgentId: 'agent-2',
       bankerAgentId: 'agent-1',
       amount: '10.0000',
@@ -337,6 +340,7 @@ describe('GameController', () => {
       amount: '15.0000',
     });
     expect(placeFundsWithBankerUseCase.execute).toHaveBeenCalledWith({
+      offerId: 'offer-1',
       gameSessionId: 'game-1',
       ownerAgentId: 'agent-2',
       bankerAgentId: 'agent-1',

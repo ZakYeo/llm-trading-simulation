@@ -69,7 +69,6 @@ function createContext(): AgentTurnContext {
         },
       ],
       selfOpenPositions: [],
-      primaryCounterpartyOpenPositions: [],
       recentSettlements: [],
       exposureSummary: {
         selfOpenPositionCount: 0,
@@ -79,16 +78,6 @@ function createContext(): AgentTurnContext {
         selfLiquidBalance: '100.0000',
         selfReservedBalance: '0.0000',
         selfCustodiedBalance: '0.0000',
-        primaryCounterpartyAgentId: 'banker-1',
-        primaryCounterpartyName: 'Banker Bot',
-        primaryCounterpartyRole: 'banker',
-        primaryCounterpartyOpenPositionCount: 0,
-        primaryCounterpartyOpenPrincipal: '0.0000',
-        primaryCounterpartyOpenWorstCaseDownside: '0.0000',
-        primaryCounterpartyOpenBestCaseUpside: '0.0000',
-        primaryCounterpartyLiquidBalance: '100.0000',
-        primaryCounterpartyReservedBalance: '0.0000',
-        primaryCounterpartyCustodiedBalance: '0.0000',
       },
       executionCostModel: {
         entryFeeBps: 20,
@@ -122,6 +111,142 @@ function createContext(): AgentTurnContext {
 }
 
 describe('OpenAiAgentGateway', () => {
+  it('requires non-null message payload fields and parses the nested decision output', async () => {
+    const context = createContext();
+    const client = {
+      responses: {
+        create: vi.fn().mockResolvedValue({
+          output_text: JSON.stringify({
+            decision: {
+              type: 'send_private_message',
+              recipientAgentId: context.peers[0]!.agentId,
+              content: 'Please quote a deposit rate.',
+              decisionExplanation:
+                'My risk appetite favors comparing deposit terms.',
+            },
+          }),
+        }),
+      },
+    };
+    const gateway = new OpenAiAgentGateway(client as never, 'gpt-test');
+    const action = await gateway.decideNextAction(context);
+    expect(action).toMatchObject({
+      type: 'send_private_message',
+      content: 'Please quote a deposit rate.',
+    });
+    const request = client.responses.create.mock.calls[0][0];
+    const branch = request.text.format.schema.properties.decision.anyOf.find(
+      (entry: { properties: { type: { enum: string[] } } }) =>
+        entry.properties.type.enum[0] === 'send_private_message',
+    );
+    expect(branch.properties.recipientAgentId).toEqual({
+      type: 'string',
+      minLength: 1,
+    });
+    expect(branch.properties.content).toEqual({ type: 'string', minLength: 1 });
+    expect(branch.required).toEqual(
+      expect.arrayContaining([
+        'recipientAgentId',
+        'content',
+        'decisionExplanation',
+      ]),
+    );
+  });
+  it('does not replace an incomplete message with a silent finalize action', async () => {
+    const client = {
+      responses: {
+        create: vi.fn().mockResolvedValue({
+          output_text: JSON.stringify({
+            decision: {
+              type: 'send_private_message',
+              recipientAgentId: null,
+              content: null,
+              decisionExplanation: 'Ask about rates.',
+            },
+          }),
+        }),
+      },
+    };
+    const gateway = new OpenAiAgentGateway(client as never, 'gpt-test');
+    await expect(gateway.decideNextAction(createContext())).rejects.toThrow(
+      'requires recipientAgentId and content',
+    );
+  });
+
+  it.each([true, false])(
+    'surfaces exhausted credit errors instead of silently finalizing (strict=%s)',
+    async (strict) => {
+      const client = {
+        responses: {
+          create: vi
+            .fn()
+            .mockRejectedValue(
+              new Error(
+                'You have no credits remaining. Add credits to continue using the API.',
+              ),
+            ),
+        },
+      };
+      const gateway = new OpenAiAgentGateway(
+        client as never,
+        'gpt-test',
+        undefined,
+        strict,
+      );
+      await expect(gateway.decideNextAction(createContext())).rejects.toThrow(
+        'no API credits remaining',
+      );
+    },
+  );
+
+  it.each([
+    [
+      { type: 'send_private_message', depositRequestAmount: '20' },
+      { depositTerms: { requestAmount: '20' } },
+    ],
+    [
+      {
+        type: 'send_private_message',
+        depositRequestId: 'request',
+        depositOfferAmount: '20',
+        depositRateBps: 150,
+      },
+      {
+        depositTerms: { requestId: 'request', offerAmount: '20', rateBps: 150 },
+      },
+    ],
+    [
+      { type: 'place_funds_with_banker', offerId: 'offer', amount: '20' },
+      { offerId: 'offer', amount: '20' },
+    ],
+  ])('normalizes structured deposit output %j', async (decision, expected) => {
+    const context = createContext();
+    const client = {
+      responses: {
+        create: vi.fn().mockResolvedValue({
+          output_text: JSON.stringify({
+            recipientAgentId: context.peers[0]!.agentId,
+            content: 'Let us discuss the deposit terms.',
+            reasoning: null,
+            decisionExplanation:
+              'My cautious risk appetite favors comparing deposit terms.',
+            ...decision,
+          }),
+        }),
+      },
+    };
+    const gateway = new OpenAiAgentGateway(
+      client as never,
+      'gpt-test',
+      undefined,
+      true,
+    );
+    expect(await gateway.decideNextAction(context)).toMatchObject(expected);
+    const request = JSON.stringify(client.responses.create.mock.calls[0]);
+    expect(request).toContain('depositRequestAmount');
+    expect(request).toContain('depositOfferAmount');
+  });
+
   it('normalizes malformed market opportunity ids using the visible opportunity suffix', async () => {
     const client = {
       responses: {

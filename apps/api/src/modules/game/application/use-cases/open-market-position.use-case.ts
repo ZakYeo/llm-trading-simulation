@@ -1,3 +1,4 @@
+import { StaleSessionError } from '../../../shared/domain/errors/stale-session.error.js';
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import { MarketPosition } from '../../domain/entities/market-position.js';
@@ -6,6 +7,7 @@ import { MarketPositionEntryCostService } from '../services/market-position-entr
 
 export interface OpenMarketPositionInput {
   gameSessionId: string;
+  expectedRevision?: number;
   ownerAgentId: string;
   opportunityId: string;
   amount: string;
@@ -23,6 +25,12 @@ export class OpenMarketPositionUseCase {
     if (!session) {
       throw new DomainInvariantError('Game session not found.');
     }
+
+    if (
+      input.expectedRevision !== undefined &&
+      session.revision !== input.expectedRevision
+    )
+      throw new StaleSessionError();
 
     const ownerAgent = session.agents.find(
       (agent) => agent.id === input.ownerAgentId,

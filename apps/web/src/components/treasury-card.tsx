@@ -25,6 +25,17 @@ export function TreasuryCard({ treasury }: { treasury?: TreasuryViewData }) {
           <dd>{treasury.totalCustodiedInterestLabel}</dd>
         </div>
       </dl>
+      {treasury.depositTerms && treasury.depositTerms.length > 0 && (
+        <div className="deposit-terms">
+          <h3>Agreed deposit terms</h3>
+          {treasury.depositTerms.map((lot) => (
+            <p key={lot.key}>
+              {lot.owner} → {lot.banker}: {lot.principal} SIM at {lot.rate} per
+              round · flexible withdrawal
+            </p>
+          ))}
+        </div>
+      )}
       {treasury.traderCustodyPosition ? (
         <dl className="custody-breakdown">
           <div>

@@ -7,9 +7,15 @@ import { GameSession } from '../../domain/entities/game-session.js';
 import { MarketOpportunity } from '../../domain/entities/market-opportunity.js';
 import { MarketPosition } from '../../domain/entities/market-position.js';
 import { findMarketOpportunityTemplateById } from '../../application/services/market-opportunity-template.catalog.js';
-import type { AgentPersonalityProfile } from '@llm-sim/shared-types';
+import type {
+  DepositNegotiation,
+  CustodyDepositLot,
+  AgentPersonalityProfile,
+} from '@llm-sim/shared-types';
 
 export interface PersistedGameSessionRecord {
+  revision?: number;
+  depositNegotiations?: DepositNegotiation[];
   id: string;
   name: string;
   status: 'SETUP' | 'ACTIVE' | 'SETTLEMENT' | 'COMPLETED' | 'FAILED';
@@ -29,6 +35,7 @@ export interface PersistedGameSessionRecord {
     } | null;
   }>;
   bankerCustodyPositions?: Array<{
+    lots?: CustodyDepositLot[];
     bankerAgentId: string;
     ownerAgentId: string;
     principal: string | { toString(): string };
@@ -143,6 +150,7 @@ export class GameSessionPrismaMapper {
       name: session.name,
       status: statusToPersistence[session.status],
       currentRound: session.currentRound,
+      depositNegotiations: session.depositNegotiations,
       agents: {
         create: session.agents.map((agent) =>
           GameSessionPrismaMapper.toNestedAgentCreateInput(agent),
@@ -154,6 +162,7 @@ export class GameSessionPrismaMapper {
           ownerAgentId: position.ownerAgentId,
           principal: position.principal.toDecimal(),
           accrued: position.accruedInterest.toDecimal(),
+          lots: position.lots,
         })),
       },
       marketOpportunities: {
@@ -196,6 +205,7 @@ export class GameSessionPrismaMapper {
       name: session.name,
       status: statusToPersistence[session.status],
       currentRound: session.currentRound,
+      depositNegotiations: session.depositNegotiations,
     };
   }
 
@@ -289,6 +299,7 @@ export class GameSessionPrismaMapper {
       ownerAgentId: position.ownerAgentId,
       principal: position.principal.toDecimal(),
       accrued: position.accruedInterest.toDecimal(),
+      lots: position.lots,
     }));
   }
 
@@ -355,6 +366,8 @@ export class GameSessionPrismaMapper {
       name: record.name,
       status: statusFromPersistence[record.status],
       currentRound: record.currentRound,
+      revision: record.revision,
+      depositNegotiations: record.depositNegotiations,
       agents: record.agents.map((agent) => {
         const balance = agent.balance;
         const depositAccount = agent.depositAccount;
@@ -377,6 +390,7 @@ export class GameSessionPrismaMapper {
       bankerCustodyPositions: (record.bankerCustodyPositions ?? []).map(
         (position) =>
           new BankerCustodyPosition({
+            lots: position.lots,
             bankerAgentId: position.bankerAgentId,
             ownerAgentId: position.ownerAgentId,
             principal: Money.fromDecimal(

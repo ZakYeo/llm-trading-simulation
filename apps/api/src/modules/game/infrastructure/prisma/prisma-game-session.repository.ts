@@ -1,3 +1,4 @@
+import { StaleSessionError } from '../../../shared/domain/errors/stale-session.error.js';
 import type { GameSessionSummary } from '@llm-sim/shared-types';
 
 import type {
@@ -37,149 +38,128 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
     session: GameSession,
     history: GameSessionHistoryRecord[] = [],
   ): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      await this.persistSession(tx, session);
+    await this.prisma
+      .$transaction(async (tx) => {
+        await this.persistSession(tx, session);
 
-      const accruals: Array<{
-        gameSessionId: string;
-        roundNumber: number;
-        bankerAgentId: string;
-        ownerAgentId: string;
-        amount: string;
-      }> = [];
-      const createdMarketSettlements = new Map<string, string>();
-      const pendingResolutionParticipants: Array<{
-        marketOpportunityResolvedId: string;
-        ownerAgentId: string;
-        principal: string;
-        profitOrLoss: string;
-        settlementHistoryKey: string;
-      }> = [];
+        const accruals: Array<{
+          bankerIncome?: string;
+          gameSessionId: string;
+          roundNumber: number;
+          bankerAgentId: string;
+          ownerAgentId: string;
+          amount: string;
+        }> = [];
+        const createdMarketSettlements = new Map<string, string>();
+        const pendingResolutionParticipants: Array<{
+          marketOpportunityResolvedId: string;
+          ownerAgentId: string;
+          principal: string;
+          profitOrLoss: string;
+          settlementHistoryKey: string;
+        }> = [];
 
-      for (const record of history) {
-        switch (record.type) {
-          case 'transfer':
-            await tx.transfer.create({
-              data: {
+        for (const record of history) {
+          switch (record.type) {
+            case 'negotiation_message': {
+              if (!tx.agentMessage)
+                throw new Error(
+                  'Message persistence is required for deposit negotiation.',
+                );
+              const message = {
+                id: record.id,
                 gameSessionId: record.gameSessionId,
-                sourceAgentId: record.sourceAgentId,
-                destinationAgentId: record.destinationAgentId,
-                amount: record.amount,
-              },
-            });
-            break;
-          case 'deposit':
-            await tx.deposit.create({
-              data: {
-                gameSessionId: record.gameSessionId,
-                agentId: record.agentId,
-                amount: record.amount,
-              },
-            });
-            break;
-          case 'withdrawal':
-            await tx.withdrawal.create({
-              data: {
-                gameSessionId: record.gameSessionId,
-                agentId: record.agentId,
-                amount: record.amount,
-              },
-            });
-            break;
-          case 'custody_placement':
-            await tx.custodyPlacement.create({
-              data: {
+                roundNumber: record.roundNumber,
+                turnNumber: record.turnNumber,
+                senderAgentId: record.senderAgentId,
+                recipientAgentId: record.recipientAgentId,
+                content: record.content,
+                createdAt: record.createdAt,
+              };
+              await tx.agentMessage.create({
+                data: { ...message, visibility: 'PRIVATE' },
+              });
+              break;
+            }
+            case 'transfer':
+              await tx.transfer.create({
+                data: {
+                  gameSessionId: record.gameSessionId,
+                  sourceAgentId: record.sourceAgentId,
+                  destinationAgentId: record.destinationAgentId,
+                  amount: record.amount,
+                },
+              });
+              break;
+            case 'deposit':
+              await tx.deposit.create({
+                data: {
+                  gameSessionId: record.gameSessionId,
+                  agentId: record.agentId,
+                  amount: record.amount,
+                },
+              });
+              break;
+            case 'withdrawal':
+              await tx.withdrawal.create({
+                data: {
+                  gameSessionId: record.gameSessionId,
+                  agentId: record.agentId,
+                  amount: record.amount,
+                },
+              });
+              break;
+            case 'custody_placement':
+              await tx.custodyPlacement.create({
+                data: {
+                  gameSessionId: record.gameSessionId,
+                  roundNumber: record.roundNumber,
+                  bankerAgentId: record.bankerAgentId,
+                  ownerAgentId: record.ownerAgentId,
+                  amount: record.amount,
+                },
+              });
+              break;
+            case 'custody_redemption':
+              await tx.custodyRedemption.create({
+                data: {
+                  gameSessionId: record.gameSessionId,
+                  roundNumber: record.roundNumber,
+                  bankerAgentId: record.bankerAgentId,
+                  ownerAgentId: record.ownerAgentId,
+                  amount: record.amount,
+                },
+              });
+              break;
+            case 'custody_accrual':
+              accruals.push({
                 gameSessionId: record.gameSessionId,
                 roundNumber: record.roundNumber,
                 bankerAgentId: record.bankerAgentId,
                 ownerAgentId: record.ownerAgentId,
                 amount: record.amount,
-              },
-            });
-            break;
-          case 'custody_redemption':
-            await tx.custodyRedemption.create({
-              data: {
-                gameSessionId: record.gameSessionId,
-                roundNumber: record.roundNumber,
-                bankerAgentId: record.bankerAgentId,
-                ownerAgentId: record.ownerAgentId,
-                amount: record.amount,
-              },
-            });
-            break;
-          case 'custody_accrual':
-            accruals.push({
-              gameSessionId: record.gameSessionId,
-              roundNumber: record.roundNumber,
-              bankerAgentId: record.bankerAgentId,
-              ownerAgentId: record.ownerAgentId,
-              amount: record.amount,
-            });
-            break;
-          case 'market_position_opened':
-            await tx.marketPositionOpen.create({
-              data: {
-                gameSessionId: record.gameSessionId,
-                roundNumber: record.roundNumber,
-                opportunityId: record.opportunityId,
-                opportunityTitle: record.opportunityTitle,
-                ownerAgentId: record.ownerAgentId,
-                amount: record.amount,
-                entryFeeBps: record.entryFeeBps,
-                entryFeeAmount: record.entryFeeAmount,
-                entrySlippageBps: record.entrySlippageBps,
-                effectiveResolutionReturnBps:
-                  record.effectiveResolutionReturnBps,
-              },
-            });
-            break;
-          case 'market_opportunity_listed':
-            await tx.marketOpportunityListed.create({
-              data: {
-                gameSessionId: record.gameSessionId,
-                roundNumber: record.roundNumber,
-                opportunityId: record.opportunityId,
-                opportunityTitle: record.opportunityTitle,
-                opportunityCategory:
-                  record.opportunityCategory.toUpperCase() as never,
-                opportunitySummary: record.opportunitySummary,
-                opportunityRiskLevel:
-                  record.opportunityRiskLevel.toUpperCase() as never,
-                listedRound: record.listedRound,
-                settlementRound: record.settlementRound,
-                minCommitment: record.minCommitment,
-                maxCommitment: record.maxCommitment,
-                estimatedNetReturnBps: record.estimatedNetReturnBps,
-                worstCaseReturnBps: record.worstCaseReturnBps,
-                bestCaseReturnBps: record.bestCaseReturnBps,
-              },
-            });
-            break;
-          case 'market_position_settled':
-            {
-              const settlement = await tx.marketPositionSettlement.create({
+                bankerIncome: record.bankerIncome,
+              });
+              break;
+            case 'market_position_opened':
+              await tx.marketPositionOpen.create({
                 data: {
                   gameSessionId: record.gameSessionId,
                   roundNumber: record.roundNumber,
                   opportunityId: record.opportunityId,
                   opportunityTitle: record.opportunityTitle,
                   ownerAgentId: record.ownerAgentId,
-                  principal: record.principal,
-                  profitOrLoss: record.profitOrLoss,
+                  amount: record.amount,
+                  entryFeeBps: record.entryFeeBps,
+                  entryFeeAmount: record.entryFeeAmount,
+                  entrySlippageBps: record.entrySlippageBps,
+                  effectiveResolutionReturnBps:
+                    record.effectiveResolutionReturnBps,
                 },
               });
-              createdMarketSettlements.set(
-                PrismaGameSessionRepository.toMarketSettlementHistoryKey(
-                  record,
-                ),
-                (settlement as { id: string }).id,
-              );
-            }
-            break;
-          case 'market_opportunity_resolved':
-            {
-              const resolvedEvent = await tx.marketOpportunityResolved.create({
+              break;
+            case 'market_opportunity_listed':
+              await tx.marketOpportunityListed.create({
                 data: {
                   gameSessionId: record.gameSessionId,
                   roundNumber: record.roundNumber,
@@ -197,71 +177,129 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
                   estimatedNetReturnBps: record.estimatedNetReturnBps,
                   worstCaseReturnBps: record.worstCaseReturnBps,
                   bestCaseReturnBps: record.bestCaseReturnBps,
-                  participantCount: record.participantCount,
-                  totalPrincipal: record.totalPrincipal,
-                  totalProfitOrLoss: record.totalProfitOrLoss,
                 },
               });
-              const participantRecords = history.filter(
-                (
-                  candidate,
-                ): candidate is Extract<
-                  GameSessionHistoryRecord,
-                  { type: 'market_position_settled' }
-                > =>
-                  candidate.type === 'market_position_settled' &&
-                  candidate.roundNumber === record.roundNumber &&
-                  candidate.opportunityId === record.opportunityId,
+              break;
+            case 'market_position_settled':
+              {
+                const settlement = await tx.marketPositionSettlement.create({
+                  data: {
+                    gameSessionId: record.gameSessionId,
+                    roundNumber: record.roundNumber,
+                    opportunityId: record.opportunityId,
+                    opportunityTitle: record.opportunityTitle,
+                    ownerAgentId: record.ownerAgentId,
+                    principal: record.principal,
+                    profitOrLoss: record.profitOrLoss,
+                  },
+                });
+                createdMarketSettlements.set(
+                  PrismaGameSessionRepository.toMarketSettlementHistoryKey(
+                    record,
+                  ),
+                  (settlement as { id: string }).id,
+                );
+              }
+              break;
+            case 'market_opportunity_resolved':
+              {
+                const resolvedEvent = await tx.marketOpportunityResolved.create(
+                  {
+                    data: {
+                      gameSessionId: record.gameSessionId,
+                      roundNumber: record.roundNumber,
+                      opportunityId: record.opportunityId,
+                      opportunityTitle: record.opportunityTitle,
+                      opportunityCategory:
+                        record.opportunityCategory.toUpperCase() as never,
+                      opportunitySummary: record.opportunitySummary,
+                      opportunityRiskLevel:
+                        record.opportunityRiskLevel.toUpperCase() as never,
+                      listedRound: record.listedRound,
+                      settlementRound: record.settlementRound,
+                      minCommitment: record.minCommitment,
+                      maxCommitment: record.maxCommitment,
+                      estimatedNetReturnBps: record.estimatedNetReturnBps,
+                      worstCaseReturnBps: record.worstCaseReturnBps,
+                      bestCaseReturnBps: record.bestCaseReturnBps,
+                      participantCount: record.participantCount,
+                      totalPrincipal: record.totalPrincipal,
+                      totalProfitOrLoss: record.totalProfitOrLoss,
+                    },
+                  },
+                );
+                const participantRecords = history.filter(
+                  (
+                    candidate,
+                  ): candidate is Extract<
+                    GameSessionHistoryRecord,
+                    { type: 'market_position_settled' }
+                  > =>
+                    candidate.type === 'market_position_settled' &&
+                    candidate.roundNumber === record.roundNumber &&
+                    candidate.opportunityId === record.opportunityId,
+                );
+                pendingResolutionParticipants.push(
+                  ...participantRecords.map((participant) => ({
+                    marketOpportunityResolvedId: (
+                      resolvedEvent as { id: string }
+                    ).id,
+                    ownerAgentId: participant.ownerAgentId,
+                    principal: participant.principal,
+                    profitOrLoss: participant.profitOrLoss,
+                    settlementHistoryKey:
+                      PrismaGameSessionRepository.toMarketSettlementHistoryKey(
+                        participant,
+                      ),
+                  })),
+                );
+              }
+              break;
+          }
+        }
+
+        if (accruals.length > 0) {
+          await tx.custodyAccrual.createMany({
+            data: accruals,
+          });
+        }
+
+        if (pendingResolutionParticipants.length > 0) {
+          await tx.marketOpportunityResolutionParticipant.createMany({
+            data: pendingResolutionParticipants.flatMap((participant) => {
+              const marketPositionSettlementId = createdMarketSettlements.get(
+                participant.settlementHistoryKey,
               );
-              pendingResolutionParticipants.push(
-                ...participantRecords.map((participant) => ({
-                  marketOpportunityResolvedId: (resolvedEvent as { id: string })
-                    .id,
+
+              if (!marketPositionSettlementId) {
+                return [];
+              }
+
+              return [
+                {
+                  marketOpportunityResolvedId:
+                    participant.marketOpportunityResolvedId,
+                  marketPositionSettlementId,
                   ownerAgentId: participant.ownerAgentId,
                   principal: participant.principal,
                   profitOrLoss: participant.profitOrLoss,
-                  settlementHistoryKey:
-                    PrismaGameSessionRepository.toMarketSettlementHistoryKey(
-                      participant,
-                    ),
-                })),
-              );
-            }
-            break;
+                },
+              ];
+            }),
+          });
         }
-      }
-
-      if (accruals.length > 0) {
-        await tx.custodyAccrual.createMany({
-          data: accruals,
-        });
-      }
-
-      if (pendingResolutionParticipants.length > 0) {
-        await tx.marketOpportunityResolutionParticipant.createMany({
-          data: pendingResolutionParticipants.flatMap((participant) => {
-            const marketPositionSettlementId = createdMarketSettlements.get(
-              participant.settlementHistoryKey,
-            );
-
-            if (!marketPositionSettlementId) {
-              return [];
-            }
-
-            return [
-              {
-                marketOpportunityResolvedId:
-                  participant.marketOpportunityResolvedId,
-                marketPositionSettlementId,
-                ownerAgentId: participant.ownerAgentId,
-                principal: participant.principal,
-                profitOrLoss: participant.profitOrLoss,
-              },
-            ];
-          }),
-        });
-      }
-    });
+      })
+      .catch((error: unknown) => {
+        if (
+          error &&
+          typeof error === 'object' &&
+          'code' in error &&
+          error.code === 'P2025'
+        )
+          throw new StaleSessionError();
+        throw error;
+      });
+    session.revision += 1;
   }
 
   async findById(id: string): Promise<GameSession | null> {
@@ -317,7 +355,7 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
     });
 
     if (!existing) {
-      await tx.gameSession.create({ data: createData });
+      await tx.gameSession.create({ data: { ...createData, revision: 1 } });
 
       const roundData = GameSessionPrismaMapper.toRoundCreateManyInput(
         session.id,
@@ -333,8 +371,11 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
     }
 
     await tx.gameSession.update({
-      where: { id: session.id },
-      data: GameSessionPrismaMapper.toUpdateInput(session),
+      where: { id: session.id, revision: session.revision },
+      data: {
+        ...GameSessionPrismaMapper.toUpdateInput(session),
+        revision: { increment: 1 },
+      },
     });
     await tx.agent.deleteMany({
       where: {
@@ -399,6 +440,7 @@ export class PrismaGameSessionRepository implements GameSessionRepositoryPort {
         update: {
           principal: position.principal,
           accrued: position.accrued,
+          lots: position.lots,
         },
       });
     }

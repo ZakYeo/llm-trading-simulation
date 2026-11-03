@@ -173,7 +173,22 @@ describe.runIf(Boolean(testDatabaseUrl))('Game money flows integration', () => {
     expect(banker).toBeDefined();
     expect(trader).toBeDefined();
 
+    await placeFundsWithBankerUseCase.negotiate(
+      createdSession.id,
+      'request-1',
+      trader!.id,
+      banker!.id,
+      { requestAmount: '40' },
+    );
+    await placeFundsWithBankerUseCase.negotiate(
+      createdSession.id,
+      'offer-1',
+      banker!.id,
+      trader!.id,
+      { requestId: 'request-1', offerAmount: '40', rateBps: 250 },
+    );
     await placeFundsWithBankerUseCase.execute({
+      offerId: 'offer-1',
       gameSessionId: createdSession.id,
       ownerAgentId: trader!.id,
       bankerAgentId: banker!.id,
@@ -182,7 +197,6 @@ describe.runIf(Boolean(testDatabaseUrl))('Game money flows integration', () => {
 
     await advanceGameRoundUseCase.execute({
       gameSessionId: createdSession.id,
-      interestRateBps: 250,
     });
 
     await redeemFundsFromBankerUseCase.execute({
@@ -203,7 +217,7 @@ describe.runIf(Boolean(testDatabaseUrl))('Game money flows integration', () => {
     );
 
     expect(persistedSession.status).toBe('active');
-    expect(persistedSession.currentRound).toBe(1);
+    expect(persistedSession.currentRound).toBe(2);
     expect(persistedBanker?.balance.available.toDecimal()).toBe('136.0000');
     expect(persistedBanker?.depositAccount.accruedInterest.toDecimal()).toBe(
       '0.0000',
@@ -216,5 +230,114 @@ describe.runIf(Boolean(testDatabaseUrl))('Game money flows integration', () => {
     expect(
       persistedSession.bankerCustodyPositions[0]?.accruedInterest.toDecimal(),
     ).toBe('0.0000');
+  });
+  it('accepts an offer once under concurrency and preserves negotiated accounting', async () => {
+    const session = await createGameSessionUseCase.execute({
+      name: 'Concurrent deposits',
+      initialBalance: '100',
+      agents: [
+        { name: 'Banker', role: 'banker' },
+        { name: 'Trader', role: 'trader' },
+      ],
+    });
+    const banker = session.agents.find((a) => a.role === 'banker')!;
+    const trader = session.agents.find((a) => a.role === 'trader')!;
+    await placeFundsWithBankerUseCase.negotiate(
+      session.id,
+      'request',
+      trader.id,
+      banker.id,
+      { requestAmount: '20' },
+    );
+    await placeFundsWithBankerUseCase.negotiate(
+      session.id,
+      'offer',
+      banker.id,
+      trader.id,
+      { requestId: 'request', offerAmount: '20', rateBps: 100 },
+    );
+    const deposit = {
+      gameSessionId: session.id,
+      ownerAgentId: trader.id,
+      bankerAgentId: banker.id,
+      amount: '20',
+      offerId: 'offer',
+    };
+    const outcomes = await Promise.allSettled([
+      placeFundsWithBankerUseCase.execute(deposit),
+      placeFundsWithBankerUseCase.execute(deposit),
+    ]);
+    expect(outcomes.filter((o) => o.status === 'fulfilled')).toHaveLength(1);
+    expect(
+      await prisma.custodyPlacement.count({
+        where: { gameSessionId: session.id },
+      }),
+    ).toBe(1);
+    const advanced = await advanceGameRoundUseCase.execute({
+      gameSessionId: session.id,
+    });
+    expect(
+      advanced.bankerCustodyPositions[0]?.accruedInterest.toDecimal(),
+    ).toBe('0.2000');
+    expect(
+      advanced.agents
+        .find((a) => a.id === banker.id)
+        ?.balance.available.toDecimal(),
+    ).toBe('120.5000');
+    const accrual = await prisma.custodyAccrual.findFirst({
+      where: { gameSessionId: session.id },
+    });
+    expect(accrual?.bankerIncome.toString()).toBe('0.3');
+    await expect(
+      placeFundsWithBankerUseCase.negotiate(
+        session.id,
+        'stale',
+        trader.id,
+        banker.id,
+        { requestAmount: '10' },
+        undefined,
+        session.revision,
+      ),
+    ).rejects.toThrow('session changed');
+  });
+
+  it('rolls back negotiations when the private message cannot be persisted', async () => {
+    const session = await createGameSessionUseCase.execute({
+      name: 'Atomic request',
+      initialBalance: '100',
+      agents: [
+        { name: 'Banker', role: 'banker' },
+        { name: 'Trader', role: 'trader' },
+      ],
+    });
+    const banker = session.agents.find((a) => a.role === 'banker')!;
+    const trader = session.agents.find((a) => a.role === 'trader')!;
+    await expect(
+      placeFundsWithBankerUseCase.negotiate(
+        session.id,
+        'request',
+        trader.id,
+        banker.id,
+        { requestAmount: '20' },
+        {
+          type: 'negotiation_message',
+          id: 'invalid-message',
+          gameSessionId: session.id,
+          senderAgentId: 'nonexistent-agent',
+          recipientAgentId: banker.id,
+          roundNumber: session.currentRound,
+          turnNumber: 1,
+          content: 'Request',
+          createdAt: new Date().toISOString(),
+        },
+      ),
+    ).rejects.toThrow();
+    const restored = await getGameSessionUseCase.execute({
+      gameSessionId: session.id,
+    });
+    expect(restored.depositNegotiations).toEqual([]);
+    expect(
+      await prisma.agentMessage.count({ where: { gameSessionId: session.id } }),
+    ).toBe(0);
   });
 });

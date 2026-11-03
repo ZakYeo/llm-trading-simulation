@@ -1,3 +1,4 @@
+import { StaleSessionError } from '../../domain/errors/stale-session.error.js';
 import {
   ArgumentsHost,
   Catch,
@@ -32,13 +33,21 @@ export class HttpErrorFilter implements ExceptionFilter {
       return;
     }
 
-    const statusCode = exception.message.toLowerCase().includes('not found')
-      ? HttpStatus.NOT_FOUND
-      : HttpStatus.BAD_REQUEST;
+    const statusCode =
+      exception instanceof StaleSessionError
+        ? HttpStatus.CONFLICT
+        : exception.message.toLowerCase().includes('not found')
+          ? HttpStatus.NOT_FOUND
+          : HttpStatus.BAD_REQUEST;
 
     response.status(statusCode).json({
       statusCode,
-      error: statusCode === HttpStatus.NOT_FOUND ? 'Not Found' : 'Bad Request',
+      error:
+        statusCode === HttpStatus.CONFLICT
+          ? 'Conflict'
+          : statusCode === HttpStatus.NOT_FOUND
+            ? 'Not Found'
+            : 'Bad Request',
       message: exception.message,
     });
   }

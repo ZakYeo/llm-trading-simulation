@@ -221,6 +221,7 @@ describe('AgentActionExecutor', () => {
 
     expect(placeFundsWithBankerUseCase.calls).toEqual([
       {
+        expectedRevision: 0,
         gameSessionId: 'game-1',
         ownerAgentId: 'agent-2',
         bankerAgentId: 'agent-1',
@@ -260,6 +261,7 @@ describe('AgentActionExecutor', () => {
 
     expect(redeemFundsFromBankerUseCase.calls).toEqual([
       {
+        expectedRevision: 0,
         gameSessionId: 'game-1',
         ownerAgentId: 'agent-2',
         bankerAgentId: 'agent-1',
@@ -298,6 +300,7 @@ describe('AgentActionExecutor', () => {
 
     expect(openMarketPositionUseCase.calls).toEqual([
       {
+        expectedRevision: 0,
         gameSessionId: 'game-1',
         ownerAgentId: 'agent-2',
         opportunityId: 'opp-risky',

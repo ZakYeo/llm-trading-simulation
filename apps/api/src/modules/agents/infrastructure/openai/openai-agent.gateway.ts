@@ -1,3 +1,5 @@
+import { agentDecisionJsonSchema } from './agent-decision.schema.js';
+import { AgentProviderError } from '../../application/ports/agent-provider.error.js';
 import { randomUUID } from 'node:crypto';
 
 import type { AgentAction, AgentTurnContext } from '@llm-sim/mcp-contracts';
@@ -14,63 +16,6 @@ import {
   defaultOpenAiAgentSystemPrompt,
   OpenAiAgentSystemContextBuilder,
 } from './openai-agent-system-context.builder.js';
-const agentDecisionJsonSchema = {
-  name: 'agent_decision',
-  strict: true,
-  schema: {
-    type: 'object',
-    additionalProperties: false,
-    required: [
-      'type',
-      'recipientAgentId',
-      'content',
-      'amount',
-      'rationale',
-      'proposalActionId',
-      'opportunityId',
-      'reasoning',
-    ],
-    properties: {
-      type: {
-        type: 'string',
-        enum: [
-          'send_public_message',
-          'send_private_message',
-          'request_payment',
-          'counter_payment_request',
-          'accept_payment_request',
-          'reject_payment_request',
-          'place_funds_with_banker',
-          'redeem_funds_from_banker',
-          'open_market_position',
-          'finalize_turn',
-        ],
-      },
-      recipientAgentId: {
-        type: ['string', 'null'],
-      },
-      content: {
-        type: ['string', 'null'],
-      },
-      amount: {
-        type: ['string', 'null'],
-      },
-      rationale: {
-        type: ['string', 'null'],
-      },
-      proposalActionId: {
-        type: ['string', 'null'],
-      },
-      opportunityId: {
-        type: ['string', 'null'],
-      },
-      reasoning: {
-        type: ['string', 'null'],
-      },
-    },
-  },
-} as const;
-
 interface RawAgentDecision {
   type: AgentAction['type'];
   recipientAgentId: string | null;
@@ -80,6 +25,13 @@ interface RawAgentDecision {
   proposalActionId: string | null;
   opportunityId: string | null;
   reasoning: string | null;
+  decisionExplanation?: string | null;
+  depositRequestAmount?: string | null;
+  depositRequestId?: string | null;
+  depositOfferAmount?: string | null;
+  depositRateBps?: number | null;
+  declineOfferId?: string | null;
+  offerId?: string | null;
 }
 
 interface MessageStreamPreview {
@@ -263,6 +215,7 @@ function normalizeAgentDecision(
         type: rawDecision.type,
         content: rawDecision.content,
         reasoning: rawDecision.reasoning ?? undefined,
+        decisionExplanation: rawDecision.decisionExplanation ?? undefined,
       };
     case 'send_private_message':
       if (!recipientAgentId || !rawDecision.content) {
@@ -274,8 +227,21 @@ function normalizeAgentDecision(
       return {
         type: rawDecision.type,
         recipientAgentId,
+        depositTerms:
+          rawDecision.depositRequestAmount ||
+          rawDecision.depositRequestId ||
+          rawDecision.declineOfferId
+            ? {
+                requestAmount: rawDecision.depositRequestAmount ?? undefined,
+                requestId: rawDecision.depositRequestId ?? undefined,
+                offerAmount: rawDecision.depositOfferAmount ?? undefined,
+                rateBps: rawDecision.depositRateBps ?? undefined,
+                declineOfferId: rawDecision.declineOfferId ?? undefined,
+              }
+            : undefined,
         content: rawDecision.content,
         reasoning: rawDecision.reasoning ?? undefined,
+        decisionExplanation: rawDecision.decisionExplanation ?? undefined,
       };
     case 'request_payment':
       if (!recipientAgentId || !rawDecision.amount || !rawDecision.rationale) {
@@ -290,6 +256,7 @@ function normalizeAgentDecision(
         amount: rawDecision.amount,
         rationale: rawDecision.rationale,
         reasoning: rawDecision.reasoning ?? undefined,
+        decisionExplanation: rawDecision.decisionExplanation ?? undefined,
       };
     case 'counter_payment_request':
       if (
@@ -310,6 +277,7 @@ function normalizeAgentDecision(
         amount: rawDecision.amount,
         rationale: rawDecision.rationale,
         reasoning: rawDecision.reasoning ?? undefined,
+        decisionExplanation: rawDecision.decisionExplanation ?? undefined,
       };
     case 'accept_payment_request':
       if (!rawDecision.proposalActionId) {
@@ -322,6 +290,7 @@ function normalizeAgentDecision(
         type: rawDecision.type,
         proposalActionId: rawDecision.proposalActionId,
         reasoning: rawDecision.reasoning ?? undefined,
+        decisionExplanation: rawDecision.decisionExplanation ?? undefined,
       };
     case 'reject_payment_request':
       if (!rawDecision.proposalActionId || !rawDecision.rationale) {
@@ -335,6 +304,7 @@ function normalizeAgentDecision(
         proposalActionId: rawDecision.proposalActionId,
         rationale: rawDecision.rationale,
         reasoning: rawDecision.reasoning ?? undefined,
+        decisionExplanation: rawDecision.decisionExplanation ?? undefined,
       };
     case 'place_funds_with_banker':
       if (!recipientAgentId || !rawDecision.amount) {
@@ -347,7 +317,11 @@ function normalizeAgentDecision(
         type: rawDecision.type,
         recipientAgentId,
         amount: rawDecision.amount,
+        ...(rawDecision.type === 'place_funds_with_banker'
+          ? { offerId: rawDecision.offerId ?? undefined }
+          : {}),
         reasoning: rawDecision.reasoning ?? undefined,
+        decisionExplanation: rawDecision.decisionExplanation ?? undefined,
       };
     case 'redeem_funds_from_banker':
       if (!recipientAgentId || !rawDecision.amount) {
@@ -361,6 +335,7 @@ function normalizeAgentDecision(
         recipientAgentId,
         amount: rawDecision.amount,
         reasoning: rawDecision.reasoning ?? undefined,
+        decisionExplanation: rawDecision.decisionExplanation ?? undefined,
       };
     case 'open_market_position':
       if (!opportunityId || !rawDecision.amount) {
@@ -387,12 +362,14 @@ function normalizeAgentDecision(
           opportunityId,
           amount,
           reasoning: rawDecision.reasoning ?? undefined,
+          decisionExplanation: rawDecision.decisionExplanation ?? undefined,
         };
       }
     case 'finalize_turn':
       return {
         type: rawDecision.type,
         reasoning: rawDecision.reasoning ?? undefined,
+        decisionExplanation: rawDecision.decisionExplanation ?? undefined,
       };
   }
 }
@@ -488,8 +465,14 @@ function logParsedAction(context: AgentTurnContext, parsedAction: AgentAction) {
 }
 
 function toFinalizedAction(outputText: string, context: AgentTurnContext) {
+  const output = JSON.parse(outputText) as
+    | RawAgentDecision
+    | { decision: RawAgentDecision };
   return agentActionSchema.parse(
-    normalizeAgentDecision(JSON.parse(outputText) as RawAgentDecision, context),
+    normalizeAgentDecision(
+      'decision' in output ? output.decision : output,
+      context,
+    ),
   );
 }
 
@@ -649,6 +632,7 @@ export class OpenAiAgentGateway implements AgentGatewayPort {
   ): Promise<AgentAction> {
     const prompt = this.buildPrompt(context);
     const request = buildDecisionRequest(this.model, prompt, context);
+    let receivedResponse = false;
     let activeStream:
       | {
           streamId: string;
@@ -685,6 +669,7 @@ export class OpenAiAgentGateway implements AgentGatewayPort {
         outputText = response.output_text ?? '';
       }
 
+      receivedResponse = true;
       if (!outputText) {
         throw new DomainInvariantError(
           'OpenAI agent gateway returned no structured action.',
@@ -766,13 +751,17 @@ export class OpenAiAgentGateway implements AgentGatewayPort {
         }),
       );
 
+      if (!receivedResponse) throw new AgentProviderError(error);
+
       if (this.strictMode) {
         throw error;
       }
 
-      return {
-        type: 'finalize_turn',
-      };
+      if (error instanceof DomainInvariantError) throw error;
+      throw new DomainInvariantError(
+        'The model returned an invalid structured decision. ' +
+          (error instanceof Error ? error.message : 'Please try again.'),
+      );
     }
   }
 }

@@ -324,3 +324,26 @@
     transform: translateY(0);
   }
 }
+
+.journal-thought {
+  background: light-dark(#f1eafa, #30233f);
+  color: light-dark(#432963, #ecddff);
+  border-inline-start: 4px solid light-dark(#7950a3, #bd91ea);
+}
+.deposit-quote {
+  margin-block: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.journal-thought .message-attribution strong {
+  color: light-dark(#432963, #ecddff);
+  background: light-dark(#e4d6f4, #463255);
+}
+.journal-thought .event-detail {
+  background: light-dark(#faf6ff, #241a30);
+}
+.journal-thought .field-note {
+  margin-top: 12px;
+}

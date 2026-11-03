@@ -1,3 +1,10 @@
+import type { NegotiationMessageHistoryRecord } from '../ports/game-session-repository.port.js';
+import { StaleSessionError } from '../../../shared/domain/errors/stale-session.error.js';
+import {
+  acceptDepositOffer,
+  negotiateDeposit,
+  type DepositMessageTerms,
+} from '../../domain/entities/deposit-negotiation.js';
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
 import { Money } from '../../../shared/domain/value-objects/money.js';
 import type { LedgerService } from '../../domain/services/ledger.service.js';
@@ -6,9 +13,11 @@ import type { GameSessionRepositoryPort } from '../ports/game-session-repository
 
 export interface PlaceFundsWithBankerInput {
   gameSessionId: string;
+  expectedRevision?: number;
   ownerAgentId: string;
   bankerAgentId: string;
   amount: string;
+  offerId?: string;
 }
 
 export class PlaceFundsWithBankerUseCase {
@@ -17,12 +26,36 @@ export class PlaceFundsWithBankerUseCase {
     private readonly ledgerService: LedgerService,
   ) {}
 
+  async negotiate(
+    gameSessionId: string,
+    id: string,
+    senderId: string,
+    recipientId: string,
+    terms: DepositMessageTerms,
+    message?: NegotiationMessageHistoryRecord,
+    expectedRevision?: number,
+  ) {
+    const session = await this.repository.findById(gameSessionId);
+    if (!session) throw new DomainInvariantError('Game session not found.');
+    if (expectedRevision !== undefined && session.revision !== expectedRevision)
+      throw new StaleSessionError();
+    const updated = negotiateDeposit(session, id, senderId, recipientId, terms);
+    await this.repository.save(updated, message ? [message] : []);
+    return updated;
+  }
+
   async execute(input: PlaceFundsWithBankerInput) {
     const session = await this.repository.findById(input.gameSessionId);
 
     if (!session) {
       throw new DomainInvariantError('Game session not found.');
     }
+
+    if (
+      input.expectedRevision !== undefined &&
+      session.revision !== input.expectedRevision
+    )
+      throw new StaleSessionError();
 
     const ownerAgent = session.agents.find(
       (agent) => agent.id === input.ownerAgentId,
@@ -48,6 +81,13 @@ export class PlaceFundsWithBankerUseCase {
     }
 
     const amount = Money.fromDecimal(input.amount);
+    const accepted = acceptDepositOffer(
+      session,
+      input.offerId,
+      ownerAgent.id,
+      bankerAgent.id,
+      amount,
+    );
     const updatedBalances = this.ledgerService.transfer(
       ownerAgent.balance,
       bankerAgent.balance,
@@ -67,9 +107,9 @@ export class PlaceFundsWithBankerUseCase {
         principal: Money.zero(),
         accruedInterest: Money.zero(),
       })
-    ).placeFunds(amount);
+    ).placeFunds(amount, accepted.offer.rateBps, accepted.offer.id);
 
-    const updatedSession = session
+    const updatedSession = accepted.session
       .withAgents(
         session.agents.map((agent) => {
           if (agent.id === ownerAgent.id) {

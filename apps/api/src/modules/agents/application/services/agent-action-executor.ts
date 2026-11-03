@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { AgentAction } from '@llm-sim/mcp-contracts';
 
 import { DomainInvariantError } from '../../../shared/domain/errors/domain-invariant.error.js';
@@ -15,6 +16,7 @@ import type {
 } from '../ports/agent-message-repository.port.js';
 
 export interface ExecuteAgentActionInput {
+  onDecisionSaved?: (record: AgentActionRecord) => void;
   session: NonNullable<
     Awaited<ReturnType<GameSessionRepositoryPort['findById']>>
   >;
@@ -52,6 +54,21 @@ export class AgentActionExecutor {
     input: ExecuteAgentActionInput,
   ): Promise<ExecuteAgentActionResult> {
     const savedAction = await this.agentActionRepository.save({
+      decisionExplanation:
+        input.session.agents.find((a) => a.id === input.agentId)?.role ===
+        'trader'
+          ? input.action.decisionExplanation
+          : undefined,
+      personalitySnapshot:
+        input.session.agents.find((a) => a.id === input.agentId)?.role ===
+        'trader'
+          ? (input.session.agents.find((a) => a.id === input.agentId)
+              ?.personalityProfile ?? undefined)
+          : undefined,
+      depositTerms:
+        input.action.type === 'send_private_message'
+          ? input.action.depositTerms
+          : undefined,
       gameSessionId: input.session.id,
       roundNumber: input.session.currentRound,
       turnNumber: input.turnNumber,
@@ -81,6 +98,7 @@ export class AgentActionExecutor {
                 : undefined,
     });
 
+    input.onDecisionSaved?.(savedAction);
     let updatedSession = input.session;
     let savedMessage: AgentMessageRecord | undefined;
     try {
@@ -88,8 +106,10 @@ export class AgentActionExecutor {
         updatedSession = await this.placeFundsWithBankerUseCase.execute({
           gameSessionId: input.session.id,
           ownerAgentId: input.agentId,
+          expectedRevision: input.session.revision,
           bankerAgentId: input.recipientAgentId!,
           amount: input.action.amount,
+          offerId: input.action.offerId,
         });
       }
 
@@ -97,6 +117,7 @@ export class AgentActionExecutor {
         updatedSession = await this.redeemFundsFromBankerUseCase.execute({
           gameSessionId: input.session.id,
           ownerAgentId: input.agentId,
+          expectedRevision: input.session.revision,
           bankerAgentId: input.recipientAgentId!,
           amount: input.action.amount,
         });
@@ -106,21 +127,40 @@ export class AgentActionExecutor {
         updatedSession = await this.openMarketPositionUseCase.execute({
           gameSessionId: input.session.id,
           ownerAgentId: input.agentId,
+          expectedRevision: input.session.revision,
           opportunityId: input.action.opportunityId,
           amount: input.action.amount,
         });
       }
 
       if (input.action.type === 'send_private_message') {
-        savedMessage = await this.agentMessageRepository.save({
+        const message = {
+          id: randomUUID(),
           gameSessionId: updatedSession.id,
           roundNumber: updatedSession.currentRound,
           turnNumber: input.turnNumber,
           senderAgentId: input.agentId,
-          recipientAgentId: input.recipientAgentId,
-          visibility: 'private',
+          recipientAgentId: input.recipientAgentId!,
           content: input.action.content,
-        });
+          createdAt: new Date().toISOString(),
+        };
+        if (input.action.depositTerms) {
+          updatedSession = await this.placeFundsWithBankerUseCase.negotiate(
+            input.session.id,
+            savedAction.id!,
+            input.agentId,
+            input.recipientAgentId!,
+            input.action.depositTerms,
+            { type: 'negotiation_message', ...message },
+            input.session.revision,
+          );
+          savedMessage = { ...message, visibility: 'private' };
+        } else {
+          savedMessage = await this.agentMessageRepository.save({
+            ...message,
+            visibility: 'private',
+          });
+        }
       }
 
       if (input.action.type === 'send_public_message') {

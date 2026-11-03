@@ -169,7 +169,11 @@ describe.runIf(Boolean(testDatabaseUrl))(
       const openedPrincipalNumber = Number.parseFloat(openedPrincipal);
 
       expect(trader).toMatchObject({
-        availableBalance: (100 - openedPrincipalNumber).toFixed(4),
+        availableBalance: (
+          100 -
+          openedPrincipalNumber -
+          openedPrincipalNumber * 0.002
+        ).toFixed(4),
         reservedBalance: openedPrincipalNumber.toFixed(4),
       });
       expect(session.marketPositions).toHaveLength(1);
@@ -267,7 +271,9 @@ describe.runIf(Boolean(testDatabaseUrl))(
       expect(
         replay.events.some((event) => event.type === 'market_position_opened'),
       ).toBe(false);
-      expect(replay.events).toHaveLength(2);
+      expect(
+        replay.events.some((event) => event.type === 'decision_failure'),
+      ).toBe(true);
     });
 
     it('builds banker context from the current open position set after settlement and reopen', async () => {
@@ -354,7 +360,11 @@ describe.runIf(Boolean(testDatabaseUrl))(
         context,
       ) => {
         capturedContexts.push(context);
-        return { type: 'finalize_turn' };
+        return {
+          type: 'finalize_turn',
+          decisionExplanation:
+            'Waiting for stronger evidence before committing funds.',
+        };
       };
 
       try {
@@ -372,45 +382,12 @@ describe.runIf(Boolean(testDatabaseUrl))(
       );
 
       expect(bankerContext).toBeDefined();
-      expect(
-        bankerContext?.marketContext.primaryCounterpartyOpenPositions,
-      ).toEqual([
-        {
-          opportunityId: secondOpportunity?.id,
-          opportunityTitle: expect.any(String),
-          principal: expect.any(String),
-          entryRound: expectedSecondRound,
-          settlementRound: secondOpportunity?.settlementRound,
-        },
-      ]);
-      expect(
-        Number.parseFloat(
-          bankerContext?.marketContext.primaryCounterpartyOpenPositions[0]
-            ?.principal ?? '0',
-        ),
-      ).toBe(Number.parseFloat(secondOpportunity?.minCommitment ?? '0'));
-      expect(
-        bankerContext?.marketContext.primaryCounterpartyOpenPositions.some(
-          (position) => position.opportunityId === firstOpportunity?.id,
-        ),
-      ).toBe(false);
-      expect(bankerContext?.marketContext.exposureSummary).toMatchObject({
-        primaryCounterpartyOpenPositionCount: 1,
-        primaryCounterpartyOpenPrincipal: expect.any(String),
-        primaryCounterpartyReservedBalance: expect.any(String),
-      });
-      expect(
-        Number.parseFloat(
-          bankerContext?.marketContext.exposureSummary
-            .primaryCounterpartyOpenPrincipal ?? '0',
-        ),
-      ).toBe(Number.parseFloat(secondOpportunity?.minCommitment ?? '0'));
-      expect(
-        Number.parseFloat(
-          bankerContext?.marketContext.exposureSummary
-            .primaryCounterpartyReservedBalance ?? '0',
-        ),
-      ).toBe(Number.parseFloat(secondOpportunity?.minCommitment ?? '0'));
+      expect(bankerContext?.marketContext).not.toHaveProperty(
+        'primaryCounterpartyOpenPositions',
+      );
+      expect(bankerContext?.marketContext.exposureSummary).not.toHaveProperty(
+        'primaryCounterpartyOpenPrincipal',
+      );
     });
   },
 );

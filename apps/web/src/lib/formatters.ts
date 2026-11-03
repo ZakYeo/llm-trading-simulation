@@ -31,6 +31,9 @@ export function formatBasisPoints(value: number) {
 }
 
 export function getReplayEventLabel(event: GameReplayRecord['events'][number]) {
+  if (event.type === 'decision_failure')
+    return `Decision failed · ${event.agentName}`;
+  if (event.type === 'thought') return `Thought · ${event.agentName}`;
   if (event.type === 'transfer') {
     return `${event.sourceAgentName} -> ${event.destinationAgentName}`;
   }
@@ -107,6 +110,8 @@ export function getReplayEventLabel(event: GameReplayRecord['events'][number]) {
 export function getReplayEventDetail(
   event: GameReplayRecord['events'][number],
 ) {
+  if (event.type === 'thought' || event.type === 'decision_failure')
+    return event.content ?? null;
   if (event.type === 'message') {
     return event.content ?? 'No content';
   }

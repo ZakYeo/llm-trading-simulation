@@ -11,13 +11,29 @@ export function EventEntry({
 }) {
   return (
     <article
-      className={`timeline-event ${event.type === 'message' ? 'journal-message' : 'journal-action'}`}
+      className={`timeline-event ${event.type === 'thought' ? 'journal-message journal-thought' : event.type === 'message' ? 'journal-message' : 'journal-action'}`}
     >
       <div className="event-topline">
         <span className="event-badge">{event.badgeLabel}</span>
         <time dateTime={event.createdAt}>{event.timestampLabel}</time>
       </div>
-      {event.type === 'message' ? (
+      {event.type === 'thought' ? (
+        <>
+          <div className="message-attribution">
+            <strong>{event.agentName ?? 'Agent'}</strong>
+            <span>◈ Thought → self</span>
+          </div>
+          <p className="event-detail">{event.content}</p>
+          {event.personalitySnapshot?.kind === 'trader' && (
+            <p className="field-note">
+              Assertiveness {event.personalitySnapshot.assertiveness}/10 · Risk
+              appetite {event.personalitySnapshot.riskAppetite}/10 · Conviction
+              threshold {event.personalitySnapshot.convictionThreshold}/10
+            </p>
+          )}
+          <small>Decision explanation · visible only to the operator</small>
+        </>
+      ) : event.type === 'message' ? (
         <>
           <div className="message-attribution">
             <strong>{event.senderAgentName ?? 'Agent'}</strong>
@@ -51,6 +67,34 @@ export function EventEntry({
             <p className="event-detail action-detail">{event.detail}</p>
           )}
         </>
+      )}
+      {event.depositTerms && (
+        <aside className="deposit-quote" aria-label="Deposit negotiation">
+          {event.depositTerms.requestAmount && (
+            <p>Deposit request: {event.depositTerms.requestAmount} SIM</p>
+          )}
+          {event.depositTerms.offerAmount && (
+            <>
+              <strong>Deposit offer</strong>
+              <p>
+                {event.depositTerms.offerAmount} SIM at{' '}
+                {(event.depositTerms.rateBps ?? 0) / 100}% per round
+              </p>
+              <p>
+                Expected next settlement interest:{' '}
+                {event.depositTerms.expectedInterest} SIM
+              </p>
+              <small>
+                Withdraw at any time. Rate fixed on remaining principal. Offer
+                expires at round advancement.
+              </small>
+            </>
+          )}
+          {event.depositTerms.declineOfferId && <p>Deposit offer declined</p>}
+        </aside>
+      )}
+      {event.bankerIncome !== undefined && (
+        <p>Banker spread income: {event.bankerIncome} SIM</p>
       )}
       {!compact && event.listedMeta.length > 0 && (
         <dl className="event-meta-grid">

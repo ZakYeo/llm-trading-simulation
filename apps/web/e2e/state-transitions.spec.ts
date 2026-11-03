@@ -73,7 +73,7 @@ test('updates treasury totals, replay, and round metrics after interest accrues'
 
   await expect(topbarMetric(page, 'Round')).toContainText('2');
   await expect(latestActivityMetric(page)).toContainText(
-    'Advanced to round 2 with 250 bps custody interest',
+    'Advanced to round 2 using agreed deposit rates',
   );
   await expect(page.locator('.treasury-shell')).toContainText('10.25');
   await expect(page.locator('.treasury-shell')).toContainText('0.25');
