@@ -44,7 +44,7 @@ Captured from the current UI with the real API and PostgreSQL, using an isolated
 
 ## Walkthrough
 
-[Play the walkthrough in the README](../README.md#demo) · [Download the MP4 (0.8 MB)](media/demo.mp4).
+[Play the walkthrough in the README](../README.md#demo) · [Download the MP4 (0.8 MB)](media/demo.mp4?raw=true).
 
 - Agent setup and personality configuration.
 - Communication turns, messages and recorded actions.
