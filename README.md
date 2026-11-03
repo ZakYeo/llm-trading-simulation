@@ -7,9 +7,9 @@ Configure their personalities, run the conversation and follow the resulting dec
 
 ## Demo
 
-[![Watch the walkthrough: agent setup, personalities, turns, settlement, finances and history](docs/media/demo-poster.png)](docs/media/demo.mp4)
+<video src="https://github.com/user-attachments/assets/26b2d792-fd2d-4ca8-b0fb-0db13a6d80a5" controls width="640"></video>
 
-[Watch the 70-second walkthrough (MP4)](docs/media/demo.mp4) · [Screenshots](docs/screenshots.md)
+[Download the 70-second walkthrough (MP4, 0.8 MB)](docs/media/demo.mp4) · [Screenshots](docs/screenshots.md)
 
 - Covers agent setup, personality configuration, running turns, round advancement, Finances and History.
 - Recorded with the real application and database using deterministic mock agents. OpenAI mode runs the LLM agents.

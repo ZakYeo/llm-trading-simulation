@@ -1,6 +1,6 @@
 # Screenshots
 
-[← README](../README.md) · [Watch the walkthrough](media/demo.mp4)
+[← README](../README.md) · [Watch the walkthrough](../README.md#demo)
 
 Captured from the current UI with the real API and PostgreSQL, using an isolated session and deterministic mock agents. These are application captures, not design mockups.
 
@@ -44,7 +44,7 @@ Captured from the current UI with the real API and PostgreSQL, using an isolated
 
 ## Walkthrough
 
-[Watch or download the MP4](media/demo.mp4).
+[Play the walkthrough in the README](../README.md#demo) · [Download the MP4 (0.8 MB)](media/demo.mp4).
 
 - Agent setup and personality configuration.
 - Communication turns, messages and recorded actions.
